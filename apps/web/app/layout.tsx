@@ -1,8 +1,11 @@
-import { Geist, Geist_Mono, Noto_Sans } from "next/font/google"
+import { Geist_Mono, Noto_Sans } from "next/font/google"
 
 import "@workspace/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@workspace/ui/lib/utils";
+import { Toaster } from "@workspace/ui/components/sonner"
+import { TooltipProvider } from "@workspace/ui/components/tooltip"
+
 
 const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-sans'})
 
@@ -23,7 +26,12 @@ export default function RootLayout({
       className={cn("antialiased", fontMono.variable, "font-sans", notoSans.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+           <TooltipProvider>
+          {children}
+            </TooltipProvider>
+          </ThemeProvider>
+                <Toaster />
       </body>
     </html>
   )
