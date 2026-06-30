@@ -11,3 +11,15 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model User {
+  id             String   @id @default(uuid())
+  walletAddress  String   @unique
+  displayName    String?
+  totalWagered   BigInt   @default(0)
+  totalWon       BigInt   @default(0)
+  createdAt      DateTime @default(now())
+  lastLoggedInAt DateTime @updatedAt
+
+  @@map("users")
+}
