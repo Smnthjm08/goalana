@@ -1,11 +1,3 @@
-use anchor_lang::prelude::*;
+pub mod market;
 
-#[account]
-#[derive(InitSpace)]
-pub struct Market {
-
-}
-
-pub struct Bet{
-    
-}
+pub use market::*;

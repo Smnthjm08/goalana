@@ -15,11 +15,11 @@ declare_id!("4x5y2L5V6NfbZDLJa7KFcESb8dt8DptAcv53iKNteBgM");
 pub mod goalana_program {
     use super::*;
 
-    pub fn create_market() -> Result<()>{
+    pub fn create_market() -> Result<()> {
         crate::instructions::create_market::handle_create_market()
     }
 
-    pub fn place_bet() -> Result<()>{
+    pub fn place_bet() -> Result<()> {
         crate::instructions::place_bet::handle_place_bet()
     }
 
