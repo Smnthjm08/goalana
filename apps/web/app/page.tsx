@@ -1,18 +1,25 @@
-"use client";
+"use client"
 
 import axiosInstance from "@/lib/axios-instance"
+import dynamic from "next/dynamic"
+const WalletMultiButton = dynamic(
+  () =>
+    import("@solana/wallet-adapter-react-ui").then(
+      (mod) => mod.WalletMultiButton
+    ),
+  { ssr: false }
+)
 import { Button } from "@workspace/ui/components/button"
+import {
+  useWallet,
+  useAnchorWallet,
+  useConnection,
+} from "@solana/wallet-adapter-react"
 
 export default function Page() {
-
-  async function handleActivateTxline() {
-    try {
-      const data = await axiosInstance.post("/admin/txline/activate", { txSig: "dfdhfdn", walletSignature: "sfdfnjdkn", leagues: ["football", "soccer"] });
-      console.log(">>>>", data);
-    } catch (error) {
-      console.log(">>>> error! ", error);
-    }
-  }
+  const { connection } = useConnection()
+  const wallet = useAnchorWallet()
+  const { signMessage } = useWallet()
 
   return (
     <div className="flex min-h-svh p-6">
@@ -20,16 +27,14 @@ export default function Page() {
         <div>
           <h1 className="font-medium">Project ready!</h1>
           <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
+          <p>We've already added the button component for you.</p>
           <Button className="mt-2">Button</Button>
         </div>
-        <div className="text-muted-foreground font-mono text-xs">
+        <div className="font-mono text-xs text-muted-foreground">
           (Press <kbd>d</kbd> to toggle dark mode)
         </div>
 
-        <Button onClick={handleActivateTxline}>
-          Activate TxLine
-        </Button>
+        <WalletMultiButton />
       </div>
     </div>
   )
