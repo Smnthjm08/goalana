@@ -9,7 +9,7 @@ pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("4x5y2L5V6NfbZDLJa7KFcESb8dt8DptAcv53iKNteBgM");
+declare_id!("AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu");
 
 #[program]
 pub mod goalana_program {
