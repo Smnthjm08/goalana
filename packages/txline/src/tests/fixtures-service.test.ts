@@ -71,4 +71,42 @@ describe("FixtureService", () => {
 
         console.log(`\n✅ Total fixture updates found across all hours: ${totalFound}`);
     }, 120_000); // 2min — 24 sequential requests
+
+    it("getFixtureValidation(fixtureId) returns Merkle proof validation data", async () => {
+        const fixtureId = 18209181; // France vs Morocco
+        const result = await service.getFixtureValidation(fixtureId);
+
+        console.log("\n📌 Fixture Validation sample:");
+        console.log(JSON.stringify(result, null, 2));
+
+        if (result) {
+            expect(result).toHaveProperty("snapshot");
+            expect(result).toHaveProperty("summary");
+            expect(result).toHaveProperty("subTreeProof");
+            expect(result).toHaveProperty("mainTreeProof");
+            expect(result.summary.fixtureId).toBe(fixtureId);
+            // Snapshot FixtureId might have category/sport bits (e.g. 1 << 48) prefixed.
+            const baseSnapshotFixtureId = Number(BigInt(result.snapshot.FixtureId) % (1n << 48n));
+            expect(baseSnapshotFixtureId).toBe(fixtureId);
+        }
+    }, 30_000);
+
+    it("getFixtureBatchValidation(epochDay, hourOfDay) returns batch Merkle proof", async () => {
+        const epochDay = 20638;
+        const hourOfDay = 23;
+        const result = await service.getFixtureBatchValidation(epochDay, hourOfDay);
+
+        console.log("\n📌 Fixture Batch Validation sample:");
+        console.log(JSON.stringify(result, null, 2));
+
+        if (result) {
+            expect(result).toHaveProperty("metadata");
+            expect(result).toHaveProperty("proof");
+            expect(result.metadata).toHaveProperty("totalUpdateCount");
+            expect(result.metadata).toHaveProperty("numUniqueFixtures");
+            expect(result.metadata).toHaveProperty("overallBatchStartTs");
+            expect(result.metadata).toHaveProperty("overallBatchEndTs");
+            expect(Array.isArray(result.proof)).toBe(true);
+        }
+    }, 30_000);
 });

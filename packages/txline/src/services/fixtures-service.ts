@@ -1,12 +1,13 @@
 import { txlineClient } from "../client"
 
+const COMPETITION_ID = 72;
+
 export class FixtureService {
     // 1. Get the latest snapshot of fixtures, optionally starting at or within 30 days after a given epoch day
-    async getFixtureSnapshot(startEpochDay?: number) {
+    async getFixtureSnapshot(startEpochDay?: number, CompetitionId?: number) {
         try {
-            const CompetitionId = 72;
             const query = new URLSearchParams();
-            query.append("competitionId", CompetitionId.toString());
+            query.append("competitionId", (CompetitionId || COMPETITION_ID).toString());
             if (startEpochDay != null) query.append("startEpochDay", startEpochDay.toString());
             const { data } = await txlineClient.get(`/fixtures/snapshot?${query.toString()}`);
             return data;
@@ -25,12 +26,33 @@ export class FixtureService {
         }
     }
 
-    // TODO 3. Get a Merkle proof for a specific fixture update
+    // 3. Get a Merkle proof for a specific fixture update
+    async getFixtureValidation(fixtureId: number, timestamp?: number) {
+        try {
+            const { data } = await txlineClient.get("/fixtures/validation", {
+                params: {
+                    fixtureId,
+                    ...(timestamp != null ? { timestamp } : {})
+                }
+            });
+            return data;
+        } catch (error) {
+            console.error("Error fetching fixture validation", error);
+        }
+    }
 
-
-
-    // TODO 4. Get a Merkle proof for an entire hourly batch of fixtures
-
-
-
+    // 4. Get a Merkle proof for an entire hourly batch of fixtures
+    async getFixtureBatchValidation(epochDay: number, hourOfDay: number) {
+        try {
+            const { data } = await txlineClient.get("/fixtures/batch-validation", {
+                params: {
+                    epochDay,
+                    hourOfDay
+                }
+            });
+            return data;
+        } catch (error) {
+            console.error("Error fetching fixture batch validation", error);
+        }
+    }
 }
