@@ -18,10 +18,13 @@
     },
     "apps/api": {
       "name": "api",
+      "version": "0.0.0",
       "dependencies": {
         "@coral-xyz/anchor": "^0.32.1",
         "@solana/spl-token": "^0.4.14",
         "@solana/web3.js": "^1.98.4",
+        "@workspace/db": "workspace:*",
+        "@workspace/txline": "workspace:*",
         "axios": "^1.18.1",
         "cors": "^2.8.6",
         "express": "^5.2.1",
@@ -31,7 +34,8 @@
         "@types/axios": "^0.14.4",
         "@types/bun": "latest",
         "@types/express": "^5.0.6",
-        "@workspace/db": "*",
+        "@workspace/eslint-config": "workspace:*",
+        "@workspace/typescript-config": "workspace:*",
       },
       "peerDependencies": {
         "typescript": "^5",
@@ -80,6 +84,7 @@
       },
       "devDependencies": {
         "@types/bun": "latest",
+        "@workspace/typescript-config": "workspace:*",
         "prisma": "^7.8.0",
       },
       "peerDependencies": {
@@ -103,6 +108,18 @@
         "globals": "^17.6.0",
         "typescript": "^5",
         "typescript-eslint": "^8.60.0",
+      },
+    },
+    "packages/txline": {
+      "name": "@workspace/txline",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "latest",
+        "@workspace/eslint-config": "workspace:*",
+        "@workspace/typescript-config": "workspace:*",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
       },
     },
     "packages/typescript-config": {
@@ -1213,6 +1230,8 @@
     "@workspace/db": ["@workspace/db@workspace:packages/db"],
 
     "@workspace/eslint-config": ["@workspace/eslint-config@workspace:packages/eslint-config"],
+
+    "@workspace/txline": ["@workspace/txline@workspace:packages/txline"],
 
     "@workspace/typescript-config": ["@workspace/typescript-config@workspace:packages/typescript-config"],
 

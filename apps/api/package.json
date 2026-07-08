@@ -1,21 +1,16 @@
 {
   "name": "api",
-  "module": "src/index.ts",
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "start": "bun src/index.ts"
-  },
-  "devDependencies": {
-    "@types/axios": "^0.14.4",
-    "@types/bun": "latest",
-    "@types/express": "^5.0.6",
-    "@workspace/db": "*"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "dependencies": {
+    "@workspace/db": "workspace:*",
+    "@workspace/txline": "workspace:*",
     "@coral-xyz/anchor": "^0.32.1",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
@@ -23,5 +18,15 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/axios": "^0.14.4",
+    "@types/bun": "latest",
+    "@types/express": "^5.0.6",
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }

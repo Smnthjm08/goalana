@@ -46,3 +46,7 @@ next-env.d.ts
 
 
 devnet-wallet.json
+
+.agents/
+
+skills-lock.json

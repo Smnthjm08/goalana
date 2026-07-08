@@ -1,11 +1,14 @@
 import express from "express"
 import cors from "cors"
+import { TXLINE_ENV } from "@workspace/txline"
 
 const app = express();
 const port = 8080
 
 app.use(express.json());
 app.use(cors({ origin: "http://localhost:3000" }))
+
+console.log("TXLINE_ENV", TXLINE_ENV);
 
 app.get("/", async (req, res) => {
   res.json({ status: "healthy!" })
