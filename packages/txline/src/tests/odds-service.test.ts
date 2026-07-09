@@ -49,8 +49,8 @@ describe("OddsService", () => {
                 totalFound += result.length;
                 console.log(`\n🕐 Interval ${interval} (Fixture ID: ${KNOWN_FIXTURE_ID}): ${result.length} update(s)`);
                 console.log(JSON.stringify(result[0], null, 2));
-                
-                const first = result[0];
+
+                const first = result[0]!;
                 expect(first.FixtureId).toBe(KNOWN_FIXTURE_ID);
                 expect(first).toHaveProperty("Bookmaker");
                 expect(first).toHaveProperty("Prices");
@@ -64,7 +64,7 @@ describe("OddsService", () => {
         // Fetch historical interval updates to get a batched/committed messageId and ts
         const updates = await service.getOddsIntervalUpdates(KNOWN_EPOCH_DAY, 23, 5, KNOWN_FIXTURE_ID);
         if (updates && Array.isArray(updates) && updates.length > 0) {
-            const first = updates[0];
+            const first = updates[0]!;
             const messageId = first.MessageId;
             const ts = first.Ts;
 
@@ -82,6 +82,36 @@ describe("OddsService", () => {
                 expect(result.odds.MessageId).toBe(messageId);
                 expect(result.odds.Ts).toBe(ts);
             }
+        } else {
+            throw new Error("No historical updates found to test validation");
+        }
+    }, 30_000);
+
+
+    it("streamOddsUpdates(fixtureId) returns a readable SSE stream", async () => {
+        const stream = await service.streamOddsUpdates(KNOWN_FIXTURE_ID);
+
+        console.log("\n📌 Odds Stream type:", typeof stream);
+
+        // The stream is a Node.js Readable; collect first chunk then destroy
+        if (stream && typeof stream.read === "function") {
+            const chunk: Buffer | null = await new Promise((resolve) => {
+                stream.once("data", (data: Buffer) => {
+                    stream.destroy();
+                    resolve(data);
+                });
+                stream.once("error", () => resolve(null));
+            });
+
+            if (chunk) {
+                const text = chunk.toString("utf-8");
+                console.log("📌 Odds Stream first chunk:", text.slice(0, 200));
+                expect(typeof text).toBe("string");
+                expect(text.length).toBeGreaterThan(0);
+            }
+        } else {
+            // Fallback: if axios returned raw text instead of a stream
+            expect(typeof stream).toBe("string");
         }
     }, 30_000);
 });

@@ -1,0 +1,579 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 2800" width="1400" height="2800">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
+      text { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    </style>
+    <!-- Day color palette -->
+    <!-- D1: #6366F1 indigo | D2: #0EA5E9 sky | D3: #10B981 emerald | D4: #F59E0B amber | D5: #EF4444 red -->
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="108%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#00000018"/>
+    </filter>
+  </defs>
+
+  <!-- ══════════════════════════════════════════════════════════ BACKGROUND -->
+  <rect width="1400" height="2800" fill="#0F0F13"/>
+
+  <!-- subtle grid -->
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff06" stroke-width="0.5"/>
+  </pattern>
+  <rect width="1400" height="2800" fill="url(#grid)"/>
+
+  <!-- ══════════════════════════════════════════════════════════ HEADER -->
+  <rect x="0" y="0" width="1400" height="120" fill="#0F0F13"/>
+  <rect x="0" y="118" width="1400" height="2" fill="#1E1E2E"/>
+
+  <!-- Logo mark -->
+  <rect x="48" y="32" width="8" height="56" rx="2" fill="#6366F1"/>
+  <rect x="62" y="44" width="8" height="44" rx="2" fill="#6366F1" opacity="0.7"/>
+  <rect x="76" y="55" width="8" height="33" rx="2" fill="#6366F1" opacity="0.4"/>
+
+  <text x="100" y="64" font-size="26" font-weight="700" fill="#FFFFFF" letter-spacing="-0.5">GOALANA</text>
+  <text x="100" y="90" font-size="13" fill="#6B6B8A" letter-spacing="2">MVP EXECUTION PLAN · 5 DAYS</text>
+
+  <!-- submission pill -->
+  <rect x="1160" y="40" width="192" height="38" rx="19" fill="#EF444420"/>
+  <rect x="1160" y="40" width="192" height="38" rx="19" fill="none" stroke="#EF4444" stroke-width="1"/>
+  <circle cx="1186" cy="59" r="5" fill="#EF4444"/>
+  <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+  <text x="1198" y="64" font-size="13" font-weight="600" fill="#EF4444">DEADLINE: JUL 19</text>
+
+  <!-- ══════════════════════════════════════════════════════════ CRITICAL PATH BAR -->
+  <rect x="48" y="136" width="1304" height="68" rx="10" fill="#1A1A2E"/>
+  <rect x="48" y="136" width="1304" height="68" rx="10" fill="none" stroke="#2D2D4E" stroke-width="1"/>
+
+  <text x="72" y="163" font-size="11" font-weight="600" fill="#6366F1" letter-spacing="1.5">CRITICAL PATH</text>
+
+  <!-- path nodes -->
+  <circle cx="180" cy="183" r="6" fill="#6366F1"/>
+  <text x="192" y="187" font-size="12" fill="#A0A0C0">Anchor Build</text>
+  <line x1="265" y1="183" x2="305" y2="183" stroke="#2D2D4E" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <circle cx="317" cy="183" r="6" fill="#0EA5E9"/>
+  <text x="329" y="187" font-size="12" fill="#A0A0C0">SSE Streams</text>
+  <line x1="405" y1="183" x2="445" y2="183" stroke="#2D2D4E" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <circle cx="457" cy="183" r="6" fill="#10B981"/>
+  <text x="469" y="187" font-size="12" fill="#A0A0C0">place_intent E2E</text>
+  <line x1="570" y1="183" x2="610" y2="183" stroke="#2D2D4E" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <circle cx="622" cy="183" r="6" fill="#F59E0B"/>
+  <text x="634" y="187" font-size="12" fill="#A0A0C0">settle_market + CPI</text>
+  <line x1="755" y1="183" x2="795" y2="183" stroke="#2D2D4E" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <circle cx="807" cy="183" r="6" fill="#F59E0B"/>
+  <text x="819" y="187" font-size="12" fill="#A0A0C0">claim_winnings</text>
+  <line x1="925" y1="183" x2="965" y2="183" stroke="#2D2D4E" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <circle cx="977" cy="183" r="6" fill="#EF4444"/>
+  <text x="989" y="187" font-size="12" fill="#A0A0C0">Demo + Video</text>
+
+  <!-- ══════════════════════════════════════════════════════════ WHAT'S DONE BANNER -->
+  <rect x="48" y="222" width="1304" height="52" rx="8" fill="#10B98112"/>
+  <rect x="48" y="222" width="4" height="52" rx="2" fill="#10B981"/>
+  <text x="68" y="244" font-size="11" font-weight="600" fill="#10B981" letter-spacing="1">ALREADY DONE</text>
+  <text x="68" y="263" font-size="12" fill="#6B9E8A">✓ TxLINE auth (JWT + API token)  ·  ✓ FixtureService REST  ·  ✓ OddsService REST  ·  ✓ ScoresService REST  ·  ✓ create_market Anchor instruction  ·  ✓ Market + Predicate state accounts</text>
+
+  <!-- ══════════════════════════════════════════════════════════ WHAT TO POSTPONE -->
+  <rect x="48" y="282" width="1304" height="52" rx="8" fill="#EF444412"/>
+  <rect x="48" y="282" width="4" height="52" rx="2" fill="#EF4444"/>
+  <text x="68" y="304" font-size="11" font-weight="600" fill="#EF4444" letter-spacing="1">POSTPONED — NOT IN MVP</text>
+  <text x="68" y="323" font-size="12" fill="#8A6B6B">✗ Pool markets  ·  ✗ Challenge social bets  ·  ✗ OddsService streaming  ·  ✗ Gap recovery workers  ·  ✗ Odds validation CPI  ·  ✗ Fixture validation CPI  ·  ✗ Privy embedded wallets  ·  ✗ Proof explorer UI</text>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- DAY 1 -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <rect x="48" y="352" width="1304" height="360" rx="12" fill="#13131F" filter="url(#shadow)"/>
+  <rect x="48" y="352" width="1304" height="360" rx="12" fill="none" stroke="#2D2D4E" stroke-width="1"/>
+  <rect x="48" y="352" width="6" height="360" rx="3" fill="#6366F1"/>
+
+  <!-- day label -->
+  <rect x="68" y="370" width="68" height="26" rx="13" fill="#6366F120"/>
+  <text x="102" y="388" text-anchor="middle" font-size="12" font-weight="700" fill="#6366F1">DAY 1</text>
+  <text x="152" y="388" font-size="18" font-weight="700" fill="#FFFFFF">Anchor Program — Remaining Instructions</text>
+  <text x="152" y="410" font-size="12" fill="#6B6B8A">Objective: Complete all on-chain instructions so the program can be deployed to devnet by end of day</text>
+
+  <!-- divider -->
+  <line x1="68" y1="424" x2="1332" y2="424" stroke="#1E1E2E" stroke-width="1"/>
+
+  <!-- 3-col layout -->
+  <!-- COL 1: Instructions -->
+  <text x="80" y="448" font-size="11" font-weight="600" fill="#6366F1" letter-spacing="1.5">ANCHOR INSTRUCTIONS TO BUILD</text>
+
+  <!-- place_intent -->
+  <rect x="80" y="458" width="380" height="70" rx="6" fill="#1A1A2E"/>
+  <text x="96" y="477" font-size="13" font-weight="600" fill="#FFFFFF">place_intent</text>
+  <text x="96" y="495" font-size="11" fill="#6B6B8A">User locks SOL in vault · creates Intent PDA</text>
+  <text x="96" y="511" font-size="11" fill="#6B6B8A">seeds: [b"intent", market, owner] · updates total_for/against</text>
+  <rect x="400" y="462" width="52" height="18" rx="9" fill="#6366F120"/>
+  <text x="426" y="475" text-anchor="middle" font-size="10" fill="#6366F1">2h</text>
+
+  <!-- execute_match -->
+  <rect x="80" y="536" width="380" height="70" rx="6" fill="#1A1A2E"/>
+  <text x="96" y="555" font-size="13" font-weight="600" fill="#FFFFFF">execute_match</text>
+  <text x="96" y="573" font-size="11" fill="#6B6B8A">Solver pairs FOR + AGAINST intents · creates MatchPair PDA</text>
+  <text x="96" y="589" font-size="11" fill="#6B6B8A">Signed by solver keypair only</text>
+  <rect x="400" y="540" width="52" height="18" rx="9" fill="#6366F120"/>
+  <text x="426" y="553" text-anchor="middle" font-size="10" fill="#6366F1">2h</text>
+
+  <!-- settle_market -->
+  <rect x="80" y="614" width="380" height="82" rx="6" fill="#1E1830"/>
+  <rect x="80" y="614" width="380" height="82" rx="6" fill="none" stroke="#6366F140" stroke-width="1"/>
+  <text x="96" y="633" font-size="13" font-weight="600" fill="#FFFFFF">settle_market ⚡ CPI</text>
+  <text x="96" y="651" font-size="11" fill="#6B6B8A">CPIs into txoracle::validate_stat · records outcome</text>
+  <text x="96" y="667" font-size="11" fill="#6B6B8A">Needs: dailyScoresMerkleRoots PDA from TxLINE</text>
+  <text x="96" y="683" font-size="11" fill="#F59E0B">⚠ Set ComputeBudgetProgram to 1,400,000 units</text>
+  <rect x="400" y="618" width="52" height="18" rx="9" fill="#6366F120"/>
+  <text x="426" y="631" text-anchor="middle" font-size="10" fill="#6366F1">3h</text>
+
+  <!-- COL 2: Also needed -->
+  <text x="492" y="448" font-size="11" font-weight="600" fill="#6366F1" letter-spacing="1.5">ALSO BUILD</text>
+
+  <rect x="492" y="458" width="340" height="52" rx="6" fill="#1A1A2E"/>
+  <text x="508" y="479" font-size="13" font-weight="600" fill="#FFFFFF">claim_winnings</text>
+  <text x="508" y="497" font-size="11" fill="#6B6B8A">Verify commitment reveal · release SOL from vault</text>
+
+  <rect x="492" y="518" width="340" height="52" rx="6" fill="#1A1A2E"/>
+  <text x="508" y="539" font-size="13" font-weight="600" fill="#FFFFFF">cancel_intent</text>
+  <text x="508" y="557" font-size="11" fill="#6B6B8A">Return unmatched SOL · safety valve</text>
+
+  <rect x="492" y="578" width="340" height="52" rx="6" fill="#1A1A2E"/>
+  <text x="508" y="599" font-size="13" font-weight="600" fill="#FFFFFF">errors.rs</text>
+  <text x="508" y="617" font-size="11" fill="#6B6B8A">PredicateSeedMismatch, MarketNotOpen, MarketNotSettled</text>
+
+  <!-- COL 3: DB + Deploy -->
+  <text x="856" y="448" font-size="11" font-weight="600" fill="#6366F1" letter-spacing="1.5">DB TABLES + DEPLOY</text>
+
+  <rect x="856" y="458" width="456" height="90" rx="6" fill="#1A1A2E"/>
+  <text x="872" y="477" font-size="12" font-weight="600" fill="#A0A0C0">Create these tables today (packages/db)</text>
+  <text x="872" y="497" font-size="11" fill="#6B6B8A">· fixtures  (fixture_id, teams, kickoff, final_seq)</text>
+  <text x="872" y="513" font-size="11" fill="#6B6B8A">· markets   (market_pda, fixture_id, predicate, status, outcome)</text>
+  <text x="872" y="529" font-size="11" fill="#6B6B8A">· intents   (intent_pda, market_pda, wallet, side, amount, matched)</text>
+  <text x="872" y="545" font-size="11" fill="#6B6B8A">· users     (wallet_address PK, first_seen_at)</text>
+
+  <rect x="856" y="558" width="456" height="52" rx="6" fill="#1A1A2E"/>
+  <text x="872" y="578" font-size="12" font-weight="600" fill="#A0A0C0">End of Day: anchor build + deploy to devnet</text>
+  <text x="872" y="596" font-size="11" fill="#6B6B8A">Copy IDL → packages/sdk/idl/  ·  Update program ID everywhere</text>
+
+  <!-- completion criteria -->
+  <rect x="68" y="704" width="1264" height="2" fill="#1E1E2E"/>
+  <text x="80" y="721" font-size="11" font-weight="600" fill="#10B981" letter-spacing="1">✓ DAY 1 DONE WHEN:</text>
+  <text x="80" y="700" font-size="11" fill="#6B6B8A">anchor test passes all 5 instructions locally  ·  anchor deploy --provider.cluster devnet succeeds  ·  IDL copied to packages/sdk</text>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- DAY 2 -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <rect x="48" y="732" width="1304" height="380" rx="12" fill="#13131F" filter="url(#shadow)"/>
+  <rect x="48" y="732" width="1304" height="380" rx="12" fill="none" stroke="#2D2D4E" stroke-width="1"/>
+  <rect x="48" y="732" width="6" height="380" rx="3" fill="#0EA5E9"/>
+
+  <rect x="68" y="750" width="68" height="26" rx="13" fill="#0EA5E920"/>
+  <text x="102" y="768" text-anchor="middle" font-size="12" font-weight="700" fill="#0EA5E9">DAY 2</text>
+  <text x="152" y="768" font-size="18" font-weight="700" fill="#FFFFFF">Backend Workers — SSE Streams + Settlement Engine</text>
+  <text x="152" y="790" font-size="12" fill="#6B6B8A">Objective: Live score events flowing into your backend, automatic market creation, settlement trigger wired up</text>
+
+  <line x1="68" y1="804" x2="1332" y2="804" stroke="#1E1E2E" stroke-width="1"/>
+
+  <!-- Why polling first -->
+  <rect x="80" y="816" width="580" height="56" rx="6" fill="#0EA5E910"/>
+  <rect x="80" y="816" width="4" height="56" rx="2" fill="#0EA5E9"/>
+  <text x="100" y="836" font-size="12" font-weight="600" fill="#0EA5E9">Polling vs SSE decision</text>
+  <text x="100" y="854" font-size="11" fill="#7BBDCC">Use polling for fixtures today (simple, reliable). Use SSE for scores (required for live settlement).</text>
+  <text x="100" y="870" font-size="11" fill="#7BBDCC">Odds stream: skip for MVP — display snapshot odds only.</text>
+
+  <!-- Worker boxes -->
+  <text x="80" y="898" font-size="11" font-weight="600" fill="#0EA5E9" letter-spacing="1.5">WORKERS TO BUILD (apps/api/workers/)</text>
+
+  <!-- fixture worker -->
+  <rect x="80" y="910" width="290" height="130" rx="8" fill="#1A1A2E"/>
+  <text x="96" y="932" font-size="13" font-weight="600" fill="#FFFFFF">fixture.worker.ts</text>
+  <rect x="250" y="915" width="100" height="18" rx="9" fill="#10B98120"/>
+  <text x="300" y="928" text-anchor="middle" font-size="10" fill="#10B981">POLLING · 15min</text>
+  <text x="96" y="952" font-size="11" fill="#6B6B8A">1. Call FixtureService.getFixtureSnapshot()</text>
+  <text x="96" y="968" font-size="11" fill="#6B6B8A">2. Upsert fixtures table</text>
+  <text x="96" y="984" font-size="11" fill="#6B6B8A">3. For new fixtures: call create_market</text>
+  <text x="96" y="1000" font-size="11" fill="#6B6B8A">   for HomeWin, AwayWin, Over2.5</text>
+  <text x="96" y="1016" font-size="11" fill="#6B6B8A">4. Write markets to DB</text>
+  <text x="96" y="1032" font-size="11" fill="#F59E0B">TxLINE: GET /api/fixtures/snapshot</text>
+
+  <!-- scores worker -->
+  <rect x="386" y="910" width="290" height="130" rx="8" fill="#1A1A2E"/>
+  <text x="402" y="932" font-size="13" font-weight="600" fill="#FFFFFF">scores.worker.ts</text>
+  <rect x="562" y="915" width="90" height="18" rx="9" fill="#EF444420"/>
+  <text x="607" y="928" text-anchor="middle" font-size="10" fill="#EF4444">SSE · LIVE</text>
+  <text x="402" y="952" font-size="11" fill="#6B6B8A">1. Connect to scores SSE stream</text>
+  <text x="402" y="968" font-size="11" fill="#6B6B8A">2. Parse each event via events.ts</text>
+  <text x="402" y="984" font-size="11" fill="#6B6B8A">3. On StatusId 5/10/13: emit SETTLE</text>
+  <text x="402" y="1000" font-size="11" fill="#6B6B8A">4. Store final_seq in fixtures table</text>
+  <text x="402" y="1016" font-size="11" fill="#6B6B8A">5. Broadcast possession/goal via WS</text>
+  <text x="402" y="1032" font-size="11" fill="#F59E0B">TxLINE: GET /api/scores/stream</text>
+
+  <!-- settlement worker -->
+  <rect x="692" y="910" width="290" height="130" rx="8" fill="#1E1830"/>
+  <rect x="692" y="910" width="290" height="130" rx="8" fill="none" stroke="#6366F140" stroke-width="1"/>
+  <text x="708" y="932" font-size="13" font-weight="600" fill="#FFFFFF">settlement.worker.ts ⚡</text>
+  <rect x="918" y="915" width="52" height="18" rx="9" fill="#F59E0B20"/>
+  <text x="944" y="928" text-anchor="middle" font-size="10" fill="#F59E0B">EVENT</text>
+  <text x="708" y="952" font-size="11" fill="#6B6B8A">1. Listens to SETTLE event from scores worker</text>
+  <text x="708" y="968" font-size="11" fill="#6B6B8A">2. Load markets for fixtureId from DB</text>
+  <text x="708" y="984" font-size="11" fill="#6B6B8A">3. Call getScoresStatValidation(fixtureId, seq)</text>
+  <text x="708" y="1000" font-size="11" fill="#6B6B8A">4. Convert proof → call settle_market()</text>
+  <text x="708" y="1016" font-size="11" fill="#6B6B8A">5. Update DB markets.status = Settled</text>
+  <text x="708" y="1032" font-size="11" fill="#F59E0B">TxLINE: GET /api/scores/stat-validation</text>
+
+  <!-- solver worker -->
+  <rect x="998" y="910" width="290" height="130" rx="8" fill="#1A1A2E"/>
+  <text x="1014" y="932" font-size="13" font-weight="600" fill="#FFFFFF">solver.worker.ts</text>
+  <rect x="1238" y="915" width="40" height="18" rx="9" fill="#6366F120"/>
+  <text x="1258" y="928" text-anchor="middle" font-size="10" fill="#6366F1">15s</text>
+  <text x="1014" y="952" font-size="11" fill="#6B6B8A">1. Poll intents table for unmatched</text>
+  <text x="1014" y="968" font-size="11" fill="#6B6B8A">2. Find FOR + AGAINST pairs</text>
+  <text x="1014" y="984" font-size="11" fill="#6B6B8A">3. Call execute_match with solver key</text>
+  <text x="1014" y="1000" font-size="11" fill="#6B6B8A">4. Update intent matched/remaining</text>
+  <text x="1014" y="1016" font-size="11" fill="#6B6B8A">5. Write match_pairs to DB</text>
+  <text x="1014" y="1032" font-size="11" fill="#6B6B8A">No TxLINE calls — pure on-chain</text>
+
+  <!-- remaining tables -->
+  <text x="80" y="1068" font-size="11" font-weight="600" fill="#0EA5E9" letter-spacing="1.5">NEW DB TABLES TODAY</text>
+  <rect x="80" y="1078" width="1252" height="20" rx="4" fill="#1A1A2E"/>
+  <text x="96" y="1092" font-size="11" fill="#6B6B8A">match_pairs  (pair_pda, market_pda, maker_intent, taker_intent, matched_amount, claimed)  ·  settlements  (market_pda, tx_sig, outcome, seq_used, settled_at)  ·  score_events (fixture_id, seq, action, confirmed, payload)</text>
+
+  <!-- completion -->
+  <rect x="68" y="1104" width="1264" height="2" fill="#1E1E2E"/>
+  <text x="80" y="1098" font-size="11" fill="#6B6B8A">SSE stream connects + prints events to console</text>
+  <text x="80" y="1118" font-size="11" font-weight="600" fill="#10B981" letter-spacing="1">✓ DAY 2 DONE WHEN:</text>
+  <text x="80" y="1098" font-size="11" fill="#6B6B8A">Fixture worker creates 3 markets on devnet for a real WC fixture  ·  Scores SSE prints live events to console  ·  Manual settlement test passes with historical fixtureId 18172489</text>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- DAY 3 -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <rect x="48" y="1130" width="1304" height="380" rx="12" fill="#13131F" filter="url(#shadow)"/>
+  <rect x="48" y="1130" width="1304" height="380" rx="12" fill="none" stroke="#2D2D4E" stroke-width="1"/>
+  <rect x="48" y="1130" width="6" height="380" rx="3" fill="#10B981"/>
+
+  <rect x="68" y="1148" width="68" height="26" rx="13" fill="#10B98120"/>
+  <text x="102" y="1166" text-anchor="middle" font-size="12" font-weight="700" fill="#10B981">DAY 3</text>
+  <text x="152" y="1166" font-size="18" font-weight="700" fill="#FFFFFF">REST API + Indexer + End-to-End Test</text>
+  <text x="152" y="1188" font-size="12" fill="#6B6B8A">Objective: Frontend can read markets, place a bet, and see it matched. Full on-chain flow tested end-to-end.</text>
+
+  <line x1="68" y1="1202" x2="1332" y2="1202" stroke="#1E1E2E" stroke-width="1"/>
+
+  <text x="80" y="1226" font-size="11" font-weight="600" fill="#10B981" letter-spacing="1.5">INDEXER SERVICE (apps/api/services/indexer.ts)</text>
+
+  <rect x="80" y="1236" width="580" height="88" rx="6" fill="#1A1A2E"/>
+  <text x="96" y="1258" font-size="12" font-weight="600" fill="#FFFFFF">What it watches: connection.onLogs(yourProgramId)</text>
+  <text x="96" y="1278" font-size="11" fill="#6B6B8A">MarketCreated  → upsert markets row in DB</text>
+  <text x="96" y="1294" font-size="11" fill="#6B6B8A">IntentPlaced   → upsert intents row · update market.total_for / total_against</text>
+  <text x="96" y="1310" font-size="11" fill="#6B6B8A">MatchExecuted  → upsert match_pairs · update intent matched/remaining</text>
+  <text x="96" y="1326" font-size="11" fill="#6B6B8A">TradeSettled   → update markets.status=Settled · markets.outcome</text>
+
+  <text x="692" y="1226" font-size="11" font-weight="600" fill="#10B981" letter-spacing="1.5">REST ROUTES (apps/api/routes/)</text>
+
+  <rect x="692" y="1236" width="596" height="88" rx="6" fill="#1A1A2E"/>
+  <text x="708" y="1258" font-size="12" font-weight="600" fill="#FFFFFF">GET /markets?fixtureId=X</text>
+  <text x="708" y="1276" font-size="11" fill="#6B6B8A">Returns markets from DB (no RPC calls)</text>
+  <text x="708" y="1296" font-size="12" font-weight="600" fill="#FFFFFF">GET /bets/:wallet</text>
+  <text x="708" y="1314" font-size="11" fill="#6B6B8A">User intent history · matched status · claimable winnings</text>
+
+  <!-- E2E test sequence -->
+  <text x="80" y="1356" font-size="11" font-weight="600" fill="#10B981" letter-spacing="1.5">END-TO-END TEST SEQUENCE (day 3 afternoon)</text>
+
+  <rect x="80" y="1366" width="1252" height="110" rx="6" fill="#0D1A15"/>
+  <rect x="80" y="1366" width="1252" height="110" rx="6" fill="none" stroke="#10B98130" stroke-width="1"/>
+
+  <!-- sequence flow -->
+  <rect x="104" y="1386" width="140" height="36" rx="6" fill="#10B98120"/>
+  <text x="174" y="1400" text-anchor="middle" font-size="11" fill="#10B981" font-weight="600">1. create_market</text>
+  <text x="174" y="1416" text-anchor="middle" font-size="10" fill="#6B9E8A">Brazil vs Japan</text>
+
+  <text x="252" y="1410" font-size="16" fill="#2D4D3A">→</text>
+
+  <rect x="266" y="1386" width="140" height="36" rx="6" fill="#10B98120"/>
+  <text x="336" y="1400" text-anchor="middle" font-size="11" fill="#10B981" font-weight="600">2. place_intent</text>
+  <text x="336" y="1416" text-anchor="middle" font-size="10" fill="#6B9E8A">Wallet A: FOR 0.5 SOL</text>
+
+  <text x="414" y="1410" font-size="16" fill="#2D4D3A">→</text>
+
+  <rect x="428" y="1386" width="140" height="36" rx="6" fill="#10B98120"/>
+  <text x="498" y="1400" text-anchor="middle" font-size="11" fill="#10B981" font-weight="600">3. place_intent</text>
+  <text x="498" y="1416" text-anchor="middle" font-size="10" fill="#6B9E8A">Wallet B: AGAINST 0.5 SOL</text>
+
+  <text x="576" y="1410" font-size="16" fill="#2D4D3A">→</text>
+
+  <rect x="590" y="1386" width="140" height="36" rx="6" fill="#10B98120"/>
+  <text x="660" y="1400" text-anchor="middle" font-size="11" fill="#10B981" font-weight="600">4. execute_match</text>
+  <text x="660" y="1416" text-anchor="middle" font-size="10" fill="#6B9E8A">solver pairs them</text>
+
+  <text x="738" y="1410" font-size="16" fill="#2D4D3A">→</text>
+
+  <rect x="752" y="1386" width="140" height="36" rx="6" fill="#6366F120"/>
+  <text x="822" y="1400" text-anchor="middle" font-size="11" fill="#6366F1" font-weight="600">5. settle_market</text>
+  <text x="822" y="1416" text-anchor="middle" font-size="10" fill="#7878CC">historical proof #18172489</text>
+
+  <text x="900" y="1410" font-size="16" fill="#2D4D3A">→</text>
+
+  <rect x="914" y="1386" width="140" height="36" rx="6" fill="#F59E0B20"/>
+  <text x="984" y="1400" text-anchor="middle" font-size="11" fill="#F59E0B" font-weight="600">6. claim_winnings</text>
+  <text x="984" y="1416" text-anchor="middle" font-size="10" fill="#A07830">Wallet A reveals + claims</text>
+
+  <text x="1062" y="1410" font-size="16" fill="#2D4D3A">→</text>
+
+  <rect x="1076" y="1386" width="140" height="36" rx="6" fill="#10B98120"/>
+  <text x="1146" y="1400" text-anchor="middle" font-size="11" fill="#10B981" font-weight="600">7. verify SOL</text>
+  <text x="1146" y="1416" text-anchor="middle" font-size="10" fill="#6B9E8A">Wallet A balance up</text>
+
+  <text x="104" y="1462" font-size="11" fill="#4A6B5A">Use fixtureId 18172489 (Brazil vs Japan, June 29 — in historical window). This is your demo fixture. Run this test 3 times until it's rock solid.</text>
+
+  <!-- completion -->
+  <rect x="68" y="1496" width="1264" height="2" fill="#1E1E2E"/>
+  <text x="80" y="1516" font-size="11" font-weight="600" fill="#10B981" letter-spacing="1">✓ DAY 3 DONE WHEN:</text>
+  <text x="80" y="1496" font-size="11" fill="#6B6B8A">Full E2E sequence above completes in a script  ·  GET /markets returns real market data  ·  DB shows correct settled outcome</text>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- DAY 4 -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <rect x="48" y="1530" width="1304" height="440" rx="12" fill="#13131F" filter="url(#shadow)"/>
+  <rect x="48" y="1530" width="1304" height="440" rx="12" fill="none" stroke="#2D2D4E" stroke-width="1"/>
+  <rect x="48" y="1530" width="6" height="440" rx="3" fill="#F59E0B"/>
+
+  <rect x="68" y="1548" width="68" height="26" rx="13" fill="#F59E0B20"/>
+  <text x="102" y="1566" text-anchor="middle" font-size="12" font-weight="700" fill="#F59E0B">DAY 4</text>
+  <text x="152" y="1566" font-size="18" font-weight="700" fill="#FFFFFF">Frontend — Core UI (4 screens)</text>
+  <text x="152" y="1588" font-size="12" fill="#6B6B8A">Objective: Working web app. User can connect wallet, browse markets, place a bet, watch live events, claim winnings.</text>
+
+  <line x1="68" y1="1602" x2="1332" y2="1602" stroke="#1E1E2E" stroke-width="1"/>
+
+  <text x="80" y="1626" font-size="11" font-weight="600" fill="#F59E0B" letter-spacing="1.5">4 SCREENS — NOTHING ELSE</text>
+
+  <!-- Screen 1 -->
+  <rect x="80" y="1636" width="290" height="220" rx="8" fill="#1A1A2E"/>
+  <rect x="80" y="1636" width="290" height="32" rx="8" fill="#F59E0B18"/>
+  <text x="96" y="1657" font-size="12" font-weight="600" fill="#F59E0B">Screen 1 · /markets</text>
+
+  <!-- mini wireframe -->
+  <rect x="96" y="1674" width="258" height="16" rx="3" fill="#2A2A3E"/>
+  <rect x="96" y="1696" width="258" height="50" rx="3" fill="#1E1E2E"/>
+  <rect x="108" y="1704" width="80" height="8" rx="2" fill="#3A3A5E"/>
+  <rect x="108" y="1716" width="120" height="8" rx="2" fill="#2A2A4E"/>
+  <rect x="290" y="1704" width="52" height="20" rx="4" fill="#F59E0B30"/>
+  <text x="316" y="1717" text-anchor="middle" font-size="9" fill="#F59E0B">Bet</text>
+  <rect x="96" y="1752" width="258" height="50" rx="3" fill="#1E1E2E"/>
+  <rect x="108" y="1760" width="80" height="8" rx="2" fill="#3A3A5E"/>
+  <rect x="108" y="1772" width="120" height="8" rx="2" fill="#2A2A4E"/>
+  <rect x="290" y="1760" width="52" height="20" rx="4" fill="#F59E0B30"/>
+  <text x="316" y="1773" text-anchor="middle" font-size="9" fill="#F59E0B">Bet</text>
+
+  <text x="96" y="1824" font-size="11" fill="#6B6B8A">Reads from GET /markets</text>
+  <text x="96" y="1840" font-size="11" fill="#6B6B8A">Shows odds from snapshot</text>
+  <text x="96" y="1856" font-size="11" fill="#6B6B8A">Links to match page</text>
+
+  <!-- Screen 2 -->
+  <rect x="386" y="1636" width="290" height="220" rx="8" fill="#1A1A2E"/>
+  <rect x="386" y="1636" width="290" height="32" rx="8" fill="#F59E0B18"/>
+  <text x="402" y="1657" font-size="12" font-weight="600" fill="#F59E0B">Screen 2 · /match/[id]</text>
+
+  <!-- mini wireframe -->
+  <rect x="402" y="1674" width="258" height="24" rx="3" fill="#2A2A3E"/>
+  <text x="416" y="1690" font-size="10" fill="#6B6B8A">Brazil 2 — 1 Japan  · 67'</text>
+  <rect x="402" y="1704" width="120" height="8" rx="2" fill="#0EA5E930"/>
+  <rect x="538" y="1704" width="118" height="8" rx="2" fill="#EF444430"/>
+  <rect x="402" y="1718" width="258" height="40" rx="3" fill="#1E1E2E"/>
+  <text x="416" y="1736" font-size="10" fill="#6B6B8A">⚡ Possible goal detected</text>
+  <text x="416" y="1750" font-size="9" fill="#4A4A6A">Confirmed: false — waiting...</text>
+  <rect x="402" y="1764" width="258" height="50" rx="3" fill="#1E1E2E"/>
+  <text x="416" y="1784" font-size="10" fill="#A0A0C0">Will Brazil win?</text>
+  <rect x="402" y="1795" width="120" height="14" rx="3" fill="#10B98130"/>
+  <text x="462" y="1805" text-anchor="middle" font-size="9" fill="#10B981">FOR 0.5 SOL</text>
+  <rect x="530" y="1795" width="130" height="14" rx="3" fill="#EF444430"/>
+  <text x="595" y="1805" text-anchor="middle" font-size="9" fill="#EF4444">AGAINST 0.5 SOL</text>
+
+  <text x="402" y="1824" font-size="11" fill="#6B6B8A">Live possession bar (WebSocket)</text>
+  <text x="402" y="1840" font-size="11" fill="#6B6B8A">Unconfirmed goal alert</text>
+  <text x="402" y="1856" font-size="11" fill="#6B6B8A">Bet modal: side + amount + sign</text>
+
+  <!-- Screen 3 -->
+  <rect x="692" y="1636" width="290" height="220" rx="8" fill="#1A1A2E"/>
+  <rect x="692" y="1636" width="290" height="32" rx="8" fill="#F59E0B18"/>
+  <text x="708" y="1657" font-size="12" font-weight="600" fill="#F59E0B">Screen 3 · /bets</text>
+
+  <rect x="708" y="1674" width="258" height="50" rx="3" fill="#1E1E2E"/>
+  <text x="724" y="1694" font-size="10" fill="#A0A0C0">Brazil vs Japan — Home Win</text>
+  <text x="724" y="1710" font-size="10" fill="#10B981">WON · 0.5 SOL</text>
+  <rect x="900" y="1680" width="58" height="20" rx="4" fill="#10B98130"/>
+  <text x="929" y="1694" text-anchor="middle" font-size="9" fill="#10B981">Claim</text>
+  <rect x="708" y="1730" width="258" height="50" rx="3" fill="#1E1E2E"/>
+  <text x="724" y="1750" font-size="10" fill="#A0A0C0">Germany vs Paraguay — Over 2.5</text>
+  <text x="724" y="1766" font-size="10" fill="#6B6B8A">Pending match</text>
+  <text x="708" y="1800" font-size="11" fill="#6B6B8A">Reads from GET /bets/:wallet</text>
+  <text x="708" y="1816" font-size="11" fill="#6B6B8A">Claim button calls claim_winnings</text>
+  <text x="708" y="1832" font-size="11" fill="#6B6B8A">Shows matched vs unmatched</text>
+
+  <!-- Screen 4: demo mode -->
+  <rect x="998" y="1636" width="290" height="220" rx="8" fill="#1E1830"/>
+  <rect x="998" y="1636" width="290" height="220" rx="8" fill="none" stroke="#6366F140" stroke-width="1"/>
+  <rect x="998" y="1636" width="290" height="32" rx="8" fill="#6366F118"/>
+  <text x="1014" y="1657" font-size="12" font-weight="600" fill="#6366F1">Screen 4 · Demo Mode ⭐</text>
+
+  <text x="1014" y="1686" font-size="11" fill="#6B6B8A">Critical for judge demo video</text>
+
+  <rect x="1014" y="1698" width="258" height="28" rx="6" fill="#6366F120"/>
+  <text x="1143" y="1716" text-anchor="middle" font-size="11" fill="#6366F1">🪂  Airdrop Devnet SOL</text>
+
+  <rect x="1014" y="1732" width="258" height="28" rx="6" fill="#10B98120"/>
+  <text x="1143" y="1750" text-anchor="middle" font-size="11" fill="#10B981">▶  Replay Brazil vs Japan</text>
+
+  <text x="1014" y="1780" font-size="11" fill="#6B6B8A">Replay uses historical endpoint</text>
+  <text x="1014" y="1796" font-size="11" fill="#6B6B8A">Shows full: bet → settle → claim</text>
+  <text x="1014" y="1812" font-size="11" fill="#6B6B8A">fixtureId: 18172489</text>
+  <text x="1014" y="1828" font-size="11" fill="#F59E0B">TxLINE: /api/scores/historical/</text>
+  <text x="1014" y="1844" font-size="11" fill="#F59E0B">No live match needed</text>
+
+  <!-- completion -->
+  <rect x="68" y="1882" width="1264" height="2" fill="#1E1E2E"/>
+  <text x="80" y="1900" font-size="11" font-weight="600" fill="#10B981" letter-spacing="1">✓ DAY 4 DONE WHEN:</text>
+  <text x="80" y="1882" font-size="11" fill="#6B6B8A">All 4 screens render real data  ·  Wallet connects + signs place_intent successfully  ·  Demo replay mode runs full flow end-to-end in browser</text>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- DAY 5 -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <rect x="48" y="1990" width="1304" height="420" rx="12" fill="#13131F" filter="url(#shadow)"/>
+  <rect x="48" y="1990" width="1304" height="420" rx="12" fill="none" stroke="#2D2D4E" stroke-width="1"/>
+  <rect x="48" y="1990" width="6" height="420" rx="3" fill="#EF4444"/>
+
+  <rect x="68" y="2008" width="68" height="26" rx="13" fill="#EF444420"/>
+  <text x="102" y="2026" text-anchor="middle" font-size="12" font-weight="700" fill="#EF4444">DAY 5</text>
+  <text x="152" y="2026" font-size="18" font-weight="700" fill="#FFFFFF">Deploy + Demo Video + Submit</text>
+  <text x="152" y="2048" font-size="12" fill="#6B6B8A">Objective: Deployed, recorded, submitted. This day is non-negotiable — reserve the full day.</text>
+
+  <line x1="68" y1="2062" x2="1332" y2="2062" stroke="#1E1E2E" stroke-width="1"/>
+
+  <!-- Morning -->
+  <text x="80" y="2086" font-size="11" font-weight="600" fill="#EF4444" letter-spacing="1.5">MORNING · DEPLOY</text>
+
+  <rect x="80" y="2096" width="580" height="100" rx="6" fill="#1A1A2E"/>
+  <text x="96" y="2118" font-size="12" font-weight="600" fill="#FFFFFF">Infrastructure</text>
+  <text x="96" y="2138" font-size="11" fill="#6B6B8A">· apps/web  → Vercel (one command: vercel --prod)</text>
+  <text x="96" y="2154" font-size="11" fill="#6B6B8A">· apps/api   → Railway (connect GitHub, set env vars)</text>
+  <text x="96" y="2170" font-size="11" fill="#6B6B8A">· Anchor program → already on devnet from Day 1</text>
+  <text x="96" y="2186" font-size="11" fill="#F59E0B">· Verify TXLINE_JWT + TXLINE_API_TOKEN in Railway env</text>
+
+  <rect x="692" y="2096" width="596" height="100" rx="6" fill="#1A1A2E"/>
+  <text x="708" y="2118" font-size="12" font-weight="600" fill="#FFFFFF">README — required by submission</text>
+  <text x="708" y="2138" font-size="11" fill="#6B6B8A">· Architecture overview (one paragraph)</text>
+  <text x="708" y="2154" font-size="11" fill="#6B6B8A">· TxLINE endpoints used (list every one)</text>
+  <text x="708" y="2170" font-size="11" fill="#6B6B8A">· Local setup: bun install → bun dev (under 5 commands)</text>
+  <text x="708" y="2186" font-size="11" fill="#6B6B8A">· API feedback section (required field)</text>
+
+  <!-- Demo video script -->
+  <text x="80" y="2222" font-size="11" font-weight="600" fill="#EF4444" letter-spacing="1.5">AFTERNOON · DEMO VIDEO (max 5 min)</text>
+
+  <rect x="80" y="2232" width="1252" height="140" rx="6" fill="#1A0A0A"/>
+  <rect x="80" y="2232" width="1252" height="140" rx="6" fill="none" stroke="#EF444430" stroke-width="1"/>
+
+  <rect x="104" y="2252" width="180" height="100" rx="6" fill="#1E1010"/>
+  <text x="194" y="2272" text-anchor="middle" font-size="11" font-weight="600" fill="#EF4444">0:00 — 0:30</text>
+  <text x="194" y="2292" text-anchor="middle" font-size="11" fill="#A07878">Hook</text>
+  <text x="194" y="2308" text-anchor="middle" font-size="10" fill="#7A5A5A">"Every bet on-chain</text>
+  <text x="194" y="2322" text-anchor="middle" font-size="10" fill="#7A5A5A">is public. Ours aren't."</text>
+  <text x="194" y="2338" text-anchor="middle" font-size="10" fill="#7A5A5A">Show commitment hash</text>
+
+  <rect x="300" y="2252" width="180" height="100" rx="6" fill="#1E1010"/>
+  <text x="390" y="2272" text-anchor="middle" font-size="11" font-weight="600" fill="#EF4444">0:30 — 2:00</text>
+  <text x="390" y="2292" text-anchor="middle" font-size="11" fill="#A07878">Live Demo</text>
+  <text x="390" y="2308" text-anchor="middle" font-size="10" fill="#7A5A5A">Browse markets</text>
+  <text x="390" y="2322" text-anchor="middle" font-size="10" fill="#7A5A5A">Place bet (sign tx)</text>
+  <text x="390" y="2338" text-anchor="middle" font-size="10" fill="#7A5A5A">Watch possession bar</text>
+
+  <rect x="496" y="2252" width="180" height="100" rx="6" fill="#1E1010"/>
+  <text x="586" y="2272" text-anchor="middle" font-size="11" font-weight="600" fill="#EF4444">2:00 — 3:00</text>
+  <text x="586" y="2292" text-anchor="middle" font-size="11" fill="#A07878">Settlement</text>
+  <text x="586" y="2308" text-anchor="middle" font-size="10" fill="#7A5A5A">Replay historical match</text>
+  <text x="586" y="2322" text-anchor="middle" font-size="10" fill="#7A5A5A">Show CPI call on Solscan</text>
+  <text x="586" y="2338" text-anchor="middle" font-size="10" fill="#7A5A5A">Outcome recorded on-chain</text>
+
+  <rect x="692" y="2252" width="180" height="100" rx="6" fill="#1E1010"/>
+  <text x="782" y="2272" text-anchor="middle" font-size="11" font-weight="600" fill="#EF4444">3:00 — 4:00</text>
+  <text x="782" y="2292" text-anchor="middle" font-size="11" fill="#A07878">Claim</text>
+  <text x="782" y="2308" text-anchor="middle" font-size="10" fill="#7A5A5A">Reveal prediction</text>
+  <text x="782" y="2322" text-anchor="middle" font-size="10" fill="#7A5A5A">SOL transfers to winner</text>
+  <text x="782" y="2338" text-anchor="middle" font-size="10" fill="#7A5A5A">Balance shown in UI</text>
+
+  <rect x="888" y="2252" width="420" height="100" rx="6" fill="#1E1010"/>
+  <text x="1098" y="2272" text-anchor="middle" font-size="11" font-weight="600" fill="#EF4444">4:00 — 5:00</text>
+  <text x="1098" y="2292" text-anchor="middle" font-size="11" fill="#A07878">Architecture Close</text>
+  <text x="1098" y="2308" text-anchor="middle" font-size="10" fill="#7A5A5A">30 seconds: diagram of TxLINE → CPI → Anchor</text>
+  <text x="1098" y="2324" text-anchor="middle" font-size="10" fill="#7A5A5A">List endpoints used on screen</text>
+  <text x="1098" y="2340" text-anchor="middle" font-size="10" fill="#7A5A5A">Deployed URL visible throughout</text>
+
+  <!-- completion -->
+  <rect x="68" y="2388" width="1264" height="2" fill="#1E1E2E"/>
+  <text x="80" y="2406" font-size="11" font-weight="600" fill="#10B981" letter-spacing="1">✓ DAY 5 DONE WHEN:</text>
+  <text x="80" y="2388" font-size="11" fill="#6B6B8A">App live on Vercel URL  ·  Video uploaded to Loom/YouTube  ·  GitHub repo public  ·  Superteam Earn submission complete</text>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <!-- BOTTOM: API REFERENCE + FEATURE TABLE -->
+  <!-- ══════════════════════════════════════════════════════════════════════════ -->
+  <rect x="48" y="2430" width="1304" height="330" rx="12" fill="#0D0D18" filter="url(#shadow)"/>
+  <rect x="48" y="2430" width="1304" height="330" rx="12" fill="none" stroke="#2D2D4E" stroke-width="1"/>
+
+  <text x="80" y="2462" font-size="14" font-weight="700" fill="#FFFFFF">TxLINE Endpoint Map by Day</text>
+
+  <!-- table header -->
+  <rect x="80" y="2472" width="1240" height="28" rx="4" fill="#1A1A2E"/>
+  <text x="96" y="2491" font-size="11" font-weight="600" fill="#6B6B8A">ENDPOINT</text>
+  <text x="440" y="2491" font-size="11" font-weight="600" fill="#6B6B8A">SERVICE</text>
+  <text x="640" y="2491" font-size="11" font-weight="600" fill="#6B6B8A">DAY USED</text>
+  <text x="800" y="2491" font-size="11" font-weight="600" fill="#6B6B8A">MVP REQUIRED</text>
+  <text x="960" y="2491" font-size="11" font-weight="600" fill="#6B6B8A">WHEN / TRIGGER</text>
+
+  <!-- rows -->
+  <line x1="80" y1="2502" x2="1320" y2="2502" stroke="#1E1E2E" stroke-width="1"/>
+  <text x="96" y="2520" font-size="11" font-family="monospace" fill="#A0C0FF">GET /api/fixtures/snapshot</text>
+  <text x="440" y="2520" font-size="11" fill="#A0A0C0">FixtureService</text>
+  <text x="640" y="2520" font-size="11" fill="#0EA5E9">Day 2</text>
+  <rect x="800" y="2508" width="60" height="18" rx="9" fill="#10B98120"/>
+  <text x="830" y="2521" text-anchor="middle" font-size="10" fill="#10B981">YES</text>
+  <text x="960" y="2520" font-size="11" fill="#6B6B8A">Startup + every 15 min (polling)</text>
+
+  <line x1="80" y1="2530" x2="1320" y2="2530" stroke="#1E1E2E" stroke-width="1"/>
+  <text x="96" y="2548" font-size="11" font-family="monospace" fill="#A0C0FF">GET /api/scores/stream</text>
+  <text x="440" y="2548" font-size="11" fill="#A0A0C0">ScoresService</text>
+  <text x="640" y="2548" font-size="11" fill="#0EA5E9">Day 2</text>
+  <rect x="800" y="2536" width="60" height="18" rx="9" fill="#10B98120"/>
+  <text x="830" y="2549" text-anchor="middle" font-size="10" fill="#10B981">YES</text>
+  <text x="960" y="2548" font-size="11" fill="#6B6B8A">Continuous SSE · reconnect on drop</text>
+
+  <line x1="80" y1="2558" x2="1320" y2="2558" stroke="#1E1E2E" stroke-width="1"/>
+  <text x="96" y="2576" font-size="11" font-family="monospace" fill="#A0C0FF">GET /api/scores/stat-validation</text>
+  <text x="440" y="2576" font-size="11" fill="#A0A0C0">SettlementService</text>
+  <text x="640" y="2576" font-size="11" fill="#0EA5E9">Day 2</text>
+  <rect x="800" y="2564" width="60" height="18" rx="9" fill="#10B98120"/>
+  <text x="830" y="2577" text-anchor="middle" font-size="10" fill="#10B981">YES</text>
+  <text x="960" y="2576" font-size="11" fill="#6B6B8A">On StatusId 5/10/13 per market</text>
+
+  <line x1="80" y1="2586" x2="1320" y2="2586" stroke="#1E1E2E" stroke-width="1"/>
+  <text x="96" y="2604" font-size="11" font-family="monospace" fill="#A0C0FF">GET /api/scores/historical/:id</text>
+  <text x="440" y="2604" font-size="11" fill="#A0A0C0">ScoresService</text>
+  <text x="640" y="2604" font-size="11" fill="#EF4444">Day 5</text>
+  <rect x="800" y="2592" width="90" height="18" rx="9" fill="#F59E0B20"/>
+  <text x="845" y="2605" text-anchor="middle" font-size="10" fill="#F59E0B">DEMO ONLY</text>
+  <text x="960" y="2604" font-size="11" fill="#6B6B8A">Replay mode · fixtureId 18172489</text>
+
+  <line x1="80" y1="2614" x2="1320" y2="2614" stroke="#1E1E2E" stroke-width="1"/>
+  <text x="96" y="2632" font-size="11" font-family="monospace" fill="#A0C0FF">GET /api/odds/snapshot/:id</text>
+  <text x="440" y="2632" font-size="11" fill="#A0A0C0">OddsService</text>
+  <text x="640" y="2632" font-size="11" fill="#F59E0B">Day 4</text>
+  <rect x="800" y="2620" width="80" height="18" rx="9" fill="#6B6B8A20"/>
+  <text x="840" y="2633" text-anchor="middle" font-size="10" fill="#6B6B8A">DISPLAY</text>
+  <text x="960" y="2632" font-size="11" fill="#6B6B8A">Once per market open · display only</text>
+
+  <line x1="80" y1="2642" x2="1320" y2="2642" stroke="#1E1E2E" stroke-width="1"/>
+  <text x="96" y="2660" font-size="11" font-family="monospace" fill="#6B6B8A">POST /auth/guest/start</text>
+  <text x="440" y="2660" font-size="11" fill="#6B6B8A">Auth</text>
+  <text x="640" y="2660" font-size="11" fill="#6366F1">Day 1</text>
+  <rect x="800" y="2648" width="60" height="18" rx="9" fill="#10B98120"/>
+  <text x="830" y="2661" text-anchor="middle" font-size="10" fill="#10B981">YES</text>
+  <text x="960" y="2660" font-size="11" fill="#6B6B8A">Already done ✓</text>
+
+  <!-- footer note -->
+  <text x="80" y="2720" font-size="11" fill="#3A3A5A">Endpoints NOT needed for MVP: /fixtures/updates · /fixtures/validation · /odds/stream · /odds/updates · /scores/updates (time window) · Batch validation</text>
+
+  <!-- branding footer -->
+  <text x="700" y="2776" text-anchor="middle" font-size="11" fill="#2A2A4A">GOALANA · TxLINE World Cup Hackathon 2026 · Submission Deadline July 19 23:59 UTC</text>
+</svg>

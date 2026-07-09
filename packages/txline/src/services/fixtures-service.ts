@@ -1,13 +1,13 @@
 import { txlineClient } from "../client"
 
-const COMPETITION_ID = 72;
+const WORLD_CUP_COMPETITION_ID = 72;
 
 export class FixtureService {
     // 1. Get the latest snapshot of fixtures, optionally starting at or within 30 days after a given epoch day
     async getFixtureSnapshot(startEpochDay?: number, CompetitionId?: number) {
         try {
             const query = new URLSearchParams();
-            query.append("competitionId", (CompetitionId || COMPETITION_ID).toString());
+            query.append("competitionId", (CompetitionId || WORLD_CUP_COMPETITION_ID).toString());
             if (startEpochDay != null) query.append("startEpochDay", startEpochDay.toString());
             const { data } = await txlineClient.get(`/fixtures/snapshot?${query.toString()}`);
             return data;
