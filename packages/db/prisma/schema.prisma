@@ -41,3 +41,25 @@ model TxlineToken {
 
   @@map("txline_tokens")
 }
+
+model Fixture {
+  /// TxODDS canonical fixture ID (int64 — stored as BigInt)
+  fixtureId        BigInt   @id @map("fixture_id")
+  /// Unix timestamp (ms) of when this snapshot was recorded
+  ts               BigInt   @map("ts")
+  /// Unix timestamp (ms) of the fixture start time
+  startTime        BigInt   @map("start_time")
+  competition      String   @map("competition")
+  competitionId    Int      @map("competition_id")
+  fixtureGroupId   Int      @map("fixture_group_id")
+  participant1Id   Int      @map("participant1_id")
+  participant1     String   @map("participant1")
+  participant2Id   Int      @map("participant2_id")
+  participant2     String   @map("participant2")
+  participant1IsHome Boolean @map("participant1_is_home")
+  /// Integer game state code (e.g. 1 = scheduled). Not in OpenAPI spec but present in responses.
+  gameState        Int?     @map("game_state")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("fixtures")
+}

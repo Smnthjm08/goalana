@@ -1,5 +1,5 @@
 import { txlineClient } from "../client";
-import type { OddsPayload, OddsValidation } from "../types";
+import type { OddsPayload, OddsValidation } from "../types/index";
 import type { Readable } from "stream";
 
 export class OddsService {

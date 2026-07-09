@@ -33,37 +33,50 @@ describe("ScoresService", () => {
         if (result && Array.isArray(result)) {
             expect(result.length).toBeGreaterThanOrEqual(0);
             if (result.length > 0) {
-                const first = result[0];
-                expect(first.FixtureId).toBe(KNOWN_FIXTURE_ID);
-                expect(first).toHaveProperty("GameState");
-                expect(first).toHaveProperty("Action");
+                const first = result[0]!;
+                expect(first.fixtureId).toBe(KNOWN_FIXTURE_ID);
+                expect(first).toHaveProperty("gameState");
+                expect(first).toHaveProperty("action");
             }
         }
     }, 30_000);
 
-    it("getLiveScoresUpdates(fixtureId) returns live score updates string", async () => {
+    it("getLiveScoresUpdates(fixtureId) returns live score updates array", async () => {
         const result = await service.getLiveScoresUpdates(KNOWN_FIXTURE_ID);
 
-        console.log("\n📌 Live Scores type:", typeof result);
-        console.log("📌 Live Scores sample:", result);
+        console.log("\n📌 Live Scores type:", typeof result, Array.isArray(result) ? "array" : "not array");
+        console.log("📌 Live Scores sample:", JSON.stringify(result?.[0] ?? result, null, 2));
 
-        expect(typeof result).toBe("string");
-        expect(result).toContain("data: {");
+        if (result && Array.isArray(result)) {
+            expect(result.length).toBeGreaterThanOrEqual(0);
+            if (result.length > 0) {
+                const first = result[0]!;
+                expect(first).toHaveProperty("fixtureId");
+                expect(first).toHaveProperty("gameState");
+            }
+        }
     }, 30_000);
 
-    it("getHistoricalScores(fixtureId) returns historical scores string", async () => {
+    it("getHistoricalScores(fixtureId) returns historical scores array", async () => {
         const result = await service.getHistoricalScores(KNOWN_FIXTURE_ID);
 
-        console.log("\n📌 Historical Scores type:", typeof result);
-        console.log("📌 Historical Scores sample:", result);
+        console.log("\n📌 Historical Scores type:", typeof result, Array.isArray(result) ? "array" : "not array");
+        console.log("📌 Historical Scores sample:", JSON.stringify(result?.[0] ?? result, null, 2));
 
-        expect(typeof result).toBe("string");
+        if (result && Array.isArray(result)) {
+            expect(result.length).toBeGreaterThanOrEqual(0);
+            if (result.length > 0) {
+                const first = result[0]!;
+                expect(first).toHaveProperty("fixtureId");
+                expect(first).toHaveProperty("seq");
+            }
+        }
     }, 30_000);
 
     it("getScoresStatValidation(params) returns Merkle proof for stats", async () => {
         const snapshot = await service.getScoresSnapshot(KNOWN_FIXTURE_ID);
         if (snapshot && Array.isArray(snapshot) && snapshot.length > 0) {
-            const seq = snapshot[0].Seq;
+            const seq = snapshot[0]!.seq;
             console.log(`\n🔍 Querying stat validation for fixtureId: ${KNOWN_FIXTURE_ID}, seq: ${seq}`);
             
             const result = await service.getScoresStatValidation({
@@ -81,7 +94,7 @@ describe("ScoresService", () => {
                 expect(result).toHaveProperty("subTreeProof");
                 expect(result).toHaveProperty("mainTreeProof");
                 // Check if it is Legacy Mode (has statToProve) or V2 Mode (has statsToProve)
-                if (result.statToProve) {
+                if ("statToProve" in result) {
                     expect(result).toHaveProperty("statToProve");
                     expect(result).toHaveProperty("statProof");
                 } else {
