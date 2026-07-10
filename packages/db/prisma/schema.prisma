@@ -13,13 +13,13 @@ datasource db {
 }
 
 model User {
-  id             String   @id @default(uuid())
-  walletAddress  String   @unique
-  displayName    String?
-  totalWagered   BigInt   @default(0)
-  totalWon       BigInt   @default(0)
-  createdAt      DateTime @default(now())
-  lastLoggedInAt DateTime @updatedAt
+  id            String    @id @default(uuid())
+  walletAddress String    @unique
+  displayName   String?
+  totalWagered  BigInt    @default(0)
+  totalWon      BigInt    @default(0)
+  createdAt     DateTime  @default(now())
+  lastActiveAt  DateTime?
 
   @@map("users")
 }
@@ -29,37 +29,116 @@ enum Network {
   DEVNET
 }
 
-model TxlineToken {
-  id                    String   @id @default(uuid())
-  network               Network  @default(DEVNET)
-  jwt                   String   @unique
-  apiToken              String   @unique
-  jwtExpiresAt          DateTime
-  subscriptionExpiresAt DateTime
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  @@map("txline_tokens")
-}
-
 model Fixture {
   /// TxODDS canonical fixture ID (int64 — stored as BigInt)
-  fixtureId        BigInt   @id @map("fixture_id")
+  fixtureId          BigInt   @id @map("fixture_id")
   /// Unix timestamp (ms) of when this snapshot was recorded
-  ts               BigInt   @map("ts")
+  ts                 BigInt   @map("ts")
   /// Unix timestamp (ms) of the fixture start time
-  startTime        BigInt   @map("start_time")
-  competition      String   @map("competition")
-  competitionId    Int      @map("competition_id")
-  fixtureGroupId   Int      @map("fixture_group_id")
-  participant1Id   Int      @map("participant1_id")
-  participant1     String   @map("participant1")
-  participant2Id   Int      @map("participant2_id")
-  participant2     String   @map("participant2")
-  participant1IsHome Boolean @map("participant1_is_home")
+  startTime          BigInt   @map("start_time")
+  competition        String   @map("competition")
+  competitionId      Int      @map("competition_id")
+  fixtureGroupId     Int      @map("fixture_group_id")
+  participant1Id     Int      @map("participant1_id")
+  participant1       String   @map("participant1")
+  participant2Id     Int      @map("participant2_id")
+  participant2       String   @map("participant2")
+  participant1IsHome Boolean  @map("participant1_is_home")
   /// Integer game state code (e.g. 1 = scheduled). Not in OpenAPI spec but present in responses.
-  gameState        Int?     @map("game_state")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  gameState          Int?     @map("game_state")
+  finalSeq           Int?     @map("final_seq")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  odds          Odds[]
+  matchEvents   MatchEvent[]
+  oddsHistories OddsHistory[]
 
   @@map("fixtures")
+}
+
+model Odds {
+  id String @id @default(cuid())
+
+  fixtureId BigInt
+  fixture   Fixture @relation(fields: [fixtureId], references: [fixtureId])
+
+  messageId String
+
+  ts BigInt
+
+  bookmaker   String
+  bookmakerId Int
+
+  superOddsType String
+
+  marketParameters String?
+  marketPeriod     String?
+
+  inRunning Boolean
+  gameState String?
+
+  priceNames    Json
+  prices        Json
+  probabilities Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([fixtureId, bookmakerId, superOddsType, marketPeriod, marketParameters])
+  @@index([fixtureId])
+  @@index([superOddsType])
+}
+
+model OddsHistory {
+  id String @id @default(cuid())
+
+  fixtureId BigInt
+  fixture   Fixture @relation(fields: [fixtureId], references: [fixtureId])
+
+  messageId String @unique
+  ts        BigInt
+
+  bookmaker   String
+  bookmakerId Int
+
+  superOddsType String
+
+  marketParameters String?
+  marketPeriod     String?
+
+  inRunning Boolean
+  gameState String?
+
+  priceNames    Json
+  prices        Json
+  probabilities Json
+
+  createdAt DateTime @default(now())
+
+  @@index([fixtureId])
+  @@index([fixtureId, superOddsType])
+  @@index([ts])
+}
+
+model MatchEvent {
+  id BigInt @id @default(autoincrement())
+
+  fixtureId BigInt
+  fixture   Fixture @relation(fields: [fixtureId], references: [fixtureId])
+
+  seq Int
+
+  action String
+
+  timestamp BigInt
+
+  payload Json
+
+  processed Boolean @default(false)
+  verified  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([fixtureId, seq])
+  @@index([fixtureId])
 }
