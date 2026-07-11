@@ -13,7 +13,7 @@
  *   [x] getOddsSnapshots          → OddsPayload[]
  *   [x] getLiveOddsUpdates        → OddsPayload[]
  *   [x] getOddsIntervalUpdates    → OddsPayload[]
- *   [x] streamOddsUpdates         → Readable (emits OddsStreamEvent)
+ *   [x] streamOddsUpdates         → SSEParser (objectMode, emits SSEEvent)
  *   [x] getOddsValidation         → OddsValidation
  *
  * SCORES (scores-service.ts)
@@ -21,7 +21,7 @@
  *   [x] getScoresUpdates          → ScoresRecord[]
  *   [x] getLiveScoresUpdates      → ScoresRecord[]
  *   [x] getHistoricalScores       → ScoresRecord[]
- *   [x] streamScoresUpdates       → Readable (emits ScoresStreamEvent)
+ *   [x] streamScoresUpdates       → SSEParser (objectMode, emits SSEEvent)
  *   [x] getScoresStatValidation   → ScoresStatValidation | ScoresStatValidationV2
  */
 
@@ -29,3 +29,4 @@ export * from "./proofs";
 export * from "./fixtures";
 export * from "./odds";
 export * from "./scores";
+export * from "./stream-options";

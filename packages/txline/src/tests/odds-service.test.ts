@@ -88,30 +88,39 @@ describe("OddsService", () => {
     }, 30_000);
 
 
-    it("streamOddsUpdates(fixtureId) returns a readable SSE stream", async () => {
-        const stream = await service.streamOddsUpdates(KNOWN_FIXTURE_ID);
+    it("streamOddsUpdates(fixtureId) returns a parsed SSE event stream", async () => {
+        const ac = new AbortController();
+        const stream = await service.streamOddsUpdates(KNOWN_FIXTURE_ID, {
+            signal: ac.signal,
+            staleTimeoutMs: 15_000,
+        });
 
-        console.log("\n📌 Odds Stream type:", typeof stream);
+        console.log("\n📌 Odds Stream type:", typeof stream, "objectMode:", stream.readableObjectMode);
 
-        // The stream is a Node.js Readable; collect first chunk then destroy
-        if (stream && typeof stream.read === "function") {
-            const chunk: Buffer | null = await new Promise((resolve) => {
-                stream.once("data", (data: Buffer) => {
-                    stream.destroy();
-                    resolve(data);
-                });
-                stream.once("error", () => resolve(null));
+        // Collect the first parsed SSEEvent, then abort the stream
+        const event = await new Promise<Record<string, unknown> | null>((resolve) => {
+            stream.once("data", (evt: Record<string, unknown>) => {
+                ac.abort();
+                resolve(evt);
             });
+            stream.once("error", () => resolve(null));
+            stream.once("close", () => resolve(null));
+        });
 
-            if (chunk) {
-                const text = chunk.toString("utf-8");
-                console.log("📌 Odds Stream first chunk:", text.slice(0, 200));
-                expect(typeof text).toBe("string");
-                expect(text.length).toBeGreaterThan(0);
+        if (event) {
+            console.log("📌 Odds SSE Event:", JSON.stringify(event, null, 2));
+            // Every SSEEvent must have a data field (string)
+            expect(typeof event.data).toBe("string");
+            // It should be either a heartbeat or a parseable JSON payload
+            if (event.event === "heartbeat") {
+                console.log("📌 Received heartbeat event");
+            } else {
+                const parsed = JSON.parse(event.data as string);
+                console.log("📌 Parsed odds payload:", JSON.stringify(parsed, null, 2));
+                expect(parsed).toHaveProperty("FixtureId");
             }
         } else {
-            // Fallback: if axios returned raw text instead of a stream
-            expect(typeof stream).toBe("string");
+            console.log("⚠️ No event received (stream may have been aborted or errored)");
         }
     }, 30_000);
 });

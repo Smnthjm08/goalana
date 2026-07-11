@@ -27,22 +27,22 @@ model User {
 }
 
 model Fixture {
-  fixtureId          BigInt   @id @map("fixture_id")
-  ts                 BigInt   @map("ts")
-  startTime          BigInt   @map("start_time")
-  competition        String   @map("competition")
-  competitionId      Int      @map("competition_id")
-  fixtureGroupId     Int      @map("fixture_group_id")
-  participant1Id     Int      @map("participant1_id")
-  participant1       String   @map("participant1")
-  participant2Id     Int      @map("participant2_id")
-  participant2       String   @map("participant2")
-  participant1IsHome Boolean  @map("participant1_is_home")
-  gameState          Int?     @map("game_state")
+  fixtureId          BigInt   @id
+  ts                 BigInt
+  startTime          BigInt
+  competition        String
+  competitionId      Int
+  fixtureGroupId     Int
+  participant1Id     Int
+  participant1       String
+  participant2Id     Int
+  participant2       String
+  participant1IsHome Boolean
+  gameState          Int?
   // Set by scores.processor when StatusId IN (5, 10, 13)
   // Required by settlement.service to call getScoresStatValidation
-  finalSeq           Int?     @map("final_seq")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  finalSeq           Int?
+  updatedAt          DateTime @updatedAt
 
   odds          Odds[]
   matchEvents   MatchEvent[]
