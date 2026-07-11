@@ -1,16 +1,23 @@
 import axios from "axios";
 
-export const TXLINE_CONFIG = {
-    baseUrl: process.env.TXLINE_API_ORIGIN,
-    timeout: 30000,
-};
-
 export const txlineClient = axios.create({
-    baseURL: TXLINE_CONFIG.baseUrl,
-    timeout: TXLINE_CONFIG.timeout,
+    timeout: 30_000,
     headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.TXLINE_JWT}`,
-        "X-Api-Token": process.env.TXLINE_API_TOKEN
     },
+});
+
+// Resolve env vars lazily at request time — not at module load time.
+// This avoids the race where `import` runs before `dotenv.config()`.
+txlineClient.interceptors.request.use((config) => {
+    if (!config.baseURL) {
+        config.baseURL = process.env.TXLINE_API_ORIGIN;
+    }
+    if (!config.headers.Authorization) {
+        config.headers.Authorization = `Bearer ${process.env.TXLINE_JWT}`;
+    }
+    if (!config.headers["X-Api-Token"]) {
+        config.headers["X-Api-Token"] = process.env.TXLINE_API_TOKEN;
+    }
+    return config;
 });

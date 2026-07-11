@@ -1,11 +1,14 @@
+dotenv.config({ path: "../../.env" })
+
 import express from "express"
 import cors from "cors"
 import { prisma } from "@workspace/db";
 import { FixtureService, OddsService } from "@workspace/txline";
 import dotenv from "dotenv";
+import { startFixtureCron } from "./crons/fixtures.cron";
+import { startScoresWorker } from "./workers/scorer.worker";
 
 
-dotenv.config({ path: "../../.env" })
 
 const app = express();
 const port = process.env.BE_PORT ?? 8080
@@ -127,4 +130,6 @@ app.get("/api/odds/snapshot", async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Listening on port ${port}...`)
+  startFixtureCron();
+  // startScoresWorker();
 })
