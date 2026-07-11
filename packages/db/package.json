@@ -1,6 +1,5 @@
 {
   "name": "@workspace/db",
-
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",

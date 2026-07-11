@@ -1,3 +1,4 @@
+// scores-service.ts
 import { txlineClient } from "../client";
 import type { Readable } from "stream";
 import type { ScoresRecord, ScoresStatValidation, ScoresStatValidationV2 } from "../types/index";

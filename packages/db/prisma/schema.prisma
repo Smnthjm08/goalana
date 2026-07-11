@@ -21,20 +21,14 @@ model User {
   createdAt     DateTime  @default(now())
   lastActiveAt  DateTime?
 
+  // intents Intent[]
+
   @@map("users")
 }
 
-enum Network {
-  MAINNET
-  DEVNET
-}
-
 model Fixture {
-  /// TxODDS canonical fixture ID (int64 — stored as BigInt)
   fixtureId          BigInt   @id @map("fixture_id")
-  /// Unix timestamp (ms) of when this snapshot was recorded
   ts                 BigInt   @map("ts")
-  /// Unix timestamp (ms) of the fixture start time
   startTime          BigInt   @map("start_time")
   competition        String   @map("competition")
   competitionId      Int      @map("competition_id")
@@ -44,101 +38,111 @@ model Fixture {
   participant2Id     Int      @map("participant2_id")
   participant2       String   @map("participant2")
   participant1IsHome Boolean  @map("participant1_is_home")
-  /// Integer game state code (e.g. 1 = scheduled). Not in OpenAPI spec but present in responses.
   gameState          Int?     @map("game_state")
+  // Set by scores.processor when StatusId IN (5, 10, 13)
+  // Required by settlement.service to call getScoresStatValidation
   finalSeq           Int?     @map("final_seq")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   odds          Odds[]
   matchEvents   MatchEvent[]
   oddsHistories OddsHistory[]
+  // markets       Market[]
 
   @@map("fixtures")
 }
 
+// ─── Odds (latest market state — one row per market identity) ─────────────────
+// Upserted by: odds.processor on every SSE update
+// Used for: displaying current odds on frontend
+
 model Odds {
-  id String @id @default(cuid())
-
-  fixtureId BigInt
-  fixture   Fixture @relation(fields: [fixtureId], references: [fixtureId])
-
-  messageId String
-
-  ts BigInt
-
-  bookmaker   String
-  bookmakerId Int
-
+  id            String @id @default(cuid())
+  fixtureId     BigInt
+  messageId     String
+  ts            BigInt
+  bookmaker     String
+  bookmakerId   Int
   superOddsType String
 
-  marketParameters String?
-  marketPeriod     String?
+  marketParameters String   @default("")
+  marketPeriod     String   @default("")
+  inRunning        Boolean
+  gameState        String?
+  priceNames       Json
+  prices           Json
+  probabilities    Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  inRunning Boolean
-  gameState String?
+  fixture Fixture @relation(fields: [fixtureId], references: [fixtureId])
 
-  priceNames    Json
-  prices        Json
-  probabilities Json
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  // Composite unique: one row per market identity
+  // marketParameters and marketPeriod use "" not null so PostgreSQL
+  // unique constraint works correctly (NULL != NULL in Postgres)
   @@unique([fixtureId, bookmakerId, superOddsType, marketPeriod, marketParameters])
   @@index([fixtureId])
   @@index([superOddsType])
+  @@map("odds")
 }
 
+// ─── OddsHistory (every update — append only) ─────────────────────────────────
+// Inserted by: odds.processor on every SSE update
+// Used for: odds movement charts, historical analysis
+
 model OddsHistory {
-  id String @id @default(cuid())
+  id               String   @id @default(cuid())
+  fixtureId        BigInt
+  // messageId is unique per TxLINE update — use as idempotency key
+  messageId        String   @unique
+  ts               BigInt
+  bookmaker        String
+  bookmakerId      Int
+  superOddsType    String
+  marketParameters String   @default("")
+  marketPeriod     String   @default("")
+  inRunning        Boolean
+  gameState        String?
+  priceNames       Json
+  prices           Json
+  probabilities    Json
+  createdAt        DateTime @default(now())
 
-  fixtureId BigInt
-  fixture   Fixture @relation(fields: [fixtureId], references: [fixtureId])
-
-  messageId String @unique
-  ts        BigInt
-
-  bookmaker   String
-  bookmakerId Int
-
-  superOddsType String
-
-  marketParameters String?
-  marketPeriod     String?
-
-  inRunning Boolean
-  gameState String?
-
-  priceNames    Json
-  prices        Json
-  probabilities Json
-
-  createdAt DateTime @default(now())
+  fixture Fixture @relation(fields: [fixtureId], references: [fixtureId])
 
   @@index([fixtureId])
   @@index([fixtureId, superOddsType])
   @@index([ts])
+  @@map("odds_history")
 }
 
+// ─── MatchEvent (score events from SSE stream) ────────────────────────────────
+// Inserted/updated by: scores.processor
+// Used for: settlement trigger, UI broadcast, audit log
+
 model MatchEvent {
-  id BigInt @id @default(autoincrement())
-
+  id        BigInt @id @default(autoincrement())
   fixtureId BigInt
-  fixture   Fixture @relation(fields: [fixtureId], references: [fixtureId])
-
-  seq Int
-
-  action String
-
+  seq       Int
+  action    String
   timestamp BigInt
 
-  payload Json
+  // Adding statusId and confirmed as first-class fields
+  // because scores.processor queries these repeatedly
+  // Option B from feedback — correct choice for this project
+  statusId  Int?
+  confirmed Boolean?
 
+  payload   Json
   processed Boolean @default(false)
-  verified  Boolean @default(false)
 
   createdAt DateTime @default(now())
 
+  fixture Fixture @relation(fields: [fixtureId], references: [fixtureId])
+
   @@unique([fixtureId, seq])
   @@index([fixtureId])
+  @@index([fixtureId, action])
+  @@index([statusId])
+  @@map("match_events")
 }

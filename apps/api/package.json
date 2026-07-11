@@ -9,13 +9,14 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@workspace/db": "workspace:*",
-    "@workspace/txline": "workspace:*",
     "@coral-xyz/anchor": "^0.32.1",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
+    "@workspace/db": "workspace:*",
+    "@workspace/txline": "workspace:*",
     "axios": "^1.18.1",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "tweetnacl": "^1.0.3"
   },

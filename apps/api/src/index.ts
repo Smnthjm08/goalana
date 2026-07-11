@@ -2,12 +2,19 @@ import express from "express"
 import cors from "cors"
 import { prisma } from "@workspace/db";
 import { FixtureService, OddsService } from "@workspace/txline";
+import dotenv from "dotenv";
+
+
+dotenv.config({ path: "../../.env" })
 
 const app = express();
-const port = 8080
+const port = process.env.BE_PORT ?? 8080
+
 
 app.use(express.json());
 app.use(cors({ origin: "http://localhost:3000" }))
+
+console.log("sssss", process.env.TXLINE_ENV)
 
 app.get("/", async (req, res) => {
   res.json({ status: "healthy!" })
