@@ -18,17 +18,23 @@ pub mod goalana_program {
     pub fn create_market(
         ctx: Context<CreateMarket>,
         fixture_id: i64,
-        market_type: MarketType,
         predicate: Predicate,
-        _predicate_seed: [u8; 8],
+        predicate_hash: [u8; 32],
     ) -> Result<()> {
         instructions::create_market::handle_create_market(
             ctx,
             fixture_id,
-            market_type,
             predicate,
-            _predicate_seed,
+            predicate_hash,
         )
+    }
+
+    pub fn lock_market(ctx: Context<LockMarket>) -> Result<()> {
+        instructions::lock_market::handle_lock_market(ctx)
+    }
+
+    pub fn cancel_market(ctx: Context<CancelMarket>) -> Result<()> {
+        instructions::cancel_market::handle_cancel_market(ctx)
     }
 }
 

@@ -2,8 +2,14 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum GoalanaError {
-    #[msg("Predicate seed does not match the provided predicate.")]
-    PredicateSeedMismatch,
+    #[msg("Predicate hash does not match the provided predicate.")]
+    InvalidPredicateHash,
+
+    #[msg("Predicate structure is invalid.")]
+    InvalidPredicateStructure,
+
+    #[msg("Unauthorized market authority.")]
+    UnauthorizedMarketAuthority,
 
     #[msg("Market is not open.")]
     MarketNotOpen,

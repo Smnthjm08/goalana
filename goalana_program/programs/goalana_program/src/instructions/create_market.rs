@@ -1,12 +1,26 @@
-use crate::{Market, MarketStatus, MarketType, Predicate, Vault};
+use crate::error::GoalanaError;
+use crate::{
+    Market,
+    MarketOrigin,
+    MarketStatus,
+    Predicate,
+    ProtocolConfig,
+};
 use anchor_lang::prelude::*;
+use solana_sha256_hasher::hash;
+
+fn compute_predicate_hash(predicate: &Predicate) -> Result<[u8; 32]> {
+    let mut serialized = Vec::with_capacity(Predicate::LEN);
+    predicate.serialize(&mut serialized)?;
+
+    Ok(hash(&serialized).to_bytes())
+}
 
 #[derive(Accounts)]
 #[instruction(
     fixture_id: i64,
-    market_type: MarketType,
     predicate: Predicate,
-    predicate_seed: [u8; 8],
+    predicate_hash: [u8; 32],
 )]
 pub struct CreateMarket<'info> {
     #[account(
@@ -16,25 +30,24 @@ pub struct CreateMarket<'info> {
         seeds = [
             b"market",
             fixture_id.to_le_bytes().as_ref(),
-            predicate_seed.as_ref(),
+            predicate_hash.as_ref(),
         ],
         bump,
     )]
     pub market: Account<'info, Market>,
 
+    /// Global Goalana protocol configuration.
     #[account(
-        init,
-        payer = creator,
-        space = Vault::LEN,
-        seeds = [
-            b"vault",
-            market.key().as_ref(),
-        ],
-        bump,
+        seeds = [b"config"],
+        bump = config.bump,
     )]
-    pub vault: Account<'info, Vault>,
+    pub config: Account<'info, ProtocolConfig>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        address = config.market_authority
+            @ GoalanaError::UnauthorizedMarketAuthority,
+    )]
     pub creator: Signer<'info>,
 
     pub system_program: Program<'info, System>,
@@ -43,45 +56,43 @@ pub struct CreateMarket<'info> {
 pub fn handle_create_market(
     ctx: Context<CreateMarket>,
     fixture_id: i64,
-    market_type: MarketType,
     predicate: Predicate,
-    _predicate_seed: [u8; 8],
+    predicate_hash: [u8; 32],
 ) -> Result<()> {
+    predicate.validate()?;
+
+    let computed_hash = compute_predicate_hash(&predicate)?;
+
+    require!(
+        computed_hash == predicate_hash,
+        GoalanaError::InvalidPredicateHash
+    );
+
     let market = &mut ctx.accounts.market;
 
-    let vault = &mut ctx.accounts.vault;
+    market.created_by = ctx.accounts.creator.key();
 
-    market.creator = ctx.accounts.creator.key();
+    market.origin = MarketOrigin::House;
 
     market.fixture_id = fixture_id;
 
-    market.market_type = market_type;
+    market.predicate_hash = predicate_hash;
 
     market.predicate = predicate;
-
-    market.created_at = Clock::get()?.unix_timestamp;
 
     market.status = MarketStatus::Open;
 
     market.outcome = None;
 
+    market.created_at = Clock::get()?.unix_timestamp;
+
+    market.locked_at = None;
+
     market.settled_at = None;
 
-    market.total_for = 0;
-
-    market.total_against = 0;
-
-    market.matched_amount = 0;
-
-    market.vault = vault.key();
+    market.cancelled_at = None;
 
     market.bump = ctx.bumps.market;
-
-    vault.market = market.key();
-
-    vault.creator = ctx.accounts.creator.key();
-
-    vault.bump = ctx.bumps.vault;
 
     Ok(())
 }
