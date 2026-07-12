@@ -1,18 +1,21 @@
-import { prisma } from "@workspace/db";
+import { prisma, Prisma } from "@workspace/db";
 import { FixtureService } from "@workspace/txline";
 import cron from "node-cron";
 import { syncOdds } from "./odds.cron";
-let isRunning = false;
+
+let isSnapshotSyncRunning = false;
+let isUpdateSyncRunning = false;
+let isBatchValidationSyncRunning = false;
 
 export async function syncFixtures() {
-    if (isRunning) {
+    if (isSnapshotSyncRunning) {
         console.warn(
-            "[fixture.cron] Previous sync is still running. Skipping."
+            "[fixture.cron] Snapshot sync already running. Skipping."
         );
         return;
     }
 
-    isRunning = true;
+    isSnapshotSyncRunning = true;
     console.log("[fixture.cron] Starting fixture sync...");
 
     try {
@@ -24,9 +27,12 @@ export async function syncFixtures() {
             return;
         }
 
-        const operations = fixtures.map((fixture) => {
+        for (const fixture of fixtures) {
+            const fixtureId = BigInt(fixture.FixtureId);
+            const ts = BigInt(fixture.Ts);
+
             const data = {
-                ts: BigInt(fixture.Ts),
+                ts,
                 startTime: BigInt(fixture.StartTime),
                 competition: fixture.Competition,
                 competitionId: fixture.CompetitionId,
@@ -39,19 +45,27 @@ export async function syncFixtures() {
                 gameState: fixture.GameState ?? null,
             };
 
-            return prisma.fixture.upsert({
-                where: {
-                    fixtureId: BigInt(fixture.FixtureId),
-                },
-                update: data,
-                create: {
-                    fixtureId: BigInt(fixture.FixtureId),
-                    ...data,
-                },
-            });
-        });
+            await prisma.$transaction(async (tx) => {
+                const current = await tx.fixture.findUnique({
+                    where: { fixtureId },
+                    select: { ts: true },
+                });
 
-        await prisma.$transaction(operations);
+                if (!current) {
+                    await tx.fixture.create({
+                        data: {
+                            fixtureId,
+                            ...data,
+                        },
+                    });
+                } else if (ts > current.ts) {
+                    await tx.fixture.update({
+                        where: { fixtureId },
+                        data,
+                    });
+                }
+            });
+        }
 
         console.log(
             `[fixture.cron] Successfully synced ${fixtures.length} fixtures.`
@@ -62,13 +76,197 @@ export async function syncFixtures() {
     } catch (error) {
         console.error("[fixture.cron] Fixture sync failed:", error);
     } finally {
-        isRunning = false;
+        isSnapshotSyncRunning = false;
+    }
+}
+
+export async function syncFixtureUpdates() {
+    if (isUpdateSyncRunning) {
+        console.warn("[fixture.cron] Update sync already running. Skipping.");
+        return;
+    }
+
+    isUpdateSyncRunning = true;
+    console.log("[fixture.cron] Starting fixture updates sync...");
+
+    try {
+        const fixtureService = new FixtureService();
+
+        const now = new Date();
+        const epochDay = Math.floor(now.getTime() / (1000 * 60 * 60 * 24));
+        const hourOfDay = now.getUTCHours();
+
+        const currentFixtures =
+            (await fixtureService.getFixtureUpdates(epochDay, hourOfDay)) ?? [];
+
+        let previousFixtures: typeof currentFixtures = [];
+
+        if (hourOfDay > 0) {
+            previousFixtures =
+                (await fixtureService.getFixtureUpdates(epochDay, hourOfDay - 1)) ?? [];
+        } else {
+            previousFixtures =
+                (await fixtureService.getFixtureUpdates(epochDay - 1, 23)) ?? [];
+        }
+
+        // Deduplicate by actual update identity
+        const updateMap = new Map<string, typeof currentFixtures[number]>();
+
+        for (const fixture of [...previousFixtures, ...currentFixtures]) {
+            const key = `${fixture.FixtureId}:${fixture.Ts}`;
+            updateMap.set(key, fixture);
+        }
+
+        const fixtures = Array.from(updateMap.values()).sort((a, b) => {
+            const aTs = BigInt(a.Ts);
+            const bTs = BigInt(b.Ts);
+        
+            return aTs < bTs ? -1 : aTs > bTs ? 1 : 0;
+        });
+
+        if (fixtures.length === 0) {
+            return;
+        }
+
+        for (const fixture of fixtures) {
+            const fixtureId = BigInt(fixture.FixtureId);
+            const ts = BigInt(fixture.Ts);
+
+            const data = {
+                ts,
+                startTime: BigInt(fixture.StartTime),
+                competition: fixture.Competition,
+                competitionId: fixture.CompetitionId,
+                fixtureGroupId: fixture.FixtureGroupId,
+                participant1Id: fixture.Participant1Id,
+                participant1: fixture.Participant1,
+                participant2Id: fixture.Participant2Id,
+                participant2: fixture.Participant2,
+                participant1IsHome: fixture.Participant1IsHome,
+                gameState: fixture.GameState ?? null,
+            };
+
+            await prisma.$transaction(async (tx) => {
+                // Ensure current fixture exists, but don't overwrite
+                // a newer state with an older update.
+                const current = await tx.fixture.findUnique({
+                    where: {
+                        fixtureId,
+                    },
+                    select: {
+                        ts: true,
+                    },
+                });
+
+                if (!current) {
+                    await tx.fixture.create({
+                        data: {
+                            fixtureId,
+                            ...data,
+                        },
+                    });
+                } else if (ts > current.ts) {
+                    await tx.fixture.update({
+                        where: {
+                            fixtureId,
+                        },
+                        data,
+                    });
+                }
+
+                // Preserve every unique update
+                await tx.fixtureUpdate.upsert({
+                    where: {
+                        fixtureId_ts: {
+                            fixtureId,
+                            ts,
+                        },
+                    },
+                    update: {},
+                    create: {
+                        fixtureId,
+                        ...data,
+                        payload: fixture as unknown as Prisma.InputJsonValue,
+                    },
+                });
+            });
+        }
+
+        console.log(`[fixture.cron] Processed ${fixtures.length} unique fixture updates.`);
+    } catch (error) {
+        console.error("[fixture.cron] Fixture updates sync failed:", error);
+    } finally {
+        isUpdateSyncRunning = false;
+    }
+}
+
+function getPreviousHour() {
+    const now = new Date();
+    now.setUTCHours(now.getUTCHours() - 1);
+    
+    const epochDay = Math.floor(now.getTime() / (1000 * 60 * 60 * 24));
+    const hourOfDay = now.getUTCHours();
+    
+    return {
+        epochDay,
+        hourOfDay,
+    };
+}
+
+export async function syncPreviousHourBatchValidation() {
+    if (isBatchValidationSyncRunning) {
+        console.warn("[fixture.cron] Batch validation sync already running. Skipping.");
+        return;
+    }
+
+    isBatchValidationSyncRunning = true;
+    console.log("[fixture.cron] Starting previous hour batch validation sync...");
+    try {
+        const fixtureService = new FixtureService();
+        const { epochDay, hourOfDay } = getPreviousHour();
+        
+        const validation = await fixtureService.getFixtureBatchValidation(epochDay, hourOfDay);
+        
+        if (!validation) {
+            console.log(`[fixture.cron] No batch validation returned for day ${epochDay} hour ${hourOfDay}.`);
+            return;
+        }
+        
+        await prisma.fixtureBatchValidation.upsert({
+            where: {
+                epochDay_hourOfDay: {
+                    epochDay,
+                    hourOfDay,
+                },
+            },
+            update: {
+                validation: validation as unknown as Prisma.InputJsonValue,
+            },
+            create: {
+                epochDay,
+                hourOfDay,
+                validation: validation as unknown as Prisma.InputJsonValue,
+            },
+        });
+        
+        console.log(`[fixture.cron] Successfully synced batch validation for day ${epochDay} hour ${hourOfDay}.`);
+    } catch (error) {
+        console.error("[fixture.cron] Batch validation sync failed:", error);
+    } finally {
+        isBatchValidationSyncRunning = false;
     }
 }
 
 export function startFixtureCron() {
-    // Then sync every 5 minutes
-    return cron.schedule("*/5 * * * *", () => {
-        void syncFixtures();
+    // Sync updates every 5 minutes
+    const updatesTask = cron.schedule("*/5 * * * *", () => {
+        void syncFixtureUpdates();
     });
+    
+    // Sync batch validation once per completed hour (retrying at minutes 5, 20, 35, 50)
+    const batchTask = cron.schedule("5,20,35,50 * * * *", () => {
+        void syncPreviousHourBatchValidation();
+    });
+    
+    return { updatesTask, batchTask };
 }

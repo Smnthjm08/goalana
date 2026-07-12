@@ -47,9 +47,42 @@ model Fixture {
   odds          Odds[]
   matchEvents   MatchEvent[]
   oddsHistories OddsHistory[]
+  updates       FixtureUpdate[]
   // markets       Market[]
 
   @@map("fixtures")
+}
+
+model FixtureUpdate {
+  id                 String  @id @default(cuid())
+
+  fixtureId          BigInt
+  ts                 BigInt
+
+  startTime          BigInt
+  competition        String
+  competitionId      Int
+  fixtureGroupId     Int
+
+  participant1Id     Int
+  participant1       String
+
+  participant2Id     Int
+  participant2       String
+
+  participant1IsHome Boolean
+  gameState          Int?
+
+  payload            Json
+
+  createdAt          DateTime @default(now())
+
+  fixture Fixture @relation(fields: [fixtureId], references: [fixtureId])
+
+  @@unique([fixtureId, ts])
+  @@index([fixtureId])
+  @@index([ts])
+  @@map("fixture_updates")
 }
 
 // ─── Odds (latest market state — one row per market identity) ─────────────────
@@ -145,4 +178,20 @@ model MatchEvent {
   @@index([fixtureId, action])
   @@index([statusId])
   @@map("match_events")
+}
+
+model FixtureBatchValidation {
+  id String @id @default(cuid())
+
+  epochDay  Int
+  hourOfDay Int
+
+  // Store TxLINE validation response
+  validation Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([epochDay, hourOfDay])
+  @@map("fixture_batch_validations")
 }
