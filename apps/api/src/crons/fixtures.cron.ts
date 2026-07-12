@@ -1,7 +1,7 @@
 import { prisma } from "@workspace/db";
 import { FixtureService } from "@workspace/txline";
 import cron from "node-cron";
-
+import { syncOdds } from "./odds.cron";
 let isRunning = false;
 
 export async function syncFixtures() {
@@ -56,6 +56,9 @@ export async function syncFixtures() {
         console.log(
             `[fixture.cron] Successfully synced ${fixtures.length} fixtures.`
         );
+
+        // Chain odds sync after successful fixture sync
+        await syncOdds();
     } catch (error) {
         console.error("[fixture.cron] Fixture sync failed:", error);
     } finally {
@@ -64,9 +67,6 @@ export async function syncFixtures() {
 }
 
 export function startFixtureCron() {
-    // Sync immediately when the API starts
-    void syncFixtures();
-
     // Then sync every 5 minutes
     return cron.schedule("*/5 * * * *", () => {
         void syncFixtures();
