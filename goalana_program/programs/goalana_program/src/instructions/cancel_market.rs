@@ -6,8 +6,10 @@ use anchor_lang::prelude::*;
 pub struct CancelMarket<'info> {
     #[account(
         mut,
-        constraint = market.status == MarketStatus::Open
-            @ GoalanaError::MarketNotOpen,
+        constraint = (
+            market.status == MarketStatus::Open
+            || market.status == MarketStatus::Locked
+        ) @ GoalanaError::MarketNotCancellable,
     )]
     pub market: Account<'info, Market>,
 

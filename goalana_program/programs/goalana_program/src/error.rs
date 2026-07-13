@@ -22,4 +22,13 @@ pub enum GoalanaError {
 
     #[msg("Unauthorized caller.")]
     Unauthorized,
+
+    #[msg("Market cannot be cancelled in its current state.")]
+    MarketNotCancellable,
+
+    #[msg("Lock time must be in the future.")]
+    InvalidLockTime,
+
+    #[msg("Arithmetic overflow occurred.")]
+    ArithmeticOverflow,
 }

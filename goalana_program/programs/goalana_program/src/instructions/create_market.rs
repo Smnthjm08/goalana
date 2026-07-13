@@ -21,6 +21,7 @@ fn compute_predicate_hash(predicate: &Predicate) -> Result<[u8; 32]> {
     fixture_id: i64,
     predicate: Predicate,
     predicate_hash: [u8; 32],
+    locks_at: i64,
 )]
 pub struct CreateMarket<'info> {
     #[account(
@@ -58,6 +59,7 @@ pub fn handle_create_market(
     fixture_id: i64,
     predicate: Predicate,
     predicate_hash: [u8; 32],
+    locks_at: i64,
 ) -> Result<()> {
     predicate.validate()?;
 
@@ -66,6 +68,13 @@ pub fn handle_create_market(
     require!(
         computed_hash == predicate_hash,
         GoalanaError::InvalidPredicateHash
+    );
+
+    let now = Clock::get()?.unix_timestamp;
+
+    require!(
+        locks_at > now,
+        GoalanaError::InvalidLockTime
     );
 
     let market = &mut ctx.accounts.market;
@@ -84,7 +93,9 @@ pub fn handle_create_market(
 
     market.outcome = None;
 
-    market.created_at = Clock::get()?.unix_timestamp;
+    market.created_at = now;
+
+    market.locks_at = locks_at;
 
     market.locked_at = None;
 

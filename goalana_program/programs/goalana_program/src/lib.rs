@@ -15,17 +15,23 @@ declare_id!("AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu");
 pub mod goalana_program {
     use super::*;
 
+    pub fn initialize_config(ctx: Context<InitializeConfig>) -> Result<()> {
+        instructions::initialize_config::handle_initialize_config(ctx)
+    }
+
     pub fn create_market(
         ctx: Context<CreateMarket>,
         fixture_id: i64,
         predicate: Predicate,
         predicate_hash: [u8; 32],
+        locks_at: i64,
     ) -> Result<()> {
         instructions::create_market::handle_create_market(
             ctx,
             fixture_id,
             predicate,
             predicate_hash,
+            locks_at,
         )
     }
 

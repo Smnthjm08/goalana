@@ -116,15 +116,48 @@ impl Predicate {
     pub const LEN: usize = 4 + 5 + 2 + 4 + 1;
 
     pub fn validate(&self) -> Result<()> {
-        if self.op.is_some() && self.stat_b_key.is_none() {
-            return err!(crate::error::GoalanaError::InvalidPredicateStructure);
+        match (self.stat_b_key, self.op) {
+            (None, None) => Ok(()),
+            (Some(_), Some(_)) => Ok(()),
+            _ => err!(crate::error::GoalanaError::InvalidPredicateStructure),
         }
+    }
 
-        if self.op.is_none() && self.stat_b_key.is_some() {
-            return err!(crate::error::GoalanaError::InvalidPredicateStructure);
-        }
+    pub fn evaluate(
+        &self,
+        stat_a_value: i32,
+        stat_b_value: Option<i32>,
+    ) -> Result<bool> {
+        let resolved_value = match (self.op, stat_b_value) {
+            (None, None) => stat_a_value,
 
-        Ok(())
+            (Some(BinaryOp::Add), Some(stat_b)) => {
+                stat_a_value
+                    .checked_add(stat_b)
+                    .ok_or(crate::error::GoalanaError::ArithmeticOverflow)?
+            }
+
+            (Some(BinaryOp::Subtract), Some(stat_b)) => {
+                stat_a_value
+                    .checked_sub(stat_b)
+                    .ok_or(crate::error::GoalanaError::ArithmeticOverflow)?
+            }
+
+            _ => {
+                return err!(crate::error::GoalanaError::InvalidPredicateStructure);
+            }
+        };
+
+        let outcome = match self.comparison {
+            Comparison::GreaterThan => resolved_value > self.threshold,
+            Comparison::GreaterThanOrEqual => resolved_value >= self.threshold,
+            Comparison::LessThan => resolved_value < self.threshold,
+            Comparison::LessThanOrEqual => resolved_value <= self.threshold,
+            Comparison::Equal => resolved_value == self.threshold,
+            Comparison::NotEqual => resolved_value != self.threshold,
+        };
+
+        Ok(outcome)
     }
 }
 
@@ -207,7 +240,10 @@ pub struct Market {
     /// Unix timestamp when the Market was created.
     pub created_at: i64,
 
-    /// Unix timestamp when the Market was locked.
+    /// Deterministic Unix timestamp when the Market automatically locks (e.g. event kickoff).
+    pub locks_at: i64,
+
+    /// Unix timestamp when the Market was locked manually or automatically.
     pub locked_at: Option<i64>,
 
     /// Unix timestamp when the Market was settled.
@@ -234,6 +270,7 @@ impl Market {
         1 +                 // status: MarketStatus
         2 +                 // outcome: Option<bool>
         8 +                 // created_at: i64
+        8 +                 // locks_at: i64
         9 +                 // locked_at: Option<i64>
         9 +                 // settled_at: Option<i64>
         9 +                 // cancelled_at: Option<i64>
