@@ -1,14 +1,8 @@
-use anchor_lang::prelude::*;
+// market.rs
 use crate::error::GoalanaError;
+use anchor_lang::prelude::*;
 
-#[derive(
-    AnchorSerialize,
-    AnchorDeserialize,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum MarketStatus {
     Open,
     Locked,
@@ -16,15 +10,7 @@ pub enum MarketStatus {
     Cancelled,
 }
 
-
-#[derive(
-    AnchorSerialize,
-    AnchorDeserialize,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum MarketOrigin {
     /// Official market created by the Goalana market authority.
     House,
@@ -40,20 +26,11 @@ pub enum Comparison {
     EqualTo,
 }
 
-#[derive(
-    AnchorSerialize,
-    AnchorDeserialize,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOp {
     Add,
     Subtract,
 }
-
-
 
 /// Generic predicate describing how this market should be settled.
 ///
@@ -69,14 +46,7 @@ pub enum BinaryOp {
 ///
 /// The SDK computes the predicate hash and the program verifies it
 /// on-chain before creating the Market.
-#[derive(
-    AnchorSerialize,
-    AnchorDeserialize,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub struct Predicate {
     /// Primary TxLINE stat key.
     pub stat_a_key: u32,
@@ -109,9 +79,9 @@ impl Predicate {
     pub fn validate(&self) -> Result<()> {
         let valid_key = |k: u32| {
             (1..=8).contains(&k)
-            || (1001..=1008).contains(&k)
-            || (2001..=2008).contains(&k)
-            || (5001..=5008).contains(&k)
+                || (1001..=1008).contains(&k)
+                || (2001..=2008).contains(&k)
+                || (5001..=5008).contains(&k)
         };
 
         require!(valid_key(self.stat_a_key), GoalanaError::InvalidStatKey);
@@ -131,22 +101,20 @@ impl Predicate {
 
     pub fn evaluate(&self, stat_a_value: i32, stat_b_value: Option<i32>) -> Result<bool> {
         let lhs: i32 = match (self.op, stat_b_value) {
-            (Some(BinaryOp::Add), Some(b)) => {
-                stat_a_value.checked_add(b)
-                    .ok_or(error!(GoalanaError::ArithmeticOverflow))?
-            }
-            (Some(BinaryOp::Subtract), Some(b)) => {
-                stat_a_value.checked_sub(b)
-                    .ok_or(error!(GoalanaError::ArithmeticOverflow))?
-            }
+            (Some(BinaryOp::Add), Some(b)) => stat_a_value
+                .checked_add(b)
+                .ok_or(error!(GoalanaError::ArithmeticOverflow))?,
+            (Some(BinaryOp::Subtract), Some(b)) => stat_a_value
+                .checked_sub(b)
+                .ok_or(error!(GoalanaError::ArithmeticOverflow))?,
             (None, None) => stat_a_value,
             _ => return err!(GoalanaError::InvalidPredicateStructure),
         };
 
         Ok(match self.comparison {
             Comparison::GreaterThan => lhs > self.threshold,
-            Comparison::LessThan    => lhs < self.threshold,
-            Comparison::EqualTo     => lhs == self.threshold,
+            Comparison::LessThan => lhs < self.threshold,
+            Comparison::EqualTo => lhs == self.threshold,
         })
     }
 }
@@ -191,7 +159,6 @@ pub struct Market {
     // ========================================================
     // Creation Metadata
     // ========================================================
-
     /// Wallet that originally created the canonical Market.
     ///
     /// This does NOT make the wallet the owner of the Market.
@@ -204,7 +171,6 @@ pub struct Market {
     // ========================================================
     // Identity
     // ========================================================
-
     /// TxLINE fixture identifier.
     pub fixture_id: i64,
 
@@ -217,7 +183,6 @@ pub struct Market {
     // ========================================================
     // Lifecycle
     // ========================================================
-
     pub status: MarketStatus,
 
     /// Final result of the Predicate.
@@ -233,6 +198,9 @@ pub struct Market {
     /// Deterministic Unix timestamp when the Market automatically locks (e.g. event kickoff).
     pub locks_at: i64,
 
+    /// Deterministic Unix timestamp after which settlement is allowed (e.g. match finished).
+    pub settle_after: i64,
+
     /// Unix timestamp when the Market was locked manually or automatically.
     pub locked_at: Option<i64>,
 
@@ -245,13 +213,11 @@ pub struct Market {
     // ========================================================
     // PDA
     // ========================================================
-
     pub bump: u8,
 }
 
 impl Market {
-    pub const LEN: usize =
-        8 +                 // Anchor discriminator
+    pub const LEN: usize = 8 +                 // Anchor discriminator
         32 +                // created_by: Pubkey
         1 +                 // origin: MarketOrigin
         8 +                 // fixture_id: i64
@@ -261,10 +227,11 @@ impl Market {
         2 +                 // outcome: Option<bool>
         8 +                 // created_at: i64
         8 +                 // locks_at: i64
+        8 +                 // settle_after: i64
         9 +                 // locked_at: Option<i64>
         9 +                 // settled_at: Option<i64>
         9 +                 // cancelled_at: Option<i64>
-        1;                  // bump: u8
+        1; // bump: u8
 }
 
 #[account]
@@ -272,23 +239,24 @@ pub struct ProtocolConfig {
     /// Protocol administrator.
     pub authority: Pubkey,
 
-    /// Wallet whose created Markets are classified as House markets.
+    /// Authority permitted to create official House markets.
     pub market_authority: Pubkey,
 
-    /// Authority permitted to perform settlement operations
-    /// until fully permissionless TxLINE verification is implemented.
+    /// Reserved authority for emergency or trusted fallback settlement.
+    ///
+    /// Normal TxLINE proof-based settlement is permissionless and
+    /// does not require this authority to sign.
     pub settlement_authority: Pubkey,
 
     pub bump: u8,
 }
 
 impl ProtocolConfig {
-    pub const LEN: usize =
-        8 +  // discriminator
+    pub const LEN: usize = 8 +  // discriminator
         32 + // authority
         32 + // market_authority
         32 + // settlement_authority
-        1;   // bump
+        1; // bump
 }
 
 #[cfg(test)]

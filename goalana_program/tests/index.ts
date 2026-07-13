@@ -129,6 +129,7 @@ describe("goalana", () => {
     );
 
     const locksAt = new anchor.BN(Math.floor(Date.now() / 1000) + 3600);
+    const settleAfter = new anchor.BN(Math.floor(Date.now() / 1000) + 7200);
 
     const instruction = await program.methods
       .createMarket(
@@ -136,6 +137,7 @@ describe("goalana", () => {
         predicate,
         [...predicateHash],
         locksAt,
+        settleAfter,
       )
       .instruction();
 
@@ -294,9 +296,10 @@ describe("goalana", () => {
       );
 
       const locksAt = new anchor.BN(locksAtTime);
+      const settleAfter = new anchor.BN(locksAtTime + 3600);
 
       await program.methods
-        .createMarket(new anchor.BN(fixtureId), predicate, [...predicateHash], locksAt)
+        .createMarket(new anchor.BN(fixtureId), predicate, [...predicateHash], locksAt, settleAfter)
         .rpc();
 
       return marketPda;
@@ -327,11 +330,35 @@ describe("goalana", () => {
       }
     });
 
+    it("fails to create market if settle_after <= locks_at", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const fixtureId = baseFixtureId + 108;
+      const predicate: PredicateInput = {
+        statAKey: 7, statBKey: 8, op: { add: {} }, threshold: 19, comparison: { greaterThan: {} }
+      };
+      const predicateBytes = serializePredicate(predicate);
+      const predicateHash = crypto.createHash("sha256").update(predicateBytes).digest();
+
+      const locksAt = new anchor.BN(now + 3600);
+      const settleAfter = new anchor.BN(now + 3600); // Equal to locksAt
+
+      try {
+        await program.methods
+          .createMarket(new anchor.BN(fixtureId), predicate, [...predicateHash], locksAt, settleAfter)
+          .rpc();
+        expect.fail("Should have thrown InvalidSettlementTime");
+      } catch (e: any) {
+        if (e.name === "AssertionError") throw e;
+        expect(e.message).to.include("InvalidSettlementTime");
+      }
+    });
+
     it("succeeds to create market if locks_at > now", async () => {
       const now = Math.floor(Date.now() / 1000);
       const marketPda = await createMarketWithLocksAt(baseFixtureId + 103, now + 3600);
       const market = await program.account.market.fetch(marketPda);
       expect(market.locksAt.toNumber()).to.equal(now + 3600);
+      expect(market.settleAfter.toNumber()).to.equal(now + 7200);
     });
 
     it("Open -> Locked -> success", async () => {

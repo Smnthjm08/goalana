@@ -1,12 +1,14 @@
-use anchor_lang::prelude::*;
+// settle_market.rs
+
 use crate::{
+    error::GoalanaError,
     state::{Market, MarketStatus},
     txline_cpi::{
         self, BinaryExpression, Comparison, ProofNode, ScoresBatchSummary, StatTerm,
         TraderPredicate,
     },
-    error::GoalanaError,
 };
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct SettleMarket<'info> {
@@ -14,11 +16,10 @@ pub struct SettleMarket<'info> {
         mut,
         seeds = [b"market", market.fixture_id.to_le_bytes().as_ref(), market.predicate_hash.as_ref()],
         bump = market.bump,
-        // Locked-only settlement. If market is still Open but past locks_at,
-        // the backend should call lock_market first. See handler for time-based fallback.
+        // Settleable if market is Open or Locked, and has not yet been settled.
         constraint = (
             market.status == MarketStatus::Locked
-            || (market.status == MarketStatus::Open)
+            || market.status == MarketStatus::Open
         ) @ GoalanaError::MarketNotSettleable,
         constraint = market.outcome.is_none() @ GoalanaError::MarketAlreadySettled,
     )]
@@ -28,8 +29,8 @@ pub struct SettleMarket<'info> {
     #[account(address = txline_cpi::id())]
     pub txoracle_program: UncheckedAccount<'info>,
 
-    /// CHECK: Validated by TxOracle's own Anchor account constraints during CPI.
-    /// TxOracle's validate_stat constrains this to the expected Merkle roots PDA.
+    /// CHECK: Verified in handler to match the derived daily scores roots PDA.
+    #[account(owner = txline_cpi::ID)]
     pub daily_scores_merkle_roots: UncheckedAccount<'info>,
 }
 
@@ -44,15 +45,27 @@ pub fn handle_settle_market(
 ) -> Result<()> {
     let market = &mut ctx.accounts.market;
 
-    // Enforce time-based settlement gate.
-    // If status is Open, only allow if we are past locks_at (betting has closed).
-    // If status is Locked, always allow (lock_market was explicitly called).
-    let now = Clock::get()?.unix_timestamp;
-    require!(
-        market.status == MarketStatus::Locked
-            || (market.status == MarketStatus::Open && now >= market.locks_at),
-        GoalanaError::MarketNotSettleable
+    // Derive and verify the canonical daily scores roots PDA
+    let epoch_day = ts
+        .checked_div(86_400_000)
+        .and_then(|day| u16::try_from(day).ok())
+        .ok_or_else(|| error!(GoalanaError::InvalidOracleTimestamp))?;
+
+    let epoch_day_bytes = epoch_day.to_le_bytes();
+
+    let (expected_pda, _bump) =
+        Pubkey::find_program_address(&[b"daily_scores_roots", &epoch_day_bytes], &txline_cpi::ID);
+    require_keys_eq!(
+        ctx.accounts.daily_scores_merkle_roots.key(),
+        expected_pda,
+        GoalanaError::InvalidOraclePda
     );
+
+    // Enforce the earliest configured settlement time.
+    // This prevents settlement before the expected settlement window.
+    // The supplied stat values are authenticated separately by the TxOracle CPI.
+    let now = Clock::get()?.unix_timestamp;
+    require!(now >= market.settle_after, GoalanaError::SettlementTooEarly);
     require!(
         fixture_summary.fixture_id == market.fixture_id,
         GoalanaError::FixtureMismatch
@@ -93,8 +106,8 @@ pub fn handle_settle_market(
         None => None,
     };
 
-    // Authenticate the exact StatTerms used below.
-    txline_cpi::validate_stat(
+    // Authenticate the exact StatTerms and evaluate the predicate on-chain via TxOracle CPI.
+    let outcome = txline_cpi::validate_stat(
         ctx.accounts.txoracle_program.to_account_info(),
         ctx.accounts.daily_scores_merkle_roots.to_account_info(),
         ts,
@@ -107,17 +120,10 @@ pub fn handle_settle_market(
         oracle_op,
     )?;
 
-    // 4. Get authenticated stat value(s)
-    let stat_a_value = stat_a.stat_to_prove.value;
-    let stat_b_value = stat_b.map(|sb| sb.stat_to_prove.value);
-
-    // 5. market.predicate.evaluate(...)
-    let outcome = market.predicate.evaluate(stat_a_value, stat_b_value)?;
-
     // 6. Market -> Settled
     market.outcome = Some(outcome);
     market.status = MarketStatus::Settled;
-    market.settled_at = Some(Clock::get()?.unix_timestamp);
+    market.settled_at = Some(now);
 
     Ok(())
 }

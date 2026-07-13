@@ -26,6 +26,7 @@ pub mod goalana_program {
         predicate: Predicate,
         predicate_hash: [u8; 32],
         locks_at: i64,
+        settle_after: i64,
     ) -> Result<()> {
         instructions::create_market::handle_create_market(
             ctx,
@@ -33,6 +34,7 @@ pub mod goalana_program {
             predicate,
             predicate_hash,
             locks_at,
+            settle_after,
         )
     }
 

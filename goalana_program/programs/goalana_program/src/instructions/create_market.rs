@@ -1,11 +1,6 @@
+// create_market.rs
 use crate::error::GoalanaError;
-use crate::{
-    Market,
-    MarketOrigin,
-    MarketStatus,
-    Predicate,
-    ProtocolConfig,
-};
+use crate::{Market, MarketOrigin, MarketStatus, Predicate, ProtocolConfig};
 use anchor_lang::prelude::*;
 use solana_sha256_hasher::hash;
 
@@ -22,6 +17,7 @@ fn compute_predicate_hash(predicate: &Predicate) -> Result<[u8; 32]> {
     predicate: Predicate,
     predicate_hash: [u8; 32],
     locks_at: i64,
+    settle_after: i64,
 )]
 pub struct CreateMarket<'info> {
     #[account(
@@ -60,6 +56,7 @@ pub fn handle_create_market(
     predicate: Predicate,
     predicate_hash: [u8; 32],
     locks_at: i64,
+    settle_after: i64,
 ) -> Result<()> {
     predicate.validate()?;
 
@@ -72,10 +69,9 @@ pub fn handle_create_market(
 
     let now = Clock::get()?.unix_timestamp;
 
-    require!(
-        locks_at > now,
-        GoalanaError::InvalidLockTime
-    );
+    require!(locks_at > now, GoalanaError::InvalidLockTime);
+
+    require!(settle_after > locks_at, GoalanaError::InvalidSettlementTime);
 
     let market = &mut ctx.accounts.market;
 
@@ -96,6 +92,8 @@ pub fn handle_create_market(
     market.created_at = now;
 
     market.locks_at = locks_at;
+
+    market.settle_after = settle_after;
 
     market.locked_at = None;
 

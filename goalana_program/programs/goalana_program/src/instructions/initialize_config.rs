@@ -1,4 +1,5 @@
-use crate::{error::GoalanaError, ProtocolConfig};
+// initialize_config.rs
+use crate::ProtocolConfig;
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -11,7 +12,7 @@ pub struct InitializeConfig<'info> {
         payer = admin,
         space = ProtocolConfig::LEN,
         seeds = [b"config"],
-        bump
+        bump,
     )]
     pub config: Account<'info, ProtocolConfig>,
 
@@ -24,10 +25,20 @@ pub fn handle_initialize_config(ctx: Context<InitializeConfig>) -> Result<()> {
 
     config.authority = admin;
     config.market_authority = admin;
+
+    // Reserved for trusted/admin fallback settlement.
+    // Permissionless TxLINE proof-based settlement should NOT
+    // require this authority to sign.
     config.settlement_authority = admin;
+
     config.bump = ctx.bumps.config;
 
-    msg!("Config initialized by {}. New market authority: {}", admin.to_string(), admin.to_string());
+    msg!(
+        "Protocol config initialized. Admin: {}, Market authority: {}, Settlement authority: {}",
+        config.authority,
+        config.market_authority,
+        config.settlement_authority,
+    );
 
     Ok(())
 }

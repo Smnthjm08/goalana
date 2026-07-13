@@ -55,4 +55,25 @@ pub enum GoalanaError {
 
     #[msg("BinaryOp must not be set when stat_b_key is absent.")]
     UnexpectedBinaryOp,
+
+    #[msg("Settlement time must be after the lock time.")]
+    InvalidSettlementTime,
+
+    #[msg("TxOracle returned no settlement result")]
+    MissingOracleReturnData,
+
+    #[msg("Settlement result was returned by an unexpected program")]
+    InvalidOracleReturnProgram,
+
+    #[msg("TxOracle returned malformed settlement data")]
+    InvalidOracleReturnData,
+
+    #[msg("Invalid daily Merkle roots PDA")]
+    InvalidOraclePda,
+
+    #[msg("Settlement time has not been reached.")]
+    SettlementTooEarly,
+
+    #[msg("Invalid TxOracle timestamp.")]
+    InvalidOracleTimestamp,
 }

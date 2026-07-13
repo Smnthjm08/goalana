@@ -1,6 +1,13 @@
-use anchor_lang::{prelude::*, solana_program::instruction::Instruction, solana_program::program::invoke, AnchorSerialize};
+// txline_cpi.rs
+use anchor_lang::prelude::*;
+use anchor_lang::solana_program::{
+    instruction::{AccountMeta, Instruction},
+    program::{get_return_data, invoke},
+};
 
 declare_id!("6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J");
+
+pub const VALIDATE_STAT_DISCRIMINATOR: [u8; 8] = [107, 197, 232, 90, 191, 136, 105, 185];
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
 pub struct ScoresBatchSummary {
@@ -66,40 +73,47 @@ pub fn validate_stat<'info>(
     stat_a: StatTerm,
     stat_b: Option<StatTerm>,
     op: Option<BinaryExpression>,
-) -> Result<()> {
-    let mut data = vec![107, 197, 232, 90, 191, 136, 105, 185]; // validate_stat discriminator
+) -> Result<bool> {
+    let mut data = VALIDATE_STAT_DISCRIMINATOR.to_vec();
+
     ts.serialize(&mut data)?;
     fixture_summary.serialize(&mut data)?;
     fixture_proof.serialize(&mut data)?;
     main_tree_proof.serialize(&mut data)?;
     predicate.serialize(&mut data)?;
     stat_a.serialize(&mut data)?;
-    stat_b.serialize(&mut data)?;   
+    stat_b.serialize(&mut data)?;
     op.serialize(&mut data)?;
-
-    let accounts = vec![
-        AccountMeta::new_readonly(daily_scores_merkle_roots.key(), false),
-    ];
 
     let ix = Instruction {
         program_id: txoracle_program.key(),
-        accounts,
+        accounts: vec![AccountMeta::new_readonly(
+            daily_scores_merkle_roots.key(),
+            false,
+        )],
         data,
     };
 
-    // invoke (not invoke_signed) — no PDA signer needed for this CPI.
-    // Security model: if this CPI succeeds, the Merkle proof is valid and the
-    // stat values inside stat_a/stat_b are authentic TxLINE-published values
-    // for this fixture. We then safely use those values in evaluate().
-    // The txoracle_program account is included so the runtime can verify it
-    // as an executable program account.
-    invoke(
-        &ix,
-        &[
-            daily_scores_merkle_roots,
-            txoracle_program,
-        ],
-    )?;
+    invoke(&ix, &[daily_scores_merkle_roots, txoracle_program.clone()])?;
 
-    Ok(())
+    // Read immediately after the CPI.
+    let (return_program_id, return_data) = get_return_data()
+        .ok_or_else(|| error!(crate::error::GoalanaError::MissingOracleReturnData))?;
+
+    require_keys_eq!(
+        return_program_id,
+        txoracle_program.key(),
+        crate::error::GoalanaError::InvalidOracleReturnProgram
+    );
+
+    require!(
+        return_data.len() == 1,
+        crate::error::GoalanaError::InvalidOracleReturnData
+    );
+
+    match return_data[0] {
+        0 => Ok(false),
+        1 => Ok(true),
+        _ => err!(crate::error::GoalanaError::InvalidOracleReturnData),
+    }
 }
