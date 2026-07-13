@@ -76,4 +76,7 @@ pub enum GoalanaError {
 
     #[msg("Invalid TxOracle timestamp.")]
     InvalidOracleTimestamp,
+
+    #[msg("Oracle snapshot predates the market settlement window.")]
+    StaleOracleSnapshot,
 }

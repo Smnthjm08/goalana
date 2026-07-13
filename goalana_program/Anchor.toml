@@ -9,6 +9,13 @@ skip-lint = false
 [programs.localnet]
 goalana_program = "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu"
 
+[test.validator]
+url = "http://127.0.0.1:8899"
+
+[[test.genesis]]
+address = "6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J"
+program = "target/deploy/txoracle_mock.so"
+
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"

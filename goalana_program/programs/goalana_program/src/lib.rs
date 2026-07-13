@@ -6,7 +6,6 @@ pub mod txline_cpi;
 
 use anchor_lang::prelude::*;
 
-pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
@@ -48,7 +47,7 @@ pub mod goalana_program {
 
     pub fn settle_market(
         ctx: Context<SettleMarket>,
-        ts: i64,
+        oracle_ts_ms: i64,
         fixture_summary: txline_cpi::ScoresBatchSummary,
         fixture_proof: Vec<txline_cpi::ProofNode>,
         main_tree_proof: Vec<txline_cpi::ProofNode>,
@@ -57,7 +56,7 @@ pub mod goalana_program {
     ) -> Result<()> {
         instructions::settle_market::handle_settle_market(
             ctx,
-            ts,
+            oracle_ts_ms,
             fixture_summary,
             fixture_proof,
             main_tree_proof,
@@ -69,10 +68,6 @@ pub mod goalana_program {
 
 // pub fn place_bet() -> Result<()> {
 //     instructions::place_bet::handle_place_bet()
-// }
-
-// pub fn settle_market() -> Result<()> {
-//     instructions::settle_market::handle_settle_market()
 // }
 
 // pub fn claim_winnings() -> Result<()> {

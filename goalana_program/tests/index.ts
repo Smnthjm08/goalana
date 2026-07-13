@@ -2,6 +2,8 @@ import * as anchor from "@coral-xyz/anchor";
 import { type GoalanaProgram } from "../target/types/goalana_program.ts";
 import crypto from "crypto";
 import { expect } from "chai";
+import fs from "fs";
+import path from "path";
 
 export interface PredicateInput {
   statAKey: number;
@@ -69,6 +71,7 @@ describe("goalana", () => {
   anchor.setProvider(provider);
 
   const program = anchor.workspace.GoalanaProgram as anchor.Program<GoalanaProgram>;
+  const baseFixtureId = Math.floor(Math.random() * 1000000);
 
   it("derives the expected predicate hash and market PDA", async () => {
     const fixtureId = 42;
@@ -261,7 +264,6 @@ describe("goalana", () => {
 
   describe("rpc execution", () => {
     let unauthorizedWallet: anchor.web3.Keypair;
-    const baseFixtureId = Math.floor(Math.random() * 1000000);
 
     before(async () => {
       unauthorizedWallet = anchor.web3.Keypair.generate();
@@ -413,6 +415,555 @@ describe("goalana", () => {
       } catch (e: any) {
         if (e.name === "AssertionError") throw e;
         expect(e.message).to.include("UnauthorizedMarketAuthority");
+      }
+    });
+  });
+
+  describe("settlement", () => {
+    const txoracleProgramId = new anchor.web3.PublicKey("6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J");
+
+    function getDailyScoresRootsPda(tsMs: number): anchor.web3.PublicKey {
+      const epochDay = Math.floor(tsMs / 86400000);
+      const epochDayBuffer = Buffer.alloc(2);
+      epochDayBuffer.writeUInt16LE(epochDay, 0);
+      const [pda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("daily_scores_roots"), epochDayBuffer],
+        txoracleProgramId
+      );
+      return pda;
+    }
+
+    const getOnChainTime = async (): Promise<number> => {
+      try {
+        const clockPubkey = anchor.web3.SYSVAR_CLOCK_PUBKEY;
+        const accountInfo = await provider.connection.getAccountInfo(clockPubkey);
+        if (accountInfo) {
+          const unixTimestamp = accountInfo.data.readBigInt64LE(32);
+          return Number(unixTimestamp);
+        }
+      } catch (e) {
+        console.warn("Failed to fetch Sysvar Clock, falling back to local system clock:", e);
+      }
+      return Math.floor(Date.now() / 1000);
+    };
+
+    const advanceTime = async (seconds: number) => {
+      const startClock = await getOnChainTime();
+      const targetClock = startClock + seconds;
+      while (true) {
+        const currentClock = await getOnChainTime();
+        if (currentClock >= targetClock) {
+          break;
+        }
+        const dummy = anchor.web3.Keypair.generate();
+        const tx = new anchor.web3.Transaction().add(
+          anchor.web3.SystemProgram.transfer({
+            fromPubkey: provider.wallet.publicKey,
+            toPubkey: dummy.publicKey,
+            lamports: 1000,
+          })
+        );
+        try {
+          await provider.sendAndConfirm(tx);
+        } catch (e) {
+          // ignore
+        }
+        await new Promise(r => setTimeout(r, 100));
+      }
+    };
+
+    const initializeDailyRoot = async (tsMs: number) => {
+      const epochDay = Math.floor(tsMs / 86400000);
+      const dailyScoresRoots = getDailyScoresRootsPda(tsMs);
+
+      const info = await provider.connection.getAccountInfo(dailyScoresRoots);
+      if (info === null) {
+        const idlPath = path.resolve("./target/idl/txoracle_mock.json");
+        const txoracleMockIdl = JSON.parse(fs.readFileSync(idlPath, "utf8"));
+        txoracleMockIdl.address = txoracleProgramId.toBase58();
+        const txoracleProgram = new anchor.Program(txoracleMockIdl, provider) as any;
+        await txoracleProgram.methods
+          .insertScoresRoot(
+            epochDay,
+            12,
+            30,
+            Array(32).fill(0)
+          )
+          .accounts({
+            authority: provider.wallet.publicKey,
+            dailyScoresRoots,
+          } as any)
+          .rpc();
+      }
+    };
+
+    const createMarketForSettle = async (
+      fixtureId: number,
+      locksAtTime: number,
+      settleAfterTime: number,
+      predicate: PredicateInput
+    ) => {
+      const predicateBytes = serializePredicate(predicate);
+      const predicateHash = crypto.createHash("sha256").update(predicateBytes).digest();
+      const fixtureIdBytes = Buffer.alloc(8);
+      fixtureIdBytes.writeBigInt64LE(BigInt(fixtureId));
+
+      const [marketPda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("market"), fixtureIdBytes, predicateHash],
+        program.programId,
+      );
+
+      const locksAt = new anchor.BN(locksAtTime);
+      const settleAfter = new anchor.BN(settleAfterTime);
+
+      await program.methods
+        .createMarket(new anchor.BN(fixtureId), predicate, [...predicateHash], locksAt, settleAfter)
+        .rpc();
+
+      return { marketPda, predicateHash };
+    };
+
+    it("fails to settle before settle_after", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 201;
+      const predicate: PredicateInput = {
+        statAKey: 1, statBKey: null, op: null, threshold: 100, comparison: { greaterThan: {} }
+      };
+      // locksAt in 5s, settleAfter in 10s (too early to settle)
+      const { marketPda } = await createMarketForSettle(fixtureId, now + 5, now + 10, predicate);
+
+      const tsMs = (await getOnChainTime()) * 1000;
+      await initializeDailyRoot(tsMs);
+      const dailyScoresMerkleRoots = getDailyScoresRootsPda(tsMs);
+
+      const fixtureSummary = {
+        fixtureId: new anchor.BN(fixtureId),
+        updateStats: { updateCount: 1, minTimestamp: new anchor.BN(now), maxTimestamp: new anchor.BN(now) },
+        eventsSubTreeRoot: Array(32).fill(0),
+      };
+
+      const statA = {
+        statToProve: { key: 1, value: 5, period: 1 },
+        eventStatRoot: Array(32).fill(0),
+        statProof: [],
+      };
+
+      try {
+        await program.methods
+          .settleMarket(
+            new anchor.BN(tsMs),
+            fixtureSummary,
+            [],
+            [],
+            statA,
+            null
+          )
+          .accounts({
+            market: marketPda,
+            txoracleProgram: txoracleProgramId,
+            dailyScoresMerkleRoots,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown SettlementTooEarly");
+      } catch (e: any) {
+        expect(e.message).to.include("SettlementTooEarly");
+      }
+    });
+
+    it("fails to settle with wrong fixture ID", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 202;
+      const predicate: PredicateInput = {
+        statAKey: 1, statBKey: null, op: null, threshold: 100, comparison: { greaterThan: {} }
+      };
+      const { marketPda } = await createMarketForSettle(fixtureId, now + 2, now + 3, predicate);
+      await advanceTime(3);
+
+      const tsMs = (await getOnChainTime()) * 1000;
+      await initializeDailyRoot(tsMs);
+      const dailyScoresMerkleRoots = getDailyScoresRootsPda(tsMs);
+
+      const fixtureSummary = {
+        fixtureId: new anchor.BN(fixtureId + 1), // Mismatching fixture ID
+        updateStats: { updateCount: 1, minTimestamp: new anchor.BN(now), maxTimestamp: new anchor.BN(now) },
+        eventsSubTreeRoot: Array(32).fill(0),
+      };
+
+      const statA = {
+        statToProve: { key: 1, value: 5, period: 1 },
+        eventStatRoot: Array(32).fill(0),
+        statProof: [],
+      };
+
+      try {
+        await program.methods
+          .settleMarket(
+            new anchor.BN(tsMs),
+            fixtureSummary,
+            [],
+            [],
+            statA,
+            null
+          )
+          .accounts({
+            market: marketPda,
+            txoracleProgram: txoracleProgramId,
+            dailyScoresMerkleRoots,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown FixtureMismatch");
+      } catch (e: any) {
+        expect(e.message).to.include("FixtureMismatch");
+      }
+    });
+
+    it("fails to settle with wrong stat A key", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 203;
+      const predicate: PredicateInput = {
+        statAKey: 1, statBKey: null, op: null, threshold: 100, comparison: { greaterThan: {} }
+      };
+      const { marketPda } = await createMarketForSettle(fixtureId, now + 2, now + 3, predicate);
+      await advanceTime(3);
+
+      const tsMs = (await getOnChainTime()) * 1000;
+      await initializeDailyRoot(tsMs);
+      const dailyScoresMerkleRoots = getDailyScoresRootsPda(tsMs);
+
+      const fixtureSummary = {
+        fixtureId: new anchor.BN(fixtureId),
+        updateStats: { updateCount: 1, minTimestamp: new anchor.BN(now), maxTimestamp: new anchor.BN(now) },
+        eventsSubTreeRoot: Array(32).fill(0),
+      };
+
+      const statA = {
+        statToProve: { key: 99, value: 5, period: 1 }, // mismatching key
+        eventStatRoot: Array(32).fill(0),
+        statProof: [],
+      };
+
+      try {
+        await program.methods
+          .settleMarket(
+            new anchor.BN(tsMs),
+            fixtureSummary,
+            [],
+            [],
+            statA,
+            null
+          )
+          .accounts({
+            market: marketPda,
+            txoracleProgram: txoracleProgramId,
+            dailyScoresMerkleRoots,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown StatKeyMismatch");
+      } catch (e: any) {
+        expect(e.message).to.include("StatKeyMismatch");
+      }
+    });
+
+    it("fails to settle with wrong daily-root PDA", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 204;
+      const predicate: PredicateInput = {
+        statAKey: 1, statBKey: null, op: null, threshold: 100, comparison: { greaterThan: {} }
+      };
+      const { marketPda } = await createMarketForSettle(fixtureId, now + 2, now + 3, predicate);
+      await advanceTime(3);
+
+      const tsMs = (await getOnChainTime()) * 1000;
+      await initializeDailyRoot(tsMs);
+      await initializeDailyRoot(tsMs + 86400000 * 2); // initialize the mismatching PDA as well so it exists on-chain
+      const dailyScoresMerkleRoots = getDailyScoresRootsPda(tsMs + 86400000 * 2); // mismatching PDA
+
+      const fixtureSummary = {
+        fixtureId: new anchor.BN(fixtureId),
+        updateStats: { updateCount: 1, minTimestamp: new anchor.BN(now), maxTimestamp: new anchor.BN(now) },
+        eventsSubTreeRoot: Array(32).fill(0),
+      };
+
+      const statA = {
+        statToProve: { key: 1, value: 5, period: 1 },
+        eventStatRoot: Array(32).fill(0),
+        statProof: [],
+      };
+
+      try {
+        await program.methods
+          .settleMarket(
+            new anchor.BN(tsMs),
+            fixtureSummary,
+            [],
+            [],
+            statA,
+            null
+          )
+          .accounts({
+            market: marketPda,
+            txoracleProgram: txoracleProgramId,
+            dailyScoresMerkleRoots,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown InvalidOraclePda");
+      } catch (e: any) {
+        expect(e.message).to.include("InvalidOraclePda");
+      }
+    });
+
+    it("succeeds to settle with outcome = true when mock validates", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 205;
+      const predicate: PredicateInput = {
+        statAKey: 1, statBKey: null, op: null, threshold: 100, comparison: { greaterThan: {} }
+      };
+      const { marketPda } = await createMarketForSettle(fixtureId, now + 2, now + 3, predicate);
+      await advanceTime(3);
+
+      const tsMs = (await getOnChainTime()) * 1000;
+      await initializeDailyRoot(tsMs);
+      const dailyScoresMerkleRoots = getDailyScoresRootsPda(tsMs);
+
+      const fixtureSummary = {
+        fixtureId: new anchor.BN(fixtureId),
+        updateStats: { updateCount: 1, minTimestamp: new anchor.BN(now), maxTimestamp: new anchor.BN(now) },
+        eventsSubTreeRoot: Array(32).fill(0),
+      };
+
+      const statA = {
+        statToProve: { key: 1, value: 5, period: 1 },
+        eventStatRoot: Array(32).fill(0),
+        statProof: [],
+      };
+
+      await program.methods
+        .settleMarket(
+          new anchor.BN(tsMs),
+          fixtureSummary,
+          [],
+          [],
+          statA,
+          null
+        )
+        .accounts({
+          market: marketPda,
+          txoracleProgram: txoracleProgramId,
+          dailyScoresMerkleRoots,
+        } as any)
+        .rpc();
+
+      const market = await program.account.market.fetch(marketPda);
+      expect(market.status).to.have.property("settled");
+      expect(market.outcome).to.equal(true);
+      expect(market.settledAt).to.not.be.null;
+    });
+
+    it("succeeds to settle with outcome = false when mock invalidates", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 206;
+      const predicate: PredicateInput = {
+        statAKey: 1, statBKey: null, op: null, threshold: 50, comparison: { greaterThan: {} }
+      };
+      const { marketPda } = await createMarketForSettle(fixtureId, now + 2, now + 3, predicate);
+      await advanceTime(3);
+
+      const tsMs = (await getOnChainTime()) * 1000;
+      await initializeDailyRoot(tsMs);
+      const dailyScoresMerkleRoots = getDailyScoresRootsPda(tsMs);
+
+      const fixtureSummary = {
+        fixtureId: new anchor.BN(fixtureId),
+        updateStats: { updateCount: 1, minTimestamp: new anchor.BN(now), maxTimestamp: new anchor.BN(now) },
+        eventsSubTreeRoot: Array(32).fill(0),
+      };
+
+      const statA = {
+        statToProve: { key: 1, value: 5, period: 1 },
+        eventStatRoot: Array(32).fill(0),
+        statProof: [],
+      };
+
+      await program.methods
+        .settleMarket(
+          new anchor.BN(tsMs),
+          fixtureSummary,
+          [],
+          [],
+          statA,
+          null
+        )
+        .accounts({
+          market: marketPda,
+          txoracleProgram: txoracleProgramId,
+          dailyScoresMerkleRoots,
+        } as any)
+        .rpc();
+
+      const market = await program.account.market.fetch(marketPda);
+      expect(market.status).to.have.property("settled");
+      expect(market.outcome).to.equal(false);
+      expect(market.settledAt).to.not.be.null;
+    });
+
+    it("fails to settle already settled market", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 207;
+      const predicate: PredicateInput = {
+        statAKey: 1, statBKey: null, op: null, threshold: 100, comparison: { greaterThan: {} }
+      };
+      const { marketPda } = await createMarketForSettle(fixtureId, now + 2, now + 3, predicate);
+      await advanceTime(3);
+
+      const tsMs = (await getOnChainTime()) * 1000;
+      await initializeDailyRoot(tsMs);
+      const dailyScoresMerkleRoots = getDailyScoresRootsPda(tsMs);
+
+      const fixtureSummary = {
+        fixtureId: new anchor.BN(fixtureId),
+        updateStats: { updateCount: 1, minTimestamp: new anchor.BN(now), maxTimestamp: new anchor.BN(now) },
+        eventsSubTreeRoot: Array(32).fill(0),
+      };
+
+      const statA = {
+        statToProve: { key: 1, value: 5, period: 1 },
+        eventStatRoot: Array(32).fill(0),
+        statProof: [],
+      };
+
+      await program.methods
+        .settleMarket(
+          new anchor.BN(tsMs),
+          fixtureSummary,
+          [],
+          [],
+          statA,
+          null
+        )
+        .accounts({
+          market: marketPda,
+          txoracleProgram: txoracleProgramId,
+          dailyScoresMerkleRoots,
+        } as any)
+        .rpc();
+
+      try {
+        await program.methods
+          .settleMarket(
+            new anchor.BN(tsMs),
+            fixtureSummary,
+            [],
+            [],
+            statA,
+            null
+          )
+          .accounts({
+            market: marketPda,
+            txoracleProgram: txoracleProgramId,
+            dailyScoresMerkleRoots,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown MarketNotSettleable");
+      } catch (e: any) {
+        // Status changes to Settled on first settlement, so settling it again throws MarketNotSettleable
+        expect(e.message).to.include("MarketNotSettleable");
+      }
+    });
+
+    it("fails to settle cancelled market", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 208;
+      const predicate: PredicateInput = {
+        statAKey: 1, statBKey: null, op: null, threshold: 100, comparison: { greaterThan: {} }
+      };
+      const { marketPda } = await createMarketForSettle(fixtureId, now + 2, now + 3, predicate);
+      await advanceTime(3);
+
+      await program.methods.cancelMarket().accounts({ market: marketPda }).rpc();
+
+      const tsMs = (await getOnChainTime()) * 1000;
+      await initializeDailyRoot(tsMs);
+      const dailyScoresMerkleRoots = getDailyScoresRootsPda(tsMs);
+
+      const fixtureSummary = {
+        fixtureId: new anchor.BN(fixtureId),
+        updateStats: { updateCount: 1, minTimestamp: new anchor.BN(now), maxTimestamp: new anchor.BN(now) },
+        eventsSubTreeRoot: Array(32).fill(0),
+      };
+
+      const statA = {
+        statToProve: { key: 1, value: 5, period: 1 },
+        eventStatRoot: Array(32).fill(0),
+        statProof: [],
+      };
+
+      try {
+        await program.methods
+          .settleMarket(
+            new anchor.BN(tsMs),
+            fixtureSummary,
+            [],
+            [],
+            statA,
+            null
+          )
+          .accounts({
+            market: marketPda,
+            txoracleProgram: txoracleProgramId,
+            dailyScoresMerkleRoots,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown MarketNotSettleable");
+      } catch (e: any) {
+        expect(e.message).to.include("MarketNotSettleable");
+      }
+    });
+
+    it("fails to settle with stale oracle timestamp", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 209;
+      const predicate: PredicateInput = {
+        statAKey: 1, statBKey: null, op: null, threshold: 100, comparison: { greaterThan: {} }
+      };
+      const { marketPda } = await createMarketForSettle(fixtureId, now + 2, now + 3, predicate);
+      await advanceTime(3);
+
+      // Stale oracle timestamp (e.g., from 10 seconds before match started)
+      const staleTsMs = (now - 10) * 1000;
+      await initializeDailyRoot(staleTsMs);
+      const dailyScoresMerkleRoots = getDailyScoresRootsPda(staleTsMs);
+
+      const fixtureSummary = {
+        fixtureId: new anchor.BN(fixtureId),
+        updateStats: { updateCount: 1, minTimestamp: new anchor.BN(now), maxTimestamp: new anchor.BN(now) },
+        eventsSubTreeRoot: Array(32).fill(0),
+      };
+
+      const statA = {
+        statToProve: { key: 1, value: 5, period: 1 },
+        eventStatRoot: Array(32).fill(0),
+        statProof: [],
+      };
+
+      try {
+        await program.methods
+          .settleMarket(
+            new anchor.BN(staleTsMs),
+            fixtureSummary,
+            [],
+            [],
+            statA,
+            null
+          )
+          .accounts({
+            market: marketPda,
+            txoracleProgram: txoracleProgramId,
+            dailyScoresMerkleRoots,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown StaleOracleSnapshot");
+      } catch (e: any) {
+        expect(e.message).to.include("StaleOracleSnapshot");
       }
     });
   });

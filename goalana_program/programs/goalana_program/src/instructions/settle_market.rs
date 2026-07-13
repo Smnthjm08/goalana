@@ -36,7 +36,7 @@ pub struct SettleMarket<'info> {
 
 pub fn handle_settle_market(
     ctx: Context<SettleMarket>,
-    ts: i64,
+    oracle_ts_ms: i64,
     fixture_summary: ScoresBatchSummary,
     fixture_proof: Vec<ProofNode>,
     main_tree_proof: Vec<ProofNode>,
@@ -45,8 +45,15 @@ pub fn handle_settle_market(
 ) -> Result<()> {
     let market = &mut ctx.accounts.market;
 
+    // Enforce that oracle timestamp is non-negative.
+    require!(
+        oracle_ts_ms >= 0,
+        GoalanaError::InvalidOracleTimestamp
+    );
+
     // Derive and verify the canonical daily scores roots PDA
-    let epoch_day = ts
+    // epoch_day uses oracle_ts_ms (Unix milliseconds)
+    let epoch_day = oracle_ts_ms
         .checked_div(86_400_000)
         .and_then(|day| u16::try_from(day).ok())
         .ok_or_else(|| error!(GoalanaError::InvalidOracleTimestamp))?;
@@ -63,9 +70,16 @@ pub fn handle_settle_market(
 
     // Enforce the earliest configured settlement time.
     // This prevents settlement before the expected settlement window.
-    // The supplied stat values are authenticated separately by the TxOracle CPI.
-    let now = Clock::get()?.unix_timestamp;
-    require!(now >= market.settle_after, GoalanaError::SettlementTooEarly);
+    // now_ts_secs is in Unix seconds, while market.settle_after is in Unix seconds.
+    let now_ts_secs = Clock::get()?.unix_timestamp;
+    require!(now_ts_secs >= market.settle_after, GoalanaError::SettlementTooEarly);
+
+    // Enforce that the oracle snapshot itself is not stale (i.e. was taken after the settle_after window).
+    let oracle_ts_secs = oracle_ts_ms
+        .checked_div(1000)
+        .ok_or_else(|| error!(GoalanaError::InvalidOracleTimestamp))?;
+    require!(oracle_ts_secs >= market.settle_after, GoalanaError::StaleOracleSnapshot);
+
     require!(
         fixture_summary.fixture_id == market.fixture_id,
         GoalanaError::FixtureMismatch
@@ -92,7 +106,7 @@ pub fn handle_settle_market(
     // Build EXACT TxOracle predicate.
     // No approximation here.
     let oracle_predicate = TraderPredicate {
-        threshold: market.predicate.threshold as i32,
+        threshold: market.predicate.threshold,
         comparison: match market.predicate.comparison {
             crate::state::Comparison::GreaterThan => Comparison::GreaterThan,
             crate::state::Comparison::LessThan => Comparison::LessThan,
@@ -110,20 +124,37 @@ pub fn handle_settle_market(
     let outcome = txline_cpi::validate_stat(
         ctx.accounts.txoracle_program.to_account_info(),
         ctx.accounts.daily_scores_merkle_roots.to_account_info(),
-        ts,
+        oracle_ts_ms,
         fixture_summary,
         fixture_proof,
         main_tree_proof,
         oracle_predicate,
-        stat_a.clone(),
-        stat_b.clone(),
+        stat_a,
+        stat_b,
         oracle_op,
     )?;
 
     // 6. Market -> Settled
     market.outcome = Some(outcome);
     market.status = MarketStatus::Settled;
-    market.settled_at = Some(now);
+    market.settled_at = Some(now_ts_secs);
+
+    emit!(MarketSettled {
+        market: market.key(),
+        fixture_id: market.fixture_id,
+        outcome,
+        oracle_ts_ms,
+        settled_at: now_ts_secs,
+    });
 
     Ok(())
+}
+
+#[event]
+pub struct MarketSettled {
+    pub market: Pubkey,
+    pub fixture_id: i64,
+    pub outcome: bool,
+    pub oracle_ts_ms: i64,
+    pub settled_at: i64,
 }
