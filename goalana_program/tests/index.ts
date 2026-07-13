@@ -3,55 +3,66 @@ import { type GoalanaProgram } from "../target/types/goalana_program.ts";
 import crypto from "crypto";
 import { expect } from "chai";
 
-type PredicateInput = {
+export interface PredicateInput {
   statAKey: number;
   statBKey: number | null;
   op: { add: {} } | { subtract: {} } | null;
   threshold: number;
   comparison:
   | { greaterThan: {} }
-  | { greaterThanOrEqual: {} }
   | { lessThan: {} }
-  | { lessThanOrEqual: {} }
-  | { equal: {} }
-  | { notEqual: {} };
-};
+  | { equalTo: {} };
+}
 
-const serializePredicate = (predicate: PredicateInput) => {
-  const bytes = Buffer.alloc(16);
-
-  bytes.writeUInt32LE(predicate.statAKey, 0);
-  bytes.writeUInt8(predicate.statBKey === null ? 0 : 1, 4);
-
-  if (predicate.statBKey !== null) {
-    bytes.writeUInt32LE(predicate.statBKey, 5);
-  }
-
-  bytes.writeUInt8(predicate.op === null ? 0 : 1, 9);
-
-  if (predicate.op !== null) {
-    bytes.writeUInt8("add" in predicate.op ? 0 : 1, 10);
-  }
-
-  bytes.writeInt32LE(predicate.threshold, 11);
+function serializePredicate(predicate: PredicateInput): Buffer {
+  const opIndex =
+    predicate.op === null
+      ? 0
+      : "add" in predicate.op
+        ? 0
+        : 1;
 
   const comparisonIndex =
     "greaterThan" in predicate.comparison
       ? 0
-      : "greaterThanOrEqual" in predicate.comparison
+      : "lessThan" in predicate.comparison
         ? 1
-        : "lessThan" in predicate.comparison
-          ? 2
-          : "lessThanOrEqual" in predicate.comparison
-            ? 3
-            : "equal" in predicate.comparison
-              ? 4
-              : 5;
+        : 2;
 
-  bytes.writeUInt8(comparisonIndex, 15);
+  const buffer = Buffer.alloc(18);
+  let offset = 0;
 
-  return bytes;
-};
+  buffer.writeUInt32LE(predicate.statAKey, offset);
+  offset += 4;
+
+  if (predicate.statBKey !== null) {
+    buffer.writeUInt8(1, offset);
+    offset += 1;
+    buffer.writeUInt32LE(predicate.statBKey, offset);
+    offset += 4;
+  } else {
+    buffer.writeUInt8(0, offset);
+    offset += 1;
+  }
+
+  if (predicate.op !== null) {
+    buffer.writeUInt8(1, offset);
+    offset += 1;
+    buffer.writeUInt8(opIndex, offset);
+    offset += 1;
+  } else {
+    buffer.writeUInt8(0, offset);
+    offset += 1;
+  }
+
+  buffer.writeInt32LE(predicate.threshold, offset);
+  offset += 4;
+
+  buffer.writeUInt8(comparisonIndex, offset);
+  offset += 1;
+
+  return buffer.slice(0, offset);
+}
 
 describe("goalana", () => {
   const provider = anchor.AnchorProvider.env();
@@ -63,10 +74,10 @@ describe("goalana", () => {
     const fixtureId = 42;
     const predicate: PredicateInput = {
       statAKey: 7,
-      statBKey: 11,
+      statBKey: 8,
       op: { add: {} },
       threshold: 19,
-      comparison: { greaterThanOrEqual: {} },
+      comparison: { greaterThan: {} },
     };
 
     const predicateBytes = serializePredicate(predicate);
@@ -95,10 +106,10 @@ describe("goalana", () => {
     const fixtureId = 42;
     const predicate: PredicateInput = {
       statAKey: 7,
-      statBKey: 11,
+      statBKey: 8,
       op: { add: {} },
       threshold: 19,
-      comparison: { greaterThanOrEqual: {} },
+      comparison: { greaterThan: {} },
     };
 
     const predicateBytes = serializePredicate(predicate);
@@ -152,10 +163,10 @@ describe("goalana", () => {
     const fixtureId = 42;
     const predicate: PredicateInput = {
       statAKey: 7,
-      statBKey: 11,
+      statBKey: 8,
       op: { add: {} },
       threshold: 19,
-      comparison: { greaterThanOrEqual: {} },
+      comparison: { greaterThan: {} },
     };
 
     const predicateBytes = serializePredicate(predicate);
@@ -201,10 +212,10 @@ describe("goalana", () => {
     const fixtureId = 42;
     const predicate: PredicateInput = {
       statAKey: 7,
-      statBKey: 11,
+      statBKey: 8,
       op: { add: {} },
       threshold: 19,
-      comparison: { greaterThanOrEqual: {} },
+      comparison: { greaterThan: {} },
     };
 
     const predicateBytes = serializePredicate(predicate);
@@ -270,7 +281,7 @@ describe("goalana", () => {
 
     const createMarketWithLocksAt = async (fixtureId: number, locksAtTime: number) => {
       const predicate: PredicateInput = {
-        statAKey: 7, statBKey: 11, op: { add: {} }, threshold: 19, comparison: { greaterThanOrEqual: {} }
+        statAKey: 7, statBKey: 8, op: { add: {} }, threshold: 19, comparison: { greaterThan: {} }
       };
       const predicateBytes = serializePredicate(predicate);
       const predicateHash = crypto.createHash("sha256").update(predicateBytes).digest();

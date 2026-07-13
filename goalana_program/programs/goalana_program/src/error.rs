@@ -29,6 +29,30 @@ pub enum GoalanaError {
     #[msg("Lock time must be in the future.")]
     InvalidLockTime,
 
+    #[msg("Market is not locked.")]
+    MarketNotLocked,
+
+    #[msg("TxLINE fixture does not match the market fixture.")]
+    FixtureMismatch,
+
+    #[msg("Stat key does not match the market predicate.")]
+    StatKeyMismatch,
+
     #[msg("Arithmetic overflow occurred.")]
     ArithmeticOverflow,
+
+    #[msg("Market is not in a settleable state (must be Open or Locked).")]
+    MarketNotSettleable,
+
+    #[msg("Market outcome is already recorded.")]
+    MarketAlreadySettled,
+
+    #[msg("Invalid stat key — not a known TxLINE soccer stat key.")]
+    InvalidStatKey,
+
+    #[msg("BinaryOp is required when stat_b_key is present.")]
+    MissingBinaryOp,
+
+    #[msg("BinaryOp must not be set when stat_b_key is absent.")]
+    UnexpectedBinaryOp,
 }

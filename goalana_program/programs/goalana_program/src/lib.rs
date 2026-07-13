@@ -2,6 +2,7 @@ pub mod constants;
 pub mod error;
 pub mod instructions;
 pub mod state;
+pub mod txline_cpi;
 
 use anchor_lang::prelude::*;
 
@@ -41,6 +42,26 @@ pub mod goalana_program {
 
     pub fn cancel_market(ctx: Context<CancelMarket>) -> Result<()> {
         instructions::cancel_market::handle_cancel_market(ctx)
+    }
+
+    pub fn settle_market(
+        ctx: Context<SettleMarket>,
+        ts: i64,
+        fixture_summary: txline_cpi::ScoresBatchSummary,
+        fixture_proof: Vec<txline_cpi::ProofNode>,
+        main_tree_proof: Vec<txline_cpi::ProofNode>,
+        stat_a: txline_cpi::StatTerm,
+        stat_b: Option<txline_cpi::StatTerm>,
+    ) -> Result<()> {
+        instructions::settle_market::handle_settle_market(
+            ctx,
+            ts,
+            fixture_summary,
+            fixture_proof,
+            main_tree_proof,
+            stat_a,
+            stat_b,
+        )
     }
 }
 

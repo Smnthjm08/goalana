@@ -1,0 +1,9 @@
+{
+	"servers": {
+		"TxLINE Documentation": {
+			"url": "https://txline.txodds.com/mcp",
+			"type": "http"
+		}
+	},
+	"inputs": []
+}

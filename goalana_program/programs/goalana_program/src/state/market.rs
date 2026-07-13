@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use crate::error::GoalanaError;
 
 #[derive(
     AnchorSerialize,
@@ -32,21 +33,11 @@ pub enum MarketOrigin {
     User,
 }
 
-#[derive(
-    AnchorSerialize,
-    AnchorDeserialize,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum Comparison {
     GreaterThan,
-    GreaterThanOrEqual,
     LessThan,
-    LessThanOrEqual,
-    Equal,
-    NotEqual,
+    EqualTo,
 }
 
 #[derive(
@@ -113,51 +104,50 @@ impl Predicate {
     /// comparison: enum        = 1
     ///
     /// Total                   = 16 bytes
-    pub const LEN: usize = 4 + 5 + 2 + 4 + 1;
+    pub const LEN: usize = 4 + 5 + 2 + 4 + 1; // 16 bytes
 
     pub fn validate(&self) -> Result<()> {
-        match (self.stat_b_key, self.op) {
-            (None, None) => Ok(()),
-            (Some(_), Some(_)) => Ok(()),
-            _ => err!(crate::error::GoalanaError::InvalidPredicateStructure),
+        let valid_key = |k: u32| {
+            (1..=8).contains(&k)
+            || (1001..=1008).contains(&k)
+            || (2001..=2008).contains(&k)
+            || (5001..=5008).contains(&k)
+        };
+
+        require!(valid_key(self.stat_a_key), GoalanaError::InvalidStatKey);
+
+        if let Some(b) = self.stat_b_key {
+            require!(valid_key(b), GoalanaError::InvalidStatKey);
         }
+
+        match (self.stat_b_key, self.op) {
+            (Some(_), None) => return err!(GoalanaError::MissingBinaryOp),
+            (None, Some(_)) => return err!(GoalanaError::UnexpectedBinaryOp),
+            _ => {}
+        }
+
+        Ok(())
     }
 
-    pub fn evaluate(
-        &self,
-        stat_a_value: i32,
-        stat_b_value: Option<i32>,
-    ) -> Result<bool> {
-        let resolved_value = match (self.op, stat_b_value) {
+    pub fn evaluate(&self, stat_a_value: i32, stat_b_value: Option<i32>) -> Result<bool> {
+        let lhs: i32 = match (self.op, stat_b_value) {
+            (Some(BinaryOp::Add), Some(b)) => {
+                stat_a_value.checked_add(b)
+                    .ok_or(error!(GoalanaError::ArithmeticOverflow))?
+            }
+            (Some(BinaryOp::Subtract), Some(b)) => {
+                stat_a_value.checked_sub(b)
+                    .ok_or(error!(GoalanaError::ArithmeticOverflow))?
+            }
             (None, None) => stat_a_value,
-
-            (Some(BinaryOp::Add), Some(stat_b)) => {
-                stat_a_value
-                    .checked_add(stat_b)
-                    .ok_or(crate::error::GoalanaError::ArithmeticOverflow)?
-            }
-
-            (Some(BinaryOp::Subtract), Some(stat_b)) => {
-                stat_a_value
-                    .checked_sub(stat_b)
-                    .ok_or(crate::error::GoalanaError::ArithmeticOverflow)?
-            }
-
-            _ => {
-                return err!(crate::error::GoalanaError::InvalidPredicateStructure);
-            }
+            _ => return err!(GoalanaError::InvalidPredicateStructure),
         };
 
-        let outcome = match self.comparison {
-            Comparison::GreaterThan => resolved_value > self.threshold,
-            Comparison::GreaterThanOrEqual => resolved_value >= self.threshold,
-            Comparison::LessThan => resolved_value < self.threshold,
-            Comparison::LessThanOrEqual => resolved_value <= self.threshold,
-            Comparison::Equal => resolved_value == self.threshold,
-            Comparison::NotEqual => resolved_value != self.threshold,
-        };
-
-        Ok(outcome)
+        Ok(match self.comparison {
+            Comparison::GreaterThan => lhs > self.threshold,
+            Comparison::LessThan    => lhs < self.threshold,
+            Comparison::EqualTo     => lhs == self.threshold,
+        })
     }
 }
 
