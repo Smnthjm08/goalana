@@ -5,13 +5,21 @@ use crate::{
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
-pub struct ClaimWinnings<'info> {
+pub struct ClaimRefund<'info> {
     #[account(
         mut,
         seeds = [b"market", market.fixture_id.to_le_bytes().as_ref(), market.predicate_hash.as_ref()],
         bump = market.bump,
-        constraint = market.status == MarketStatus::Settled @ GoalanaError::MarketNotSettled,
-        constraint = market.outcome.is_some() @ GoalanaError::MarketNotSettled,
+        constraint = (
+            market.status == MarketStatus::Cancelled
+            || (
+                market.status == MarketStatus::Settled
+                && (
+                    (market.outcome == Some(true) && market.total_yes == 0)
+                    || (market.outcome == Some(false) && market.total_no == 0)
+                )
+            )
+        ) @ GoalanaError::InvalidRefundState,
     )]
     pub market: Account<'info, Market>,
 
@@ -36,45 +44,18 @@ pub struct ClaimWinnings<'info> {
     pub user: Signer<'info>,
 }
 
-pub fn handle_claim_winnings(ctx: Context<ClaimWinnings>) -> Result<()> {
-    let market = &ctx.accounts.market;
-    let position = &ctx.accounts.position;
-
-    let outcome = market
-        .outcome
-        .ok_or(GoalanaError::MarketNotSettled)?;
-
-    let winning_stake = if outcome {
-        position.yes_amount
-    } else {
-        position.no_amount
-    };
-
-    require!(winning_stake > 0, GoalanaError::NoWinningStake);
-
-    let total_winning_stake = if outcome {
-        market.total_yes
-    } else {
-        market.total_no
-    };
-
-    // Defensive invariant: if winning_stake > 0, total_winning_stake must also be > 0.
-    require!(total_winning_stake > 0, GoalanaError::DivisionByZero);
-
-    let total_pool = market.total_yes
-        .checked_add(market.total_no)
+pub fn handle_claim_refund(ctx: Context<ClaimRefund>) -> Result<()> {
+    let refund_amount = ctx
+        .accounts
+        .position
+        .yes_amount
+        .checked_add(ctx.accounts.position.no_amount)
         .ok_or(GoalanaError::ArithmeticOverflow)?;
 
-    // Use u128 intermediate math to prevent u64 × u64 overflow.
-    // payout = floor(winning_stake × total_pool / total_winning_stake)
-    let intermediate_payout = (winning_stake as u128)
-        .checked_mul(total_pool as u128)
-        .ok_or(GoalanaError::ArithmeticOverflow)?
-        .checked_div(total_winning_stake as u128)
-        .ok_or(GoalanaError::DivisionByZero)?;
-
-    let payout = u64::try_from(intermediate_payout)
-        .map_err(|_| GoalanaError::ArithmeticOverflow)?;
+    require!(
+        refund_amount > 0,
+        GoalanaError::NoRefundableStake
+    );
 
     let vault_info = ctx.accounts.vault.to_account_info();
     let user_info = ctx.accounts.user.to_account_info();
@@ -88,41 +69,38 @@ pub fn handle_claim_winnings(ctx: Context<ClaimWinnings>) -> Result<()> {
         .ok_or(GoalanaError::InsufficientVaultBalance)?;
 
     require!(
-        available_balance >= payout,
+        available_balance >= refund_amount,
         GoalanaError::InsufficientVaultBalance
     );
 
     let new_vault_balance = vault_info
         .lamports()
-        .checked_sub(payout)
+        .checked_sub(refund_amount)
         .ok_or(GoalanaError::ArithmeticOverflow)?;
 
     let new_user_balance = user_info
         .lamports()
-        .checked_add(payout)
+        .checked_add(refund_amount)
         .ok_or(GoalanaError::ArithmeticOverflow)?;
 
-    // Direct lamport transfer from program-owned vault PDA to user.
-    // Integer division may leave residual lamport dust in the vault.
+    // Program-owned accounts may have their lamports directly mutated.
     **vault_info.try_borrow_mut_lamports()? = new_vault_balance;
     **user_info.try_borrow_mut_lamports()? = new_user_balance;
 
     ctx.accounts.position.claimed = true;
 
-    emit!(WinningsClaimed {
+    emit!(RefundClaimed {
         market: ctx.accounts.market.key(),
         user: ctx.accounts.user.key(),
-        winning_stake,
-        payout,
+        amount: refund_amount,
     });
 
     Ok(())
 }
 
 #[event]
-pub struct WinningsClaimed {
+pub struct RefundClaimed {
     pub market: Pubkey,
     pub user: Pubkey,
-    pub winning_stake: u64,
-    pub payout: u64,
+    pub amount: u64,
 }

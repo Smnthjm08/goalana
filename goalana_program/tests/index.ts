@@ -73,6 +73,83 @@ describe("goalana", () => {
   const program = anchor.workspace.GoalanaProgram as anchor.Program<GoalanaProgram>;
   const baseFixtureId = Math.floor(Math.random() * 1000000);
 
+  const txoracleProgramId = new anchor.web3.PublicKey("6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J");
+
+  function getDailyScoresRootsPda(tsMs: number): anchor.web3.PublicKey {
+    const epochDay = Math.floor(tsMs / 86400000);
+    const epochDayBuffer = Buffer.alloc(2);
+    epochDayBuffer.writeUInt16LE(epochDay, 0);
+    const [pda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("daily_scores_roots"), epochDayBuffer],
+      txoracleProgramId
+    );
+    return pda;
+  }
+
+  const getOnChainTime = async (): Promise<number> => {
+    try {
+      const clockPubkey = anchor.web3.SYSVAR_CLOCK_PUBKEY;
+      const accountInfo = await provider.connection.getAccountInfo(clockPubkey);
+      if (accountInfo) {
+        const unixTimestamp = accountInfo.data.readBigInt64LE(32);
+        return Number(unixTimestamp);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch Sysvar Clock, falling back to local system clock:", e);
+    }
+    return Math.floor(Date.now() / 1000);
+  };
+
+  const advanceTime = async (seconds: number) => {
+    const startClock = await getOnChainTime();
+    const targetClock = startClock + seconds;
+    while (true) {
+      const currentClock = await getOnChainTime();
+      if (currentClock >= targetClock) {
+        break;
+      }
+      const dummy = anchor.web3.Keypair.generate();
+      const tx = new anchor.web3.Transaction().add(
+        anchor.web3.SystemProgram.transfer({
+          fromPubkey: provider.wallet.publicKey,
+          toPubkey: dummy.publicKey,
+          lamports: 1000,
+        })
+      );
+      try {
+        await provider.sendAndConfirm(tx);
+      } catch (e) {
+        // ignore
+      }
+      await new Promise(r => setTimeout(r, 100));
+    }
+  };
+
+  const initializeDailyRoot = async (tsMs: number) => {
+    const epochDay = Math.floor(tsMs / 86400000);
+    const dailyScoresRoots = getDailyScoresRootsPda(tsMs);
+
+    const info = await provider.connection.getAccountInfo(dailyScoresRoots);
+    if (info === null) {
+      const idlPath = path.resolve("./target/idl/txoracle_mock.json");
+      const txoracleMockIdl = JSON.parse(fs.readFileSync(idlPath, "utf8"));
+      txoracleMockIdl.address = txoracleProgramId.toBase58();
+      const txoracleProgram = new anchor.Program(txoracleMockIdl, provider) as any;
+      await txoracleProgram.methods
+        .insertScoresRoot(
+          epochDay,
+          12,
+          30,
+          Array(32).fill(0)
+        )
+        .accounts({
+          authority: provider.wallet.publicKey,
+          dailyScoresRoots,
+        } as any)
+        .rpc();
+    }
+  };
+
   it("derives the expected predicate hash and market PDA", async () => {
     const fixtureId = 42;
     const predicate: PredicateInput = {
@@ -420,82 +497,7 @@ describe("goalana", () => {
   });
 
   describe("settlement", () => {
-    const txoracleProgramId = new anchor.web3.PublicKey("6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J");
-
-    function getDailyScoresRootsPda(tsMs: number): anchor.web3.PublicKey {
-      const epochDay = Math.floor(tsMs / 86400000);
-      const epochDayBuffer = Buffer.alloc(2);
-      epochDayBuffer.writeUInt16LE(epochDay, 0);
-      const [pda] = anchor.web3.PublicKey.findProgramAddressSync(
-        [Buffer.from("daily_scores_roots"), epochDayBuffer],
-        txoracleProgramId
-      );
-      return pda;
-    }
-
-    const getOnChainTime = async (): Promise<number> => {
-      try {
-        const clockPubkey = anchor.web3.SYSVAR_CLOCK_PUBKEY;
-        const accountInfo = await provider.connection.getAccountInfo(clockPubkey);
-        if (accountInfo) {
-          const unixTimestamp = accountInfo.data.readBigInt64LE(32);
-          return Number(unixTimestamp);
-        }
-      } catch (e) {
-        console.warn("Failed to fetch Sysvar Clock, falling back to local system clock:", e);
-      }
-      return Math.floor(Date.now() / 1000);
-    };
-
-    const advanceTime = async (seconds: number) => {
-      const startClock = await getOnChainTime();
-      const targetClock = startClock + seconds;
-      while (true) {
-        const currentClock = await getOnChainTime();
-        if (currentClock >= targetClock) {
-          break;
-        }
-        const dummy = anchor.web3.Keypair.generate();
-        const tx = new anchor.web3.Transaction().add(
-          anchor.web3.SystemProgram.transfer({
-            fromPubkey: provider.wallet.publicKey,
-            toPubkey: dummy.publicKey,
-            lamports: 1000,
-          })
-        );
-        try {
-          await provider.sendAndConfirm(tx);
-        } catch (e) {
-          // ignore
-        }
-        await new Promise(r => setTimeout(r, 100));
-      }
-    };
-
-    const initializeDailyRoot = async (tsMs: number) => {
-      const epochDay = Math.floor(tsMs / 86400000);
-      const dailyScoresRoots = getDailyScoresRootsPda(tsMs);
-
-      const info = await provider.connection.getAccountInfo(dailyScoresRoots);
-      if (info === null) {
-        const idlPath = path.resolve("./target/idl/txoracle_mock.json");
-        const txoracleMockIdl = JSON.parse(fs.readFileSync(idlPath, "utf8"));
-        txoracleMockIdl.address = txoracleProgramId.toBase58();
-        const txoracleProgram = new anchor.Program(txoracleMockIdl, provider) as any;
-        await txoracleProgram.methods
-          .insertScoresRoot(
-            epochDay,
-            12,
-            30,
-            Array(32).fill(0)
-          )
-          .accounts({
-            authority: provider.wallet.publicKey,
-            dailyScoresRoots,
-          } as any)
-          .rpc();
-      }
-    };
+    // Helpers moved to top-level describe block
 
     const createMarketForSettle = async (
       fixtureId: number,
@@ -965,6 +967,399 @@ describe("goalana", () => {
       } catch (e: any) {
         expect(e.message).to.include("StaleOracleSnapshot");
       }
+    });
+  });
+
+  describe("participation and payout", () => {
+    // txoracleProgramId is defined globally
+
+    const getVaultPda = (marketPda: anchor.web3.PublicKey): anchor.web3.PublicKey => {
+      const [pda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), marketPda.toBuffer()],
+        program.programId
+      );
+      return pda;
+    };
+
+    const getPositionPda = (marketPda: anchor.web3.PublicKey, userPubkey: anchor.web3.PublicKey): anchor.web3.PublicKey => {
+      const [pda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("position"), marketPda.toBuffer(), userPubkey.toBuffer()],
+        program.programId
+      );
+      return pda;
+    };
+
+    const createMarketForBet = async (fixtureId: number, locksAtTime: number, settleAfterTime: number) => {
+      const predicate: PredicateInput = {
+        statAKey: 1, statBKey: null, op: null, threshold: 100, comparison: { greaterThan: {} }
+      };
+      const predicateBytes = serializePredicate(predicate);
+      const predicateHash = crypto.createHash("sha256").update(predicateBytes).digest();
+      const fixtureIdBytes = Buffer.alloc(8);
+      fixtureIdBytes.writeBigInt64LE(BigInt(fixtureId));
+
+      const [marketPda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("market"), fixtureIdBytes, predicateHash],
+        program.programId,
+      );
+
+      const locksAt = new anchor.BN(locksAtTime);
+      const settleAfter = new anchor.BN(settleAfterTime);
+
+      await program.methods
+        .createMarket(new anchor.BN(fixtureId), predicate, [...predicateHash], locksAt, settleAfter)
+        .rpc();
+
+      return { marketPda, predicateHash };
+    };
+
+    it("succeeds to place YES and NO bets, updates pools, and accumulates", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 301;
+      const { marketPda } = await createMarketForBet(fixtureId, now + 100, now + 200);
+
+      const vaultPda = getVaultPda(marketPda);
+      const positionPda = getPositionPda(marketPda, provider.wallet.publicKey);
+
+      // Place first bet: 1.5 SOL on YES
+      const yesAmount = new anchor.BN(1.5 * anchor.web3.LAMPORTS_PER_SOL);
+      await program.methods
+        .placeBet({ yes: {} }, yesAmount)
+        .accounts({
+          market: marketPda,
+          vault: vaultPda,
+          position: positionPda,
+        } as any)
+        .rpc();
+
+      let market = await program.account.market.fetch(marketPda);
+      let position = await program.account.position.fetch(positionPda);
+      let vaultBalance = await provider.connection.getBalance(vaultPda);
+
+      expect(market.totalYes.toString()).to.equal(yesAmount.toString());
+      expect(market.totalNo.toString()).to.equal("0");
+      expect(position.yesAmount.toString()).to.equal(yesAmount.toString());
+      expect(position.noAmount.toString()).to.equal("0");
+      expect(position.claimed).to.equal(false);
+      expect(vaultBalance).to.be.at.least(yesAmount.toNumber());
+
+      // Place second bet: 0.5 SOL on NO from the same user
+      const noAmount = new anchor.BN(0.5 * anchor.web3.LAMPORTS_PER_SOL);
+      await program.methods
+        .placeBet({ no: {} }, noAmount)
+        .accounts({
+          market: marketPda,
+          vault: vaultPda,
+          position: positionPda,
+        } as any)
+        .rpc();
+
+      market = await program.account.market.fetch(marketPda);
+      position = await program.account.position.fetch(positionPda);
+      vaultBalance = await provider.connection.getBalance(vaultPda);
+
+      expect(market.totalYes.toString()).to.equal(yesAmount.toString());
+      expect(market.totalNo.toString()).to.equal(noAmount.toString());
+      expect(position.yesAmount.toString()).to.equal(yesAmount.toString());
+      expect(position.noAmount.toString()).to.equal(noAmount.toString());
+      expect(vaultBalance).to.be.at.least(yesAmount.add(noAmount).toNumber());
+    });
+
+    it("fails to place bet after locks_at", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 302;
+      const { marketPda } = await createMarketForBet(fixtureId, now + 2, now + 3);
+
+      const vaultPda = getVaultPda(marketPda);
+      const positionPda = getPositionPda(marketPda, provider.wallet.publicKey);
+
+      await advanceTime(3);
+
+      try {
+        await program.methods
+          .placeBet({ yes: {} }, new anchor.BN(1000))
+          .accounts({
+            market: marketPda,
+            vault: vaultPda,
+            position: positionPda,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown BettingLocked");
+      } catch (e: any) {
+        expect(e.message).to.include("BettingLocked");
+      }
+    });
+
+    it("succeeds to claim winnings proportionally", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 303;
+      const { marketPda } = await createMarketForBet(fixtureId, now + 100, now + 200);
+
+      const vaultPda = getVaultPda(marketPda);
+
+      // We will bet with two different users:
+      // User 1 (provider wallet): 2 SOL on YES
+      const user1PositionPda = getPositionPda(marketPda, provider.wallet.publicKey);
+      await program.methods
+        .placeBet({ yes: {} }, new anchor.BN(2 * anchor.web3.LAMPORTS_PER_SOL))
+        .accounts({
+          market: marketPda,
+          vault: vaultPda,
+          position: user1PositionPda,
+        } as any)
+        .rpc();
+
+      // User 2: 1 SOL on YES
+      const user2 = anchor.web3.Keypair.generate();
+      const airdropSig2 = await provider.connection.requestAirdrop(user2.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL);
+      const latestBlockhash2 = await provider.connection.getLatestBlockhash();
+      await provider.connection.confirmTransaction({
+        blockhash: latestBlockhash2.blockhash,
+        lastValidBlockHeight: latestBlockhash2.lastValidBlockHeight,
+        signature: airdropSig2,
+      });
+
+      const user2PositionPda = getPositionPda(marketPda, user2.publicKey);
+      await program.methods
+        .placeBet({ yes: {} }, new anchor.BN(1 * anchor.web3.LAMPORTS_PER_SOL))
+        .accounts({
+          market: marketPda,
+          vault: vaultPda,
+          position: user2PositionPda,
+          user: user2.publicKey,
+        } as any)
+        .signers([user2])
+        .rpc();
+
+      // User 3 (another random keypair): 3 SOL on NO
+      const user3 = anchor.web3.Keypair.generate();
+      // Airdrop User 3
+      const airdropSig = await provider.connection.requestAirdrop(user3.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL);
+      const latestBlockhash = await provider.connection.getLatestBlockhash();
+      await provider.connection.confirmTransaction({
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+        signature: airdropSig,
+      });
+
+      const user3PositionPda = getPositionPda(marketPda, user3.publicKey);
+      await program.methods
+        .placeBet({ no: {} }, new anchor.BN(3 * anchor.web3.LAMPORTS_PER_SOL))
+        .accounts({
+          market: marketPda,
+          vault: vaultPda,
+          position: user3PositionPda,
+          user: user3.publicKey,
+        } as any)
+        .signers([user3])
+        .rpc();
+
+      // Total pool = 2 + 1 + 3 = 6 SOL.
+      // YES winning pool = 3 SOL.
+      // NO losing pool = 3 SOL.
+
+      // Wait and settle market with outcome = true
+      await advanceTime(200);
+      const tsMs = (await getOnChainTime()) * 1000;
+      await initializeDailyRoot(tsMs);
+      const dailyScoresMerkleRoots = getDailyScoresRootsPda(tsMs);
+
+      const fixtureSummary = {
+        fixtureId: new anchor.BN(fixtureId),
+        updateStats: { updateCount: 1, minTimestamp: new anchor.BN(now), maxTimestamp: new anchor.BN(now) },
+        eventsSubTreeRoot: Array(32).fill(0),
+      };
+
+      const statA = {
+        statToProve: { key: 1, value: 5, period: 1 },
+        eventStatRoot: Array(32).fill(0),
+        statProof: [],
+      };
+
+      // Evaluate YES as winning since predicate.threshold is 100 and mock returns true if threshold >= 100 (which it is!)
+      await program.methods
+        .settleMarket(
+          new anchor.BN(tsMs),
+          fixtureSummary,
+          [],
+          [],
+          statA,
+          null
+        )
+        .accounts({
+          market: marketPda,
+          txoracleProgram: txoracleProgramId,
+          dailyScoresMerkleRoots,
+        } as any)
+        .rpc();
+
+      // User 2 claims winnings:
+      // Winning pool = 3 SOL. Total pool = 6 SOL.
+      // User 2 stake = 1 SOL.
+      // Expected payout = 1 * 6 / 3 = 2 SOL.
+      const initialBalance = await provider.connection.getBalance(user2.publicKey);
+      await program.methods
+        .claimWinnings()
+        .accounts({
+          market: marketPda,
+          vault: vaultPda,
+          position: user2PositionPda,
+          user: user2.publicKey,
+        } as any)
+        .signers([user2])
+        .rpc();
+
+      const finalBalance = await provider.connection.getBalance(user2.publicKey);
+      const diff = finalBalance - initialBalance;
+      // We check that diff is approximately 2 SOL (minus tx fee which is negligible on localnet but let's be safe)
+      expect(diff).to.be.closeTo(2 * anchor.web3.LAMPORTS_PER_SOL, 0.01 * anchor.web3.LAMPORTS_PER_SOL);
+
+      const user2Position = await program.account.position.fetch(user2PositionPda);
+      expect(user2Position.claimed).to.equal(true);
+
+      // Loser (User 3) cannot claim winnings
+      try {
+        await program.methods
+          .claimWinnings()
+          .accounts({
+            market: marketPda,
+            vault: vaultPda,
+            position: user3PositionPda,
+            user: user3.publicKey,
+          } as any)
+          .signers([user3])
+          .rpc();
+        expect.fail("Should have thrown NoWinningStake");
+      } catch (e: any) {
+        expect(e.message).to.include("NoWinningStake");
+      }
+    });
+
+    it("succeeds to claim refund in cancelled market", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 304;
+      const { marketPda } = await createMarketForBet(fixtureId, now + 100, now + 200);
+
+      const vaultPda = getVaultPda(marketPda);
+      const positionPda = getPositionPda(marketPda, provider.wallet.publicKey);
+
+      const amount = new anchor.BN(1 * anchor.web3.LAMPORTS_PER_SOL);
+      await program.methods
+        .placeBet({ yes: {} }, amount)
+        .accounts({
+          market: marketPda,
+          vault: vaultPda,
+          position: positionPda,
+        } as any)
+        .rpc();
+
+      // Cancel market
+      await program.methods.cancelMarket().accounts({ market: marketPda }).rpc();
+
+      // Claim refund
+      const initialBalance = await provider.connection.getBalance(provider.wallet.publicKey);
+      await program.methods
+        .claimRefund()
+        .accounts({
+          market: marketPda,
+          vault: vaultPda,
+          position: positionPda,
+        } as any)
+        .rpc();
+
+      const finalBalance = await provider.connection.getBalance(provider.wallet.publicKey);
+      const diff = finalBalance - initialBalance;
+      expect(diff).to.be.closeTo(1 * anchor.web3.LAMPORTS_PER_SOL, 0.01 * anchor.web3.LAMPORTS_PER_SOL);
+
+      const position = await program.account.position.fetch(positionPda);
+      expect(position.claimed).to.equal(true);
+    });
+
+    it("succeeds to claim refund in settled market with empty winning pool", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 305;
+      const { marketPda } = await createMarketForBet(fixtureId, now + 100, now + 200);
+
+      const vaultPda = getVaultPda(marketPda);
+
+      // Only User 3 bets on NO: 2 SOL
+      const user3 = anchor.web3.Keypair.generate();
+      const airdropSig = await provider.connection.requestAirdrop(user3.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL);
+      const latestBlockhash = await provider.connection.getLatestBlockhash();
+      await provider.connection.confirmTransaction({
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+        signature: airdropSig,
+      });
+
+      const user3PositionPda = getPositionPda(marketPda, user3.publicKey);
+      await program.methods
+        .placeBet({ no: {} }, new anchor.BN(2 * anchor.web3.LAMPORTS_PER_SOL))
+        .accounts({
+          market: marketPda,
+          vault: vaultPda,
+          position: user3PositionPda,
+          user: user3.publicKey,
+        } as any)
+        .signers([user3])
+        .rpc();
+
+      // Total YES = 0. Total NO = 2.
+      // Settle market with outcome = true (YES wins!).
+      // Since YES wins but total_yes == 0, the winning pool is empty.
+
+      await advanceTime(200);
+      const tsMs = (await getOnChainTime()) * 1000;
+      await initializeDailyRoot(tsMs);
+      const dailyScoresMerkleRoots = getDailyScoresRootsPda(tsMs);
+
+      const fixtureSummary = {
+        fixtureId: new anchor.BN(fixtureId),
+        updateStats: { updateCount: 1, minTimestamp: new anchor.BN(now), maxTimestamp: new anchor.BN(now) },
+        eventsSubTreeRoot: Array(32).fill(0),
+      };
+
+      const statA = {
+        statToProve: { key: 1, value: 5, period: 1 },
+        eventStatRoot: Array(32).fill(0),
+        statProof: [],
+      };
+
+      await program.methods
+        .settleMarket(
+          new anchor.BN(tsMs),
+          fixtureSummary,
+          [],
+          [],
+          statA,
+          null
+        )
+        .accounts({
+          market: marketPda,
+          txoracleProgram: txoracleProgramId,
+          dailyScoresMerkleRoots,
+        } as any)
+        .rpc();
+
+      // Settle succeeded. Now User 3 (who bet on losing NO) should be allowed to refund their stake because the winning pool is empty!
+      const initialBalance = await provider.connection.getBalance(user3.publicKey);
+      await program.methods
+        .claimRefund()
+        .accounts({
+          market: marketPda,
+          vault: vaultPda,
+          position: user3PositionPda,
+          user: user3.publicKey,
+        } as any)
+        .signers([user3])
+        .rpc();
+
+      const finalBalance = await provider.connection.getBalance(user3.publicKey);
+      const diff = finalBalance - initialBalance;
+      expect(diff).to.be.closeTo(2 * anchor.web3.LAMPORTS_PER_SOL, 0.01 * anchor.web3.LAMPORTS_PER_SOL);
+
+      const position = await program.account.position.fetch(user3PositionPda);
+      expect(position.claimed).to.equal(true);
     });
   });
 

@@ -79,4 +79,34 @@ pub enum GoalanaError {
 
     #[msg("Oracle snapshot predates the market settlement window.")]
     StaleOracleSnapshot,
+
+    #[msg("Betting is locked for this market.")]
+    BettingLocked,
+
+    #[msg("Bet amount must be greater than zero.")]
+    InvalidBetAmount,
+
+    #[msg("Already claimed winnings or refund.")]
+    AlreadyClaimed,
+
+    #[msg("No winning stake on this position.")]
+    NoWinningStake,
+
+    #[msg("Division by zero occurred.")]
+    DivisionByZero,
+
+    #[msg("Refund is not allowed (market must be cancelled or settled with no winning pool).")]
+    InvalidRefundState,
+
+    #[msg("Market is not cancelled.")]
+    MarketNotCancelled,
+
+    #[msg("Position does not belong to the expected market or user.")]
+    InvalidPosition,
+
+    #[msg("Position has no refundable stake.")]
+    NoRefundableStake,
+
+    #[msg("Insufficient vault balance to fulfill payout or refund.")]
+    InsufficientVaultBalance,
 }

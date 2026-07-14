@@ -64,16 +64,20 @@ pub mod goalana_program {
             stat_b,
         )
     }
+
+    pub fn place_bet(
+        ctx: Context<PlaceBet>,
+        side: BetSide,
+        amount: u64,
+    ) -> Result<()> {
+        instructions::place_bet::handle_place_bet(ctx, side, amount)
+    }
+
+    pub fn claim_winnings(ctx: Context<ClaimWinnings>) -> Result<()> {
+        instructions::claim_winnings::handle_claim_winnings(ctx)
+    }
+
+    pub fn claim_refund(ctx: Context<ClaimRefund>) -> Result<()> {
+        instructions::claim_refund::handle_claim_refund(ctx)
+    }
 }
-
-// pub fn place_bet() -> Result<()> {
-//     instructions::place_bet::handle_place_bet()
-// }
-
-// pub fn claim_winnings() -> Result<()> {
-//     instructions::claim_winnings::handle_claim_winnings()
-// }
-
-// pub fn close_bet() -> Result<()> {
-//     instructions::close_bet::handle_close_bet()
-// }

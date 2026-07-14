@@ -211,6 +211,12 @@ pub struct Market {
     pub cancelled_at: Option<i64>,
 
     // ========================================================
+    // Pari-mutuel Pools
+    // ========================================================
+    pub total_yes: u64,
+    pub total_no: u64,
+
+    // ========================================================
     // PDA
     // ========================================================
     pub bump: u8,
@@ -231,6 +237,8 @@ impl Market {
         9 +                 // locked_at: Option<i64>
         9 +                 // settled_at: Option<i64>
         9 +                 // cancelled_at: Option<i64>
+        8 +                 // total_yes: u64
+        8 +                 // total_no: u64
         1; // bump: u8
 }
 

@@ -101,6 +101,10 @@ pub fn handle_create_market(
 
     market.cancelled_at = None;
 
+    market.total_yes = 0;
+
+    market.total_no = 0;
+
     market.bump = ctx.bumps.market;
 
     Ok(())
