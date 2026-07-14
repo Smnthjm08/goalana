@@ -39,45 +39,51 @@ export async function startScoresWorker() {
         }
 
         try {
-          const event = JSON.parse(
-            frame.data,
-          ) as ScoresRecordWithSoccer;
+          const rawEvent = JSON.parse(frame.data) as ScoresRecord;
 
-          const statusId =
-            typeof event.dataSoccer?.StatusId === "number"
-              ? event.dataSoccer.StatusId
-              : null;
+          const fixtureId = rawEvent.FixtureId;
+          const seq = rawEvent.Seq;
+          const action = rawEvent.Action;
+          const ts = rawEvent.Ts;
+          const confirmed = rawEvent.Confirmed ?? false;
+          
+          // StatusId is at the root for Soccer events in the TxLINE stream
+          const statusId = typeof rawEvent.StatusId === "number" ? rawEvent.StatusId : null;
+
+          if (!fixtureId || seq === undefined) {
+             throw new Error("Missing FixtureId or Seq");
+          }
 
           await prisma.matchEvent.upsert({
             where: {
               fixtureId_seq: {
-                fixtureId: BigInt(event.fixtureId),
-                seq: event.seq,
+                fixtureId: BigInt(fixtureId),
+                seq: seq,
               },
             },
 
             update: {
-              action: event.action,
-              timestamp: BigInt(event.ts),
+              action: action,
+              timestamp: BigInt(ts),
               statusId,
-              confirmed: event.confirmed,
-              payload: event as any,
+              confirmed: confirmed,
+              payload: rawEvent as any,
             },
 
             create: {
-              fixtureId: BigInt(event.fixtureId),
-              seq: event.seq,
-              action: event.action,
-              timestamp: BigInt(event.ts),
+              fixtureId: BigInt(fixtureId),
+              seq: seq,
+              action: action,
+              timestamp: BigInt(ts),
               statusId,
-              confirmed: event.confirmed,
-              payload: event as any,
+              confirmed: confirmed,
+              payload: rawEvent as any,
             },
           });
 
           logger.event(
             "scores.worker",
-            `Saved seq=${event.seq} fixture=${event.fixtureId} action=${event.action} confirmed=${event.confirmed}`,
+            `Saved seq=${seq} fixture=${fixtureId} action=${action} confirmed=${confirmed}`,
           );
         } catch (error) {
           logger.error("scores.worker", "Failed to parse or save event", error);

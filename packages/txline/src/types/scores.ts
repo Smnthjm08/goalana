@@ -9,60 +9,60 @@ import type { ProofList } from "./proofs";
  */
 export interface ScoresRecord {
     // Required core fields
-    fixtureId: number;
-    gameState: string;
-    startTime: number;
-    isTeam: boolean;
-    fixtureGroupId: number;
-    competitionId: number;
-    countryId: number;
-    sportId: number;
-    participant1IsHome: boolean;
-    participant2Id: number;
-    participant1Id: number;
-    action: string;
-    id: number;
-    ts: number;
-    connectionId: number;
-    seq: number;
+    FixtureId: number;
+    GameState: string;
+    StartTime: number;
+    IsTeam: boolean;
+    FixtureGroupId: number;
+    CompetitionId: number;
+    CountryId: number;
+    SportId: number;
+    Participant1IsHome: boolean;
+    Participant2Id: number;
+    Participant1Id: number;
+    Action: string;
+    Id: number;
+    Ts: number;
+    ConnectionId: number;
+    Seq: number;
     // Optional shared
-    coverageSecondaryData?: boolean;
-    coverageType?: string;
-    confirmed?: boolean;
-    participant?: number;
-    possession?: number;
-    possessionType?: unknown;
-    type?: unknown;
-    stats?: Record<string, number>;
-    kickoff?: unknown;
-    lineups?: unknown[];
+    CoverageSecondaryData?: boolean;
+    CoverageType?: string;
+    Confirmed?: boolean;
+    Participant?: number;
+    Possession?: number;
+    PossessionType?: unknown;
+    Type?: unknown;
+    Stats?: Record<string, number>;
+    Kickoff?: unknown;
+    Lineups?: unknown[];
     // Optional sport-specific status (union tags)
-    statusId?: unknown;           // US Football status
-    statusBasketballId?: unknown; // Basketball status
-    statusSoccerId?: unknown;     // Soccer status
+    StatusId?: unknown;           // US Football status
+    StatusBasketballId?: unknown; // Basketball status
+    StatusSoccerId?: unknown;     // Soccer status
     // Optional US Football
-    score?: unknown;
-    data?: unknown;
-    clock?: unknown;
-    down?: unknown;
-    inPlayInfo?: unknown;
-    kickoffInfo?: unknown;
-    parti1StateUsFootball?: unknown;
-    parti2StateUsFootball?: unknown;
-    possibleEventUsFootball?: unknown;
-    playerStatsUsFootball?: unknown;
+    Score?: unknown;
+    Data?: unknown;
+    Clock?: unknown;
+    Down?: unknown;
+    InPlayInfo?: unknown;
+    KickoffInfo?: unknown;
+    Parti1StateUsFootball?: unknown;
+    Parti2StateUsFootball?: unknown;
+    PossibleEventUsFootball?: unknown;
+    PlayerStatsUsFootball?: unknown;
     // Optional Soccer
-    scoreSoccer?: unknown;
-    dataSoccer?: unknown;
-    parti1StateSoccer?: unknown;
-    parti2StateSoccer?: unknown;
-    possibleEventSoccer?: unknown;
-    playerStatsSoccer?: unknown;
+    ScoreSoccer?: unknown;
+    DataSoccer?: unknown;
+    Parti1StateSoccer?: unknown;
+    Parti2StateSoccer?: unknown;
+    PossibleEventSoccer?: unknown;
+    PlayerStatsSoccer?: unknown;
     // Optional Basketball
-    scoreBasketball?: unknown;
-    dataBasketball?: unknown;
-    parti1StateBasketball?: unknown;
-    parti2StateBasketball?: unknown;
+    ScoreBasketball?: unknown;
+    DataBasketball?: unknown;
+    Parti1StateBasketball?: unknown;
+    Parti2StateBasketball?: unknown;
 }
 
 /** A single event emitted by the SSE stream at GET /api/scores/stream. */

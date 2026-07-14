@@ -19,6 +19,9 @@ const requiredEnv = [
   "DATABASE_URL",
   "TXLINE_ENV",
   "SOLANA_RPC_URL",
+  "TXLINE_JWT",
+  "TXLINE_API_TOKEN",
+  "WALLET_PRIVATE_KEY",
 ] as const;
 
 for (const key of requiredEnv) {
