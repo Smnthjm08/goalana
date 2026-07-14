@@ -1,6 +1,7 @@
 import { prisma } from "@workspace/db";
 import { OddsService, type OddsPayload } from "@workspace/txline";
 import { processOddsUpdate } from "./odds.processor";
+import { logger } from "../utils/logger";
 
 const oddsService = new OddsService();
 
@@ -55,7 +56,7 @@ export async function syncFixtureOdds(fixtureId: bigint) {
 }
 
 export async function startOddsWorker() {
-  console.log("[odds-worker] Started");
+  logger.info("odds-worker", "Started");
 
   while (true) {
     try {
@@ -65,7 +66,7 @@ export async function startOddsWorker() {
         await syncFixtureOdds(fixture.fixtureId);
       }
     } catch (error) {
-      console.error("[odds-worker] Error:", error);
+      logger.error("odds-worker", "Error", error);
     }
 
     await sleep(10_000);

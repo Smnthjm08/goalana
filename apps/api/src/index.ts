@@ -9,6 +9,7 @@ import { startScoresWorker } from "./workers/scorer.worker";
 import { startOddsWorker } from "./workers/odds.worker";
 import path from "path";
 import { fileURLToPath } from "url";
+import { logger } from "./utils/logger";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,7 +59,7 @@ app.get("/api/data/", async (_req, res) => {
 
     return res.status(200).json({ data });
   } catch (error) {
-    console.error(error);
+    logger.error("api", "Internal server error", error);
 
     return res.status(500).json({
       error: "internal server error",
@@ -75,20 +76,20 @@ app.post("/api/fixtures/sync", async (_req, res) => {
 });
 
 async function bootstrap() {
-  console.log("[bootstrap] Starting Goalana backend");
+  logger.info("bootstrap", "Starting Goalana backend");
 
   // 1. Fixture snapshot
   try {
     await syncFixtures();
   } catch (error) {
-    console.error("[bootstrap] Fixture sync failed:", error);
+    logger.error("bootstrap", "Fixture sync failed", error);
   }
 
   // 2. Fetch odds and create supported Goalana markets
   try {
     await createTodayMarket();
   } catch (error) {
-    console.error("[bootstrap] Market creation failed:", error);
+    logger.error("bootstrap", "Market creation failed", error);
   }
 
   // 3. Start scheduled fixture refresh
@@ -99,21 +100,21 @@ async function bootstrap() {
 
   // 5. Start live workers
   void startOddsWorker().catch((error) => {
-    console.error("[odds-worker] Fatal error:", error);
+    logger.error("odds-worker", "Fatal error", error);
   });
 
   void startScoresWorker().catch((error) => {
-    console.error("[scores-worker] Fatal error:", error);
+    logger.error("scores-worker", "Fatal error", error);
   });
 
-  console.log("[bootstrap] Goalana backend ready");
+  logger.success("bootstrap", "Goalana backend ready");
 }
 
 app.listen(port, () => {
-  console.log(`Listening on port ${port}...`);
+  logger.info("api", `Listening on port ${port}...`);
 
   void bootstrap().catch((error) => {
-    console.error("[bootstrap] Fatal:", error);
+    logger.error("bootstrap", "Fatal", error);
     process.exit(1);
   });
 });

@@ -3,6 +3,7 @@ import { OddsService, type OddsPayload } from "@workspace/txline";
 import { type Predicate, TXLINE_STAT_KEYS } from "@workspace/goalana-sdk";
 import { createMarketForFixture, initializeGoalanaConfig } from "./goalana.service";
 import { SUPPORTED_MARKETS } from "./market-definitions";
+import { logger } from "../utils/logger";
 
 const oddsService = new OddsService();
 
@@ -201,20 +202,20 @@ export async function processMarketsForUpcomingFixtures() {
   });
 
   if (fixtures.length === 0) {
-    console.log("[market] No upcoming fixtures found in window");
+    logger.info("market.service", "No upcoming fixtures found in window");
     return [];
   }
 
   const results = [];
 
   for (const fixture of fixtures) {
-    console.log(`[market] Processing Fixture: ${fixture.fixtureId} ${fixture.participant1} vs ${fixture.participant2}`);
+    logger.info("market.service", `Processing Fixture: ${fixture.fixtureId} ${fixture.participant1} vs ${fixture.participant2}`);
 
     // 2. Fetch TxLINE odds
     const oddsRows = await oddsService.getOddsSnapshots(Number(fixture.fixtureId));
 
     if (!oddsRows || oddsRows.length === 0) {
-      console.log(`[market] No odds found for fixture ${fixture.fixtureId}`);
+      logger.info("market.service", `No odds found for fixture ${fixture.fixtureId}`);
       continue;
     }
 
@@ -227,7 +228,7 @@ export async function processMarketsForUpcomingFixtures() {
         continue; // Skip unsupported or malformed markets
       }
 
-      console.log(`[market] Discovered market: ${market.type} (${market.question})`);
+      logger.event("market.service", `Discovered market: ${market.type} (${market.question})`);
       
       // Determine market times
       const locksAt = new Date(Number(fixture.startTime));
@@ -241,7 +242,7 @@ export async function processMarketsForUpcomingFixtures() {
         settleAfter
       );
 
-      console.log(`[market] Created on-chain PDA: ${result.marketPda.toBase58()} (already exists: ${result.alreadyExists})`);
+      logger.success("market.service", `Created on-chain PDA: ${result.marketPda.toBase58()} (already exists: ${result.alreadyExists})`);
 
       // Store market in DB
       if (result.marketPda) {

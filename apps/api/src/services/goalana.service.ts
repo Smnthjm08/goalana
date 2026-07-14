@@ -8,6 +8,7 @@ import {
   type Predicate,
 } from "@workspace/goalana-sdk";
 import bs58 from "bs58";
+import { logger } from "../utils/logger";
 
 // Ensure SOLANA_RPC_URL and WALLET_PRIVATE_KEY are set
 const connection = new Connection(process.env.SOLANA_RPC_URL!);
@@ -25,7 +26,7 @@ if (process.env.WALLET_PRIVATE_KEY) {
     keypair = Keypair.fromSecretKey(secretKey);
   }
 } else {
-  console.warn("[goalana.service] WALLET_PRIVATE_KEY is not set. Creating a dummy wallet. Transactions will fail.");
+  logger.warn("goalana.service", "WALLET_PRIVATE_KEY is not set. Creating a dummy wallet. Transactions will fail.");
   keypair = Keypair.generate();
 }
 
@@ -44,16 +45,16 @@ export async function initializeGoalanaConfig() {
   
   const accountInfo = await connection.getAccountInfo(configPda);
   if (accountInfo) {
-    console.log("[goalana.service] Config PDA already initialized.");
+    logger.info("goalana.service", "Config PDA already initialized.");
     return;
   }
 
-  console.log("[goalana.service] Initializing Config PDA...");
+  logger.info("goalana.service", "Initializing Config PDA...");
   const tx = await program.methods
     .initializeConfig()
     .rpc();
 
-  console.log("[goalana.service] Config initialized in tx:", tx);
+  logger.success("goalana.service", `Config initialized in tx: ${tx}`);
 }
 
 /**
@@ -71,14 +72,14 @@ export async function createMarketForFixture(
 
   const accountInfo = await connection.getAccountInfo(marketPda);
   if (accountInfo) {
-    console.log(`[goalana.service] Market for fixture ${fixtureId} already exists. Skipping.`);
+    logger.info("goalana.service", `Market for fixture ${fixtureId} already exists. Skipping.`);
     return { marketPda, predicateHash, txSignature: null, alreadyExists: true };
   }
 
   const locksAt = new BN(Math.floor(locksAtDate.getTime() / 1000));
   const settleAfter = new BN(Math.floor(settleAfterDate.getTime() / 1000));
   
-  console.log(`[goalana.service] Creating market for fixture ${fixtureId}...`);
+  logger.info("goalana.service", `Creating market for fixture ${fixtureId}...`);
 
   const txSignature = await program.methods
     .createMarket(
@@ -94,6 +95,6 @@ export async function createMarketForFixture(
     })
     .rpc();
 
-  console.log(`[goalana.service] Market created. Signature: ${txSignature}`);
+  logger.success("goalana.service", `Market created. Signature: ${txSignature}`);
   return { marketPda, predicateHash, txSignature, alreadyExists: false };
 }

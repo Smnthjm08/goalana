@@ -1,26 +1,28 @@
 import { prisma } from "@workspace/db";
 import { OddsService } from "@workspace/txline";
+import { logger } from "../utils/logger";
 
 
 let isRunning = false;
 
 export async function syncOdds() {
     if (isRunning) {
-        console.warn(
-            "[odds.cron] Previous sync is still running. Skipping."
+        logger.warn(
+            "odds.cron",
+            "Previous sync is still running. Skipping."
         );
         return;
     }
 
     isRunning = true;
-    console.log("[odds.cron] Starting odds sync...");
+    logger.info("odds.cron", "Starting odds sync...");
 
     try {
         const oddsService = new OddsService();
         const fixtures = await prisma.fixture.findMany();
 
         if (!fixtures || fixtures.length === 0) {
-            console.warn("[odds.cron] No fixtures found to sync odds for.");
+            logger.warn("odds.cron", "No fixtures found to sync odds for.");
             return;
         }
 
@@ -79,11 +81,12 @@ export async function syncOdds() {
             totalUpserted += oddsSnapshots.length;
         }
 
-        console.log(
-            `[odds.cron] Successfully synced ${totalUpserted} odds markets across ${fixtures.length} fixtures.`
+        logger.success(
+            "odds.cron",
+            `Successfully synced ${totalUpserted} odds markets across ${fixtures.length} fixtures.`
         );
     } catch (error) {
-        console.error("[odds.cron] Odds sync failed:", error);
+        logger.error("odds.cron", "Odds sync failed", error);
     } finally {
         isRunning = false;
     }

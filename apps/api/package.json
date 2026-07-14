@@ -17,6 +17,7 @@
     "@workspace/txline": "workspace:*",
     "axios": "^1.18.1",
     "bs58": "^6.0.0",
+    "chalk": "^5.6.2",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -24,8 +25,8 @@
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
-    "@types/axios": "^0.14.4",
     "@types/bun": "latest",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*"

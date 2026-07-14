@@ -2,6 +2,7 @@ import { prisma, Prisma } from "@workspace/db";
 import { FixtureService } from "@workspace/txline";
 import cron from "node-cron";
 import { syncOdds } from "./odds.cron";
+import { logger } from "../utils/logger";
 
 let isSnapshotSyncRunning = false;
 let isUpdateSyncRunning = false;
@@ -9,21 +10,22 @@ let isBatchValidationSyncRunning = false;
 
 export async function syncFixtures() {
     if (isSnapshotSyncRunning) {
-        console.warn(
-            "[fixture.cron] Snapshot sync already running. Skipping."
+        logger.warn(
+            "fixture.cron",
+            "Snapshot sync already running. Skipping."
         );
         return;
     }
 
     isSnapshotSyncRunning = true;
-    console.log("[fixture.cron] Starting fixture sync...");
+    logger.info("fixture.cron", "Starting fixture sync...");
 
     try {
         const fixtureService = new FixtureService();
         const fixtures = await fixtureService.getFixtureSnapshot(undefined, 72);
 
         if (!fixtures || fixtures.length === 0) {
-            console.warn("[fixture.cron] No fixtures returned from TxLINE.");
+            logger.warn("fixture.cron", "No fixtures returned from TxLINE.");
             return;
         }
 
@@ -67,14 +69,15 @@ export async function syncFixtures() {
             });
         }
 
-        console.log(
-            `[fixture.cron] Successfully synced ${fixtures.length} fixtures.`
+        logger.success(
+            "fixture.cron",
+            `Successfully synced ${fixtures.length} fixtures.`
         );
 
         // Chain odds sync after successful fixture sync
         await syncOdds();
     } catch (error) {
-        console.error("[fixture.cron] Fixture sync failed:", error);
+        logger.error("fixture.cron", "Fixture sync failed", error);
     } finally {
         isSnapshotSyncRunning = false;
     }
@@ -82,12 +85,12 @@ export async function syncFixtures() {
 
 export async function syncFixtureUpdates() {
     if (isUpdateSyncRunning) {
-        console.warn("[fixture.cron] Update sync already running. Skipping.");
+        logger.warn("fixture.cron", "Update sync already running. Skipping.");
         return;
     }
 
     isUpdateSyncRunning = true;
-    console.log("[fixture.cron] Starting fixture updates sync...");
+    logger.info("fixture.cron", "Starting fixture updates sync...");
 
     try {
         const fixtureService = new FixtureService();
@@ -192,9 +195,9 @@ export async function syncFixtureUpdates() {
             });
         }
 
-        console.log(`[fixture.cron] Processed ${fixtures.length} unique fixture updates.`);
+        logger.success("fixture.cron", `Processed ${fixtures.length} unique fixture updates.`);
     } catch (error) {
-        console.error("[fixture.cron] Fixture updates sync failed:", error);
+        logger.error("fixture.cron", "Fixture updates sync failed", error);
     } finally {
         isUpdateSyncRunning = false;
     }
@@ -215,12 +218,12 @@ function getPreviousHour() {
 
 export async function syncPreviousHourBatchValidation() {
     if (isBatchValidationSyncRunning) {
-        console.warn("[fixture.cron] Batch validation sync already running. Skipping.");
+        logger.warn("fixture.cron", "Batch validation sync already running. Skipping.");
         return;
     }
 
     isBatchValidationSyncRunning = true;
-    console.log("[fixture.cron] Starting previous hour batch validation sync...");
+    logger.info("fixture.cron", "Starting previous hour batch validation sync...");
     try {
         const fixtureService = new FixtureService();
         const { epochDay, hourOfDay } = getPreviousHour();
@@ -228,7 +231,7 @@ export async function syncPreviousHourBatchValidation() {
         const validation = await fixtureService.getFixtureBatchValidation(epochDay, hourOfDay);
         
         if (!validation) {
-            console.log(`[fixture.cron] No batch validation returned for day ${epochDay} hour ${hourOfDay}.`);
+            logger.info("fixture.cron", `No batch validation returned for day ${epochDay} hour ${hourOfDay}.`);
             return;
         }
         
@@ -249,9 +252,9 @@ export async function syncPreviousHourBatchValidation() {
             },
         });
         
-        console.log(`[fixture.cron] Successfully synced batch validation for day ${epochDay} hour ${hourOfDay}.`);
+        logger.success("fixture.cron", `Successfully synced batch validation for day ${epochDay} hour ${hourOfDay}.`);
     } catch (error) {
-        console.error("[fixture.cron] Batch validation sync failed:", error);
+        logger.error("fixture.cron", "Batch validation sync failed", error);
     } finally {
         isBatchValidationSyncRunning = false;
     }
