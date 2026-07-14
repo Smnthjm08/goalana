@@ -6,6 +6,12 @@ import axiosInstance from "@/lib/axios-instance"
 import { Card, CardHeader, CardContent } from "@workspace/ui/components/card"
 import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@workspace/ui/components/chart"
+import { LineChart, Line, CartesianGrid, XAxis, YAxis, ReferenceLine, ResponsiveContainer } from "recharts"
 
 const marketTypeLabels: Record<string, string> = {
   FULL_TIME_HOME_WIN: "MATCH RESULT / FULL TIME",
@@ -73,6 +79,9 @@ export default function FixtureDetailPage() {
   
   const [fixture, setFixture] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<"MARKETS" | "ODDS_MOVEMENT">("MARKETS")
+  const [oddsData, setOddsData] = useState<any>(null)
+  const [visibleSeries, setVisibleSeries] = useState({ home: true, draw: true, away: true })
 
   useEffect(() => {
     if (!fixtureId) return
@@ -84,6 +93,15 @@ export default function FixtureDetailPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false))
+      
+    // Fetch and store the new odds history data
+    axiosInstance.get(`/fixtures/${fixtureId}/odds/history`)
+      .then(res => {
+        if (res.data?.data) {
+          setOddsData(res.data.data)
+        }
+      })
+      .catch(err => console.error("Error fetching odds history:", err))
   }, [fixtureId])
 
   if (loading) {
@@ -109,12 +127,32 @@ export default function FixtureDetailPage() {
   const tsNum = Number(fixture.startTime)
   const date = new Date(tsNum > 1e11 ? tsNum : tsNum * 1000)
 
+  const toggleSeries = (series: "home" | "draw" | "away") => {
+    setVisibleSeries(prev => ({ ...prev, [series]: !prev[series] }))
+  }
+
+  // Chart config
+  const chartConfig = {
+    home: {
+      label: fixture.participant1,
+      color: "hsl(var(--primary))",
+    },
+    draw: {
+      label: "Draw",
+      color: "hsl(var(--muted-foreground))",
+    },
+    away: {
+      label: fixture.participant2,
+      color: "hsl(var(--chart-2))", // using chart-2 for distinction
+    },
+  }
+
   return (
     <div className="flex w-full flex-col p-4 md:p-8 lg:p-12">
-      <div className="flex w-full max-w-5xl flex-col gap-12 mx-auto">
+      <div className="flex w-full max-w-5xl flex-col gap-8 mx-auto">
         
         {/* Match Header */}
-        <div className="flex flex-col w-full mb-4">
+        <div className="flex flex-col w-full mb-2">
           <div className="flex items-center justify-between mb-6">
              <span className="font-mono text-xs md:text-sm text-foreground uppercase tracking-widest">
                {fixture.competition}
@@ -157,26 +195,143 @@ export default function FixtureDetailPage() {
           </div>
         </div>
 
-        {/* Markets Section */}
-        <div className="flex flex-col gap-6">
-          <h3 className="font-heading text-xl md:text-2xl uppercase tracking-widest text-foreground border-b border-border pb-4">
-            Active Prediction Markets
-          </h3>
-
-          {!fixture.markets || fixture.markets.length === 0 ? (
-             <div className="border border-border p-8 text-center bg-card">
-               <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
-                 No markets available for this fixture yet.
-               </span>
-             </div>
-          ) : (
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               {fixture.markets.map((market: any) => (
-                 <MarketCard key={market.id} market={market} />
-               ))}
-             </div>
-          )}
+        {/* Tabs */}
+        <div className="flex border-b border-border w-full gap-8">
+          <button
+            onClick={() => setActiveTab("MARKETS")}
+            className={`font-heading uppercase tracking-widest pb-4 text-sm transition-colors border-b-2 ${activeTab === "MARKETS" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            Markets
+          </button>
+          <button
+            onClick={() => setActiveTab("ODDS_MOVEMENT")}
+            className={`font-heading uppercase tracking-widest pb-4 text-sm transition-colors border-b-2 ${activeTab === "ODDS_MOVEMENT" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            Odds & Movement
+          </button>
         </div>
+
+        {/* Tab Content */}
+        {activeTab === "MARKETS" && (
+          <div className="flex flex-col gap-6">
+            {!fixture.markets || fixture.markets.length === 0 ? (
+               <div className="border border-border p-8 text-center bg-card">
+                 <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
+                   No markets available for this fixture yet.
+                 </span>
+               </div>
+            ) : (
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {fixture.markets.map((market: any) => (
+                   <MarketCard key={market.id} market={market} />
+                 ))}
+               </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "ODDS_MOVEMENT" && (
+          <div className="flex flex-col gap-6">
+            {!oddsData || !oddsData.history || oddsData.history.length === 0 ? (
+              <div className="border border-border p-8 text-center bg-card">
+                 <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
+                   No historical odds data available for this match.
+                 </span>
+               </div>
+            ) : (
+              <div className="flex flex-col border border-border bg-card p-6 gap-8">
+                {/* Controls & Summary */}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="flex flex-col">
+                    <span className="font-sans font-bold text-lg text-foreground">MATCH RESULT</span>
+                    <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+                      IMPLIED PROBABILITIES
+                    </span>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => toggleSeries("home")}
+                      className={`h-auto py-2 px-3 flex-col items-start gap-1 rounded-sm border transition-colors ${visibleSeries.home ? 'border-primary/50 bg-primary/5' : 'border-border bg-transparent opacity-50 hover:opacity-100'}`}
+                    >
+                      <span className="font-mono text-[10px] uppercase text-muted-foreground">{fixture.participant1}</span>
+                      <span className="font-heading text-lg text-foreground leading-none">{oddsData.latest.home.toFixed(2)}%</span>
+                    </Button>
+
+                    <Button 
+                      variant="outline" 
+                      onClick={() => toggleSeries("draw")}
+                      className={`h-auto py-2 px-3 flex-col items-start gap-1 rounded-sm border transition-colors ${visibleSeries.draw ? 'border-muted-foreground/50 bg-muted/20' : 'border-border bg-transparent opacity-50 hover:opacity-100'}`}
+                    >
+                      <span className="font-mono text-[10px] uppercase text-muted-foreground">DRAW</span>
+                      <span className="font-heading text-lg text-foreground leading-none">{oddsData.latest.draw.toFixed(2)}%</span>
+                    </Button>
+
+                    <Button 
+                      variant="outline" 
+                      onClick={() => toggleSeries("away")}
+                      className={`h-auto py-2 px-3 flex-col items-start gap-1 rounded-sm border transition-colors ${visibleSeries.away ? 'border-chart-2/50 bg-chart-2/5' : 'border-border bg-transparent opacity-50 hover:opacity-100'}`}
+                    >
+                      <span className="font-mono text-[10px] uppercase text-muted-foreground">{fixture.participant2}</span>
+                      <span className="font-heading text-lg text-foreground leading-none">{oddsData.latest.away.toFixed(2)}%</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Graph */}
+                <div className="w-full h-[400px]">
+                  <ChartContainer config={chartConfig} className="w-full h-[400px]">
+                    <LineChart data={oddsData.history}>
+                      {visibleSeries.home && (
+                        <Line 
+                          type="stepAfter" 
+                          dataKey="home" 
+                          stroke="#22c55e" 
+                          strokeWidth={2} 
+                          dot={false} 
+                          isAnimationActive={false}
+                        />
+                      )}
+                      {visibleSeries.draw && (
+                        <Line 
+                          type="stepAfter" 
+                          dataKey="draw" 
+                          stroke="#737373" 
+                          strokeWidth={2} 
+                          dot={false} 
+                          isAnimationActive={false}
+                        />
+                      )}
+                      {visibleSeries.away && (
+                        <Line 
+                          type="stepAfter" 
+                          dataKey="away" 
+                          stroke="#f43f5e" 
+                          strokeWidth={2} 
+                          dot={false} 
+                          isAnimationActive={false}
+                        />
+                      )}
+                    </LineChart>
+                  </ChartContainer>
+                </div>
+
+                {/* Footer Metadata */}
+                <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border pt-4 mt-2 gap-4">
+                   <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest text-center sm:text-left">
+                     LATEST UPDATE / {new Date(oddsData.history[oddsData.history.length - 1].timestamp).toLocaleTimeString()}
+                   </span>
+                   <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest text-center sm:text-right">
+                     HISTORY POINTS / {oddsData.history.length} <br className="sm:hidden" />
+                     <span className="hidden sm:inline"> • </span>
+                     SOURCE / TXLINE
+                   </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

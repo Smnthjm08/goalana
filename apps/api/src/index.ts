@@ -39,7 +39,9 @@ app.set("json replacer", (_key: string, value: unknown) => {
 });
 
 app.use(express.json());
-app.use(cors({ origin: "http://localhost:3000" }));
+
+const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+app.use(cors({ origin: frontendUrl }));
 
 app.get("/", async (req, res) => {
   res.json({ status: "healthy!" });
@@ -104,6 +106,86 @@ app.get("/api/fixtures/:id", async (req, res) => {
     return res.status(200).json({ data: fixture });
   } catch (error) {
     logger.error("api", `Error fetching fixture ${req.params.id}`, error);
+    return res.status(500).json({ error: "internal server error" });
+  }
+});
+
+app.get("/api/fixtures/:id/odds/history", async (req, res) => {
+  try {
+    const fixtureIdStr = req.params.id;
+    const fixtureId = BigInt(fixtureIdStr);
+
+    // Fetch all odds histories for this fixture
+    const histories = await prisma.oddsHistory.findMany({
+      where: { fixtureId },
+      orderBy: { ts: "asc" }
+    });
+
+    // Find the 1X2 market (Home, Draw, Away) - Full Time
+    const firstMatch = histories.find(h => {
+       const names = h.priceNames as string[];
+       return h.superOddsType === "1X2_PARTICIPANT_RESULT" && h.marketPeriod === "";
+    });
+
+    if (!firstMatch) {
+       return res.status(200).json({ data: null });
+    }
+
+    const targetType = firstMatch.superOddsType;
+    const filteredHistories = histories.filter(h => 
+      h.superOddsType === targetType && 
+      h.marketPeriod === "" &&
+      !(h.probabilities as string[]).includes("NA")
+    );
+
+    // Map and parse probabilities
+    const historyData = filteredHistories.map(h => {
+       const probs = h.probabilities as string[];
+       const names = h.priceNames as string[];
+       
+       // TXLine uses part1, draw, part2 for 1X2 markets
+       const idx1 = names.indexOf("part1");
+       const idxX = names.indexOf("draw");
+       const idx2 = names.indexOf("part2");
+
+       return {
+         timestamp: Number(h.ts),
+         home: parseFloat(probs[idx1] || "0"),
+         draw: parseFloat(probs[idxX] || "0"),
+         away: parseFloat(probs[idx2] || "0")
+       };
+    });
+
+    // Remove duplicates based on consecutive identical probabilities
+    const deduplicated = [];
+    let lastProbs = "";
+    for (const h of historyData) {
+       const currentProbs = `${h.home.toFixed(4)}-${h.draw.toFixed(4)}-${h.away.toFixed(4)}`;
+       if (currentProbs !== lastProbs) {
+          deduplicated.push(h);
+          lastProbs = currentProbs;
+       }
+    }
+
+    if (deduplicated.length === 0) {
+      return res.status(200).json({ data: null });
+    }
+
+    const opening = deduplicated[0]!;
+    const latest = deduplicated[deduplicated.length - 1]!;
+
+    return res.status(200).json({
+      data: {
+        fixtureId: fixtureIdStr,
+        market: "MATCH_RESULT",
+        opening: { home: opening.home, draw: opening.draw, away: opening.away },
+        latest: { home: latest.home, draw: latest.draw, away: latest.away },
+        history: deduplicated
+      }
+    });
+
+  } catch (error) {
+    logger.error("api", `Error fetching odds history for fixture ${req.params.id}`, error);
     return res.status(500).json({ error: "internal server error" });
   }
 });
