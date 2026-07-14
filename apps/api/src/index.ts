@@ -4,10 +4,27 @@ import dotenv from "dotenv";
 
 import { prisma } from "@workspace/db";
 import { startFixtureCron, syncFixtures } from "./crons/fixtures.cron";
+import { createTodayMarket, startMarketCron } from "./crons/market.cron";
 import { startScoresWorker } from "./workers/scorer.worker";
 import { startOddsWorker } from "./workers/odds.worker";
+import path from "path";
+import { fileURLToPath } from "url";
 
-dotenv.config({ path: "../../.env" });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+
+const requiredEnv = [
+  "DATABASE_URL",
+  "TXLINE_ENV",
+  "SOLANA_RPC_URL",
+] as const;
+
+for (const key of requiredEnv) {
+  if (!process.env[key]) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+}
 
 const app = express();
 const port = process.env.BE_PORT ?? 8080;
@@ -19,8 +36,6 @@ app.set("json replacer", (_key: string, value: unknown) => {
 
 app.use(express.json());
 app.use(cors({ origin: "http://localhost:3000" }));
-
-console.log("sssss", process.env.TXLINE_ENV);
 
 app.get("/", async (req, res) => {
   res.json({ status: "healthy!" });
@@ -59,12 +74,46 @@ app.post("/api/fixtures/sync", async (_req, res) => {
   });
 });
 
-app.listen(port, async () => {
-  console.log(`Listening on port ${port}...`);
+async function bootstrap() {
+  console.log("[bootstrap] Starting Goalana backend");
 
-  await syncFixtures();
+  // 1. Fixture snapshot
+  try {
+    await syncFixtures();
+  } catch (error) {
+    console.error("[bootstrap] Fixture sync failed:", error);
+  }
+
+  // 2. Fetch odds and create supported Goalana markets
+  try {
+    await createTodayMarket();
+  } catch (error) {
+    console.error("[bootstrap] Market creation failed:", error);
+  }
+
+  // 3. Start scheduled fixture refresh
   startFixtureCron();
 
-  void startScoresWorker();
-  void startOddsWorker();
+  // 4. Periodically discover/create missing markets
+  startMarketCron();
+
+  // 5. Start live workers
+  void startOddsWorker().catch((error) => {
+    console.error("[odds-worker] Fatal error:", error);
+  });
+
+  void startScoresWorker().catch((error) => {
+    console.error("[scores-worker] Fatal error:", error);
+  });
+
+  console.log("[bootstrap] Goalana backend ready");
+}
+
+app.listen(port, () => {
+  console.log(`Listening on port ${port}...`);
+
+  void bootstrap().catch((error) => {
+    console.error("[bootstrap] Fatal:", error);
+    process.exit(1);
+  });
 });

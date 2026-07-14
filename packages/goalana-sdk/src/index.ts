@@ -6,6 +6,7 @@
 // Usage:
 //   import { createGoalanaClient, getMarketPda, GOALANA_PROGRAM_ID } from "@workspace/goalana-sdk";
 
-export * from "./constants";
-export * from "./pdas";
-export * from "./client";
+export * from "./constants.js";
+export * from "./pdas.js";
+export * from "./client.js";
+export * from "./predicate.js";export * from "./txline-stats.js";
