@@ -1,4 +1,4 @@
-import { Geist_Mono, Noto_Sans } from "next/font/google"
+import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google"
 
 import "@workspace/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -6,13 +6,10 @@ import { cn } from "@workspace/ui/lib/utils"
 import { Toaster } from "@workspace/ui/components/sonner"
 import { TooltipProvider } from "@workspace/ui/components/tooltip"
 import { SolanaProvider } from "@/components/providers/solana-provider"
-
-const notoSans = Noto_Sans({ subsets: ["latin"], variable: "--font-sans" })
-
-const fontMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-})
+import { Header } from "@/components/header"
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-heading" })
+const jetBrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export default function RootLayout({
   children,
@@ -25,16 +22,22 @@ export default function RootLayout({
       suppressHydrationWarning
       suppressContentEditableWarning
       className={cn(
-        "antialiased",
-        fontMono.variable,
-        "font-sans",
-        notoSans.variable
+        "antialiased dark",
+        inter.variable,
+        spaceGrotesk.variable,
+        jetBrainsMono.variable,
+        "font-sans"
       )}
     >
       <body>
         <ThemeProvider>
           <TooltipProvider>
-            <SolanaProvider>{children}</SolanaProvider>
+            <SolanaProvider>
+              <div className="relative flex min-h-svh flex-col">
+                <Header />
+                <main className="flex-1">{children}</main>
+              </div>
+            </SolanaProvider>
           </TooltipProvider>
         </ThemeProvider>
         <Toaster />

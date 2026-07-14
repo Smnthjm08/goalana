@@ -49,17 +49,15 @@ app.get("/health", async (req, res) => {
   res.status(200).json({ status: "UP", timestamp: new Date().toISOString() });
 });
 
-app.get(["/api/data/", "/api/fixtures"], async (_req, res) => {
+app.get("/api/fixtures", async (_req, res) => {
   try {
     const data = await prisma.fixture.findMany({
+      orderBy: {
+        startTime: "asc",
+      },
       include: {
-        odds: true,
-
-        oddsHistories: {
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 100,
+        _count: {
+          select: { markets: true },
         },
       },
     });
@@ -74,6 +72,42 @@ app.get(["/api/data/", "/api/fixtures"], async (_req, res) => {
   }
 });
 
+app.get("/api/fixtures/:id", async (req, res) => {
+  try {
+    const fixtureIdStr = req.params.id;
+    const fixtureId = BigInt(fixtureIdStr);
+
+    const fixture = await prisma.fixture.findUnique({
+      where: {
+        fixtureId,
+      },
+      include: {
+        markets: true,
+        odds: {
+          orderBy: {
+            ts: "desc",
+          }
+        },
+        matchEvents: {
+          orderBy: {
+            seq: "desc",
+          },
+          take: 50,
+        },
+      },
+    });
+
+    if (!fixture) {
+      return res.status(404).json({ error: "Fixture not found" });
+    }
+
+    return res.status(200).json({ data: fixture });
+  } catch (error) {
+    logger.error("api", `Error fetching fixture ${req.params.id}`, error);
+    return res.status(500).json({ error: "internal server error" });
+  }
+});
+
 app.post("/api/fixtures/sync", async (_req, res) => {
   await syncFixtures();
 
@@ -84,6 +118,12 @@ app.post("/api/fixtures/sync", async (_req, res) => {
 
 async function bootstrap() {
   logger.info("bootstrap", "Starting Goalana backend");
+
+  if (process.env.API_ONLY === "true") {
+    logger.info("bootstrap", "Running in API-only mode. Skipping crons and workers.");
+    logger.success("bootstrap", "Goalana backend ready (API Only)");
+    return;
+  }
 
   // 1. Fixture snapshot
   try {
