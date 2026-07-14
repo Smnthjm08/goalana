@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/goalana_program.json`.
  */
 export type GoalanaProgram = {
-  "address": "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu",
+  ,
   "metadata": {
     "name": "goalanaProgram",
     "version": "0.1.0",
@@ -325,7 +325,7 @@ export type GoalanaProgram = {
         },
         {
           "name": "systemProgram",
-          "address": "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu"
+          
         }
       ],
       "args": [
@@ -399,7 +399,7 @@ export type GoalanaProgram = {
         },
         {
           "name": "systemProgram",
-          "address": "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu"
+          
         }
       ],
       "args": []
@@ -546,7 +546,7 @@ export type GoalanaProgram = {
         },
         {
           "name": "systemProgram",
-          "address": "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu"
+          
         }
       ],
       "args": [
@@ -608,7 +608,7 @@ export type GoalanaProgram = {
         },
         {
           "name": "txoracleProgram",
-          "address": "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu"
+          
         },
         {
           "name": "dailyScoresMerkleRoots"

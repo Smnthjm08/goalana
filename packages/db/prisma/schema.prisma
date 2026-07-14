@@ -48,34 +48,34 @@ model Fixture {
   matchEvents   MatchEvent[]
   oddsHistories OddsHistory[]
   updates       FixtureUpdate[]
-  // markets       Market[]
+  markets       Market[]
 
   @@map("fixtures")
 }
 
 model FixtureUpdate {
-  id                 String  @id @default(cuid())
+  id String @id @default(cuid())
 
-  fixtureId          BigInt
-  ts                 BigInt
+  fixtureId BigInt
+  ts        BigInt
 
-  startTime          BigInt
-  competition        String
-  competitionId      Int
-  fixtureGroupId     Int
+  startTime      BigInt
+  competition    String
+  competitionId  Int
+  fixtureGroupId Int
 
-  participant1Id     Int
-  participant1       String
+  participant1Id Int
+  participant1   String
 
-  participant2Id     Int
-  participant2       String
+  participant2Id Int
+  participant2   String
 
   participant1IsHome Boolean
   gameState          Int?
 
-  payload            Json
+  payload Json
 
-  createdAt          DateTime @default(now())
+  createdAt DateTime @default(now())
 
   fixture Fixture @relation(fields: [fixtureId], references: [fixtureId])
 
@@ -194,4 +194,27 @@ model FixtureBatchValidation {
 
   @@unique([epochDay, hourOfDay])
   @@map("fixture_batch_validations")
+}
+
+model Market {
+  id                  String   @id @default(cuid())
+  fixtureId           BigInt
+  marketPda           String   @unique
+  predicateHash       String
+  marketType          String
+  question            String
+  locksAt             DateTime
+  settleAfter         DateTime
+  creationTx          String?
+  sourceOddsMessageId String
+  initialYesPct       Float
+  initialNoPct        Float
+  status              String   @default("OPEN")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fixture Fixture @relation(fields: [fixtureId], references: [fixtureId])
+
+  @@map("markets")
 }

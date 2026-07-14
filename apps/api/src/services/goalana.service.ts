@@ -1,5 +1,5 @@
 import { AnchorProvider, BN, Wallet } from "@coral-xyz/anchor";
-import { Connection, Keypair } from "@solana/web3.js";
+import { Connection, Keypair, SystemProgram } from "@solana/web3.js";
 import {
   getGoalanaProgram,
   getConfigPda,
@@ -88,6 +88,10 @@ export async function createMarketForFixture(
       locksAt,
       settleAfter
     )
+    .accounts({
+      creator: provider.wallet.publicKey,
+      systemProgram: SystemProgram.programId,
+    })
     .rpc();
 
   console.log(`[goalana.service] Market created. Signature: ${txSignature}`);

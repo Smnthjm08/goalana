@@ -6,142 +6,272 @@ import { SUPPORTED_MARKETS } from "./market-definitions";
 
 const oddsService = new OddsService();
 
-export interface GoalanaReferenceOdds {
+export type GoalanaMarketType = keyof typeof SUPPORTED_MARKETS;
+
+export interface DiscoveredMarket {
   fixtureId: bigint;
-  marketType: "TOTAL_GOALS_OVER_2_5";
-  yesPct: number;
-  noPct: number;
-  sourceMessageId: string;
-  sourceTimestamp: bigint;
+  type: GoalanaMarketType;
+  question: string;
+  referenceProbability: {
+    yesPct: number;
+    noPct: number;
+  } | null;
+  source: {
+    messageId: string;
+    timestamp: bigint;
+    superOddsType: string;
+    marketPeriod: string;
+    marketParameters: string;
+  };
+  predicate: Predicate | null;
+  supportedForCreation: boolean;
+  unsupportedReason?: string;
 }
 
-export function mapOver25Odds(market: OddsPayload): GoalanaReferenceOdds {
-  if (!market.PriceNames || !market.Pct) {
-    throw new Error("Missing PriceNames or Pct in market");
-  }
-
-  const overIndex = market.PriceNames.indexOf("over");
-  const underIndex = market.PriceNames.indexOf("under");
-
-  if (overIndex === -1 || underIndex === -1) {
-    throw new Error("Invalid Over/Under market");
-  }
-
+function extractProbability(market: OddsPayload, yesKey: string, noKey: string) {
+  if (!market.PriceNames || !market.Pct) return null;
+  const yesIndex = market.PriceNames.indexOf(yesKey);
+  const noIndex = market.PriceNames.indexOf(noKey);
+  if (yesIndex === -1 || noIndex === -1) return null;
+  
   return {
-    fixtureId: BigInt(market.FixtureId),
-    marketType: "TOTAL_GOALS_OVER_2_5",
-    yesPct: Number(market.Pct[overIndex]),
-    noPct: Number(market.Pct[underIndex]),
-    sourceMessageId: market.MessageId,
-    sourceTimestamp: BigInt(market.Ts),
+    yesPct: Number(market.Pct[yesIndex]),
+    noPct: Number(market.Pct[noIndex]),
   };
 }
 
-export async function createMarketForUpcomingFixture() {
+function toBinaryProbability(yesPct: number) {
+  return {
+    yesPct,
+    noPct: 100 - yesPct,
+  };
+}
+
+function extract1X2Probability(market: OddsPayload, targetOutcome: "part1" | "draw" | "part2") {
+  if (!market.PriceNames || !market.Pct) return null;
+  const targetIndex = market.PriceNames.indexOf(targetOutcome);
+  if (targetIndex === -1) return null;
+  return toBinaryProbability(Number(market.Pct[targetIndex]));
+}
+
+function generateQuestion(template: string, participant1: string, participant2: string) {
+  return template
+    .replace("{participant1}", participant1)
+    .replace("{participant2}", participant2);
+}
+
+export function discoverMarketsForFixture(
+  fixture: { fixtureId: bigint; participant1: string; participant2: string },
+  oddsRows: OddsPayload[]
+): DiscoveredMarket[] {
+  // 1. Group by logical market identity
+  const logicalMarkets = new Map<string, OddsPayload>();
+
+  for (const row of oddsRows) {
+    if (row.InRunning) continue; // Only process pre-match odds for creation
+
+    const period = row.MarketPeriod || "";
+    const params = row.MarketParameters || "";
+    const key = `${row.SuperOddsType}|${period}|${params}`;
+
+    const existing = logicalMarkets.get(key);
+    // 2. Select latest row by Ts
+    if (!existing || row.Ts > existing.Ts) {
+      logicalMarkets.set(key, row);
+    }
+  }
+
+  const discovered: DiscoveredMarket[] = [];
+
+  for (const row of logicalMarkets.values()) {
+    const period = row.MarketPeriod || "";
+    const params = row.MarketParameters || "";
+
+    const baseSource = {
+      messageId: row.MessageId,
+      timestamp: BigInt(row.Ts),
+      superOddsType: row.SuperOddsType,
+      marketPeriod: period,
+      marketParameters: params,
+    };
+
+    // FULL_TIME_OVER_2_5
+    if (
+      row.SuperOddsType === SUPPORTED_MARKETS.FULL_TIME_OVER_2_5.txline.superOddsType &&
+      params === SUPPORTED_MARKETS.FULL_TIME_OVER_2_5.txline.marketParameters &&
+      period === SUPPORTED_MARKETS.FULL_TIME_OVER_2_5.txline.marketPeriod
+    ) {
+      discovered.push({
+        fixtureId: fixture.fixtureId,
+        type: "FULL_TIME_OVER_2_5",
+        question: SUPPORTED_MARKETS.FULL_TIME_OVER_2_5.label,
+        referenceProbability: extractProbability(row, "over", "under"),
+        source: baseSource,
+        predicate: {
+          statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
+          statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
+          op: { add: {} },
+          threshold: 2,
+          comparison: { greaterThan: {} },
+        },
+        supportedForCreation: true,
+      });
+    }
+
+    // 1X2 FULL TIME (Home Win, Draw, Away Win)
+    if (
+      row.SuperOddsType === SUPPORTED_MARKETS.FULL_TIME_HOME_WIN.txline.superOddsType &&
+      params === SUPPORTED_MARKETS.FULL_TIME_HOME_WIN.txline.marketParameters &&
+      period === SUPPORTED_MARKETS.FULL_TIME_HOME_WIN.txline.marketPeriod
+    ) {
+      // Home Win
+      discovered.push({
+        fixtureId: fixture.fixtureId,
+        type: "FULL_TIME_HOME_WIN",
+        question: generateQuestion(SUPPORTED_MARKETS.FULL_TIME_HOME_WIN.label, fixture.participant1, fixture.participant2),
+        referenceProbability: extract1X2Probability(row, "part1"),
+        source: baseSource,
+        predicate: {
+          statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
+          statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
+          op: { subtract: {} },
+          threshold: 0,
+          comparison: { greaterThan: {} },
+        },
+        supportedForCreation: true,
+      });
+
+      // Draw
+      discovered.push({
+        fixtureId: fixture.fixtureId,
+        type: "FULL_TIME_DRAW",
+        question: generateQuestion(SUPPORTED_MARKETS.FULL_TIME_DRAW.label, fixture.participant1, fixture.participant2),
+        referenceProbability: extract1X2Probability(row, "draw"),
+        source: baseSource,
+        predicate: {
+          statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
+          statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
+          op: { subtract: {} },
+          threshold: 0,
+          comparison: { equalTo: {} },
+        },
+        supportedForCreation: true,
+      });
+
+      // Away Win
+      discovered.push({
+        fixtureId: fixture.fixtureId,
+        type: "FULL_TIME_AWAY_WIN",
+        question: generateQuestion(SUPPORTED_MARKETS.FULL_TIME_AWAY_WIN.label, fixture.participant1, fixture.participant2),
+        referenceProbability: extract1X2Probability(row, "part2"),
+        source: baseSource,
+        predicate: {
+          statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
+          statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
+          op: { subtract: {} },
+          threshold: 0,
+          comparison: { lessThan: {} },
+        },
+        supportedForCreation: true,
+      });
+    }
+  }
+
+  return discovered;
+}
+
+export async function processMarketsForUpcomingFixtures() {
   await initializeGoalanaConfig();
 
-  const now = BigInt(Date.now());
+  const now = Date.now();
+  const until = now + 24 * 60 * 60 * 1000;
 
-  // 1. Find upcoming fixture
-  const fixture = await prisma.fixture.findFirst({
+  // 1. Find upcoming fixtures (next 24 hours)
+  const fixtures = await prisma.fixture.findMany({
     where: {
-      startTime: { gt: now },
+      startTime: {
+        gt: BigInt(now),
+        lte: BigInt(until),
+      },
     },
     orderBy: {
       startTime: "asc",
     },
+    take: 10, // Process in batches
   });
 
-  if (!fixture) {
-    console.log("[market] No upcoming fixture");
-    return;
+  if (fixtures.length === 0) {
+    console.log("[market] No upcoming fixtures found in window");
+    return [];
   }
 
-  console.log(`[market] Fixture: ${fixture.fixtureId} ${fixture.participant1} vs ${fixture.participant2}`);
+  const results = [];
 
-  // 2. Fetch TxLINE odds
-  const odds = await oddsService.getOddsSnapshots(Number(fixture.fixtureId));
+  for (const fixture of fixtures) {
+    console.log(`[market] Processing Fixture: ${fixture.fixtureId} ${fixture.participant1} vs ${fixture.participant2}`);
 
-  if (!odds || odds.length === 0) {
-    console.log("[market] No odds found for fixture");
-    return;
-  }
+    // 2. Fetch TxLINE odds
+    const oddsRows = await oddsService.getOddsSnapshots(Number(fixture.fixtureId));
 
-  // 3. Find supported market
-  const over25 = odds.find(
-    (market) =>
-      market.SuperOddsType === "OVERUNDER_PARTICIPANT_GOALS" &&
-      market.MarketParameters === "line=2.5" &&
-      !market.MarketPeriod && // MarketPeriod might be null or undefined
-      market.InRunning === false
-  );
+    if (!oddsRows || oddsRows.length === 0) {
+      console.log(`[market] No odds found for fixture ${fixture.fixtureId}`);
+      continue;
+    }
 
-  if (!over25) {
-    console.log("[market] No full-time Over 2.5 market available");
-    return;
-  }
-
-  console.log("[market] Found Over 2.5 market:", {
-    messageId: over25.MessageId,
-    timestamp: over25.Ts,
-    prices: over25.Prices,
-    percentages: over25.Pct,
-  });
-
-  // Map odds
-  const refOdds = mapOver25Odds(over25);
-
-  // 4. Construct settlement predicate
-  const predicate: Predicate = {
-    statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
-    statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
-    op: { add: {} },
-    threshold: 2,
-    comparison: { greaterThan: {} },
-  };
-
-  // 5. Determine market times
-  const locksAt = new Date(Number(fixture.startTime));
-  const settleAfter = new Date(locksAt.getTime() + 3 * 60 * 60 * 1000);
-
-  // 6. Create market on Solana
-  const result = await createMarketForFixture(
-    fixture.fixtureId,
-    predicate,
-    locksAt,
-    settleAfter
-  );
-
-  console.log("[market] Result:", {
-    marketPda: result.marketPda.toBase58(),
-    transaction: result.txSignature,
-  });
-
-  // 7. Store market in DB
-  if (result.marketPda) {
-    await prisma.market.upsert({
-      where: { marketPda: result.marketPda.toBase58() },
-      update: {},
-      create: {
-        fixtureId: fixture.fixtureId,
-        marketPda: result.marketPda.toBase58(),
-        predicateHash: Array.from(result.predicateHash || []).join(','),
-        marketType: refOdds.marketType,
-        question: SUPPORTED_MARKETS.TOTAL_GOALS_OVER_2_5.label,
-        locksAt,
-        settleAfter,
-        creationTx: result.txSignature,
-        sourceOddsMessageId: refOdds.sourceMessageId,
-        initialYesPct: refOdds.yesPct,
-        initialNoPct: refOdds.noPct,
-        status: "OPEN"
+    // 3. Discover markets
+    const discoveredMarkets = discoverMarketsForFixture(fixture, oddsRows);
+    
+    // 4. Create supported markets
+    for (const market of discoveredMarkets) {
+      if (!market.supportedForCreation || !market.predicate || !market.referenceProbability) {
+        continue; // Skip unsupported or malformed markets
       }
-    });
+
+      console.log(`[market] Discovered market: ${market.type} (${market.question})`);
+      
+      // Determine market times
+      const locksAt = new Date(Number(fixture.startTime));
+      const settleAfter = new Date(locksAt.getTime() + 3 * 60 * 60 * 1000);
+
+      // Create market on Solana
+      const result = await createMarketForFixture(
+        fixture.fixtureId,
+        market.predicate,
+        locksAt,
+        settleAfter
+      );
+
+      console.log(`[market] Created on-chain PDA: ${result.marketPda.toBase58()} (already exists: ${result.alreadyExists})`);
+
+      // Store market in DB
+      if (result.marketPda) {
+        await prisma.market.upsert({
+          where: { marketPda: result.marketPda.toBase58() },
+          update: {
+            initialYesPct: market.referenceProbability.yesPct,
+            initialNoPct: market.referenceProbability.noPct,
+            sourceOddsMessageId: market.source.messageId,
+          }, // Could update probabilities or metadata if needed
+          create: {
+            fixtureId: fixture.fixtureId,
+            marketPda: result.marketPda.toBase58(),
+            predicateHash: Array.from(result.predicateHash || []).join(','),
+            marketType: market.type,
+            question: market.question,
+            locksAt,
+            settleAfter,
+            creationTx: result.txSignature,
+            sourceOddsMessageId: market.source.messageId,
+            initialYesPct: market.referenceProbability.yesPct,
+            initialNoPct: market.referenceProbability.noPct,
+            status: "OPEN"
+          }
+        });
+      }
+
+      results.push({ fixtureId: fixture.fixtureId, market, result });
+    }
   }
 
-  return {
-    fixture,
-    referenceOdds: over25,
-    ...result,
-  };
+  return results;
 }

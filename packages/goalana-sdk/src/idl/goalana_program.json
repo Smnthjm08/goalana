@@ -318,8 +318,7 @@
           "signer": true
         },
         {
-          "name": "system_program",
-          "address": "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu"
+          "name": "system_program"
         }
       ],
       "args": [
@@ -392,8 +391,7 @@
           }
         },
         {
-          "name": "system_program",
-          "address": "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu"
+          "name": "system_program"
         }
       ],
       "args": []
@@ -539,8 +537,7 @@
           "signer": true
         },
         {
-          "name": "system_program",
-          "address": "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu"
+          "name": "system_program"
         }
       ],
       "args": [
@@ -601,8 +598,7 @@
           }
         },
         {
-          "name": "txoracle_program",
-          "address": "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu"
+          "name": "txoracle_program"
         },
         {
           "name": "daily_scores_merkle_roots"
