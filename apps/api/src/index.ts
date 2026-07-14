@@ -42,7 +42,11 @@ app.get("/", async (req, res) => {
   res.json({ status: "healthy!" });
 });
 
-app.get("/api/data/", async (_req, res) => {
+app.get("/health", async (req, res) => {
+  res.status(200).json({ status: "UP", timestamp: new Date().toISOString() });
+});
+
+app.get(["/api/data/", "/api/fixtures"], async (_req, res) => {
   try {
     const data = await prisma.fixture.findMany({
       include: {

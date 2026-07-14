@@ -9,7 +9,8 @@
     "lint": "turbo run lint",
     "format": "turbo run format",
     "typecheck": "turbo run typecheck",
-    "db:generate": "bun --filter @workspace/db generate"
+    "db:generate": "bun --filter @workspace/db generate",
+    "db:deploy": "bun --filter @workspace/db migrate:deploy"
   },
   "devDependencies": {
     "@workspace/eslint-config": "workspace:*",
