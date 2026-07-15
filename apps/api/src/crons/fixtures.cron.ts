@@ -2,6 +2,7 @@ import { prisma, Prisma } from "@workspace/db";
 import { FixtureService } from "@workspace/txline";
 import cron from "node-cron";
 import { syncOdds } from "./odds.cron";
+import { backfillFixtureScores } from "../workers/scores.backfill";
 import { logger } from "../utils/logger";
 
 // TxLINE's /fixtures/updates endpoint has no competitionId filter, unlike
@@ -69,6 +70,19 @@ export async function syncFixtures(): Promise<SyncResult> {
                             fixtureId,
                             ...data,
                         },
+                    });
+
+                    // Newly-tracked fixture: reconcile any scores history it
+                    // already has (e.g. a fixture that was already in-play
+                    // when Goalana started tracking it) through the same
+                    // canonical processor the live scores worker uses.
+                    // Fire-and-forget — must not block fixture sync.
+                    void backfillFixtureScores(fixture.FixtureId).catch((error) => {
+                        logger.error(
+                            "fixture.cron",
+                            `Scores backfill failed for new fixture ${fixture.FixtureId}`,
+                            error,
+                        );
                     });
                 } else if (ts > current.ts) {
                     await tx.fixture.update({
@@ -185,6 +199,14 @@ export async function syncFixtureUpdates() {
                             fixtureId,
                             ...data,
                         },
+                    });
+
+                    void backfillFixtureScores(fixture.FixtureId).catch((error) => {
+                        logger.error(
+                            "fixture.cron",
+                            `Scores backfill failed for new fixture ${fixture.FixtureId}`,
+                            error,
+                        );
                     });
                 } else if (ts > current.ts) {
                     await tx.fixture.update({

@@ -39,10 +39,31 @@ model Fixture {
   participant2       String
   participant1IsHome Boolean
   gameState          Int?
-  // Set by scores.processor when StatusId IN (5, 10, 13)
+  // Set by scores.processor when the fixture reaches a terminal state.
+  // Observed live feeds emit a non-standard StatusId (100) via the
+  // undocumented "game_finalised" action rather than the documented 5/10/13 —
+  // see scores.processor.ts isTerminalState() for the full condition.
   // Required by settlement.service to call getScoresStatValidation
   finalSeq           Int?
   updatedAt          DateTime @updatedAt
+
+  // ─── Canonical live match state (scores.processor.ts) ───────────────────
+  // Derived from the highest-Seq MatchEvent that carries a `Score`/`StatusId`
+  // field — never from counting goal events (see scores.processor.ts docs).
+  // Null until the first scores event for this fixture has been processed.
+  homeScore       Int?
+  awayScore       Int?
+  liveStatusId    Int?
+  // Free-text period label derived from statusId/action (e.g. "H1", "HT",
+  // "H2", "FT") — kept as a string because observed values (StatusId=100 /
+  // action="game_finalised") fall outside the documented 1–18 enum.
+  livePeriodLabel String?
+  clockSeconds    Int?
+  clockRunning    Boolean?
+  // Highest Seq applied to the live state above — used to reject
+  // out-of-order/stale deliveries without needing a DB read-then-check race.
+  lastEventSeq    Int?
+  lastEventTs     BigInt?
 
   odds          Odds[]
   matchEvents   MatchEvent[]

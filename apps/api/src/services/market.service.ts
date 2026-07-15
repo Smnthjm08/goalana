@@ -60,6 +60,43 @@ function extract1X2Probability(market: OddsPayload, targetOutcome: "part1" | "dr
   return toBinaryProbability(Number(market.Pct[targetIndex]));
 }
 
+/**
+ * Computes a market's *current* TxLINE reference probability from its matching
+ * `Odds` row (current-state table, one row per logical market identity).
+ *
+ * Reuses the same extraction logic as `discoverMarketsForFixture` so the
+ * "opening" (at creation time) and "current" reference numbers are derived
+ * identically — this is TxLINE reference data only, never Goalana's on-chain
+ * pool split.
+ */
+export function computeCurrentReferenceProbability(
+  marketType: string,
+  odds: { priceNames: unknown; probabilities: unknown } | null | undefined
+): { yesPct: number; noPct: number } | null {
+  if (!odds) return null;
+
+  const priceNames = odds.priceNames as string[] | null;
+  const probabilities = odds.probabilities as string[] | null;
+  if (!priceNames || !probabilities) return null;
+
+  const row = { PriceNames: priceNames, Pct: probabilities } as Pick<OddsPayload, "PriceNames" | "Pct"> as OddsPayload;
+
+  switch (marketType) {
+    case "FULL_TIME_HOME_WIN":
+      return extract1X2Probability(row, "part1");
+    case "FULL_TIME_DRAW":
+      return extract1X2Probability(row, "draw");
+    case "FULL_TIME_AWAY_WIN":
+      return extract1X2Probability(row, "part2");
+    case "FULL_TIME_OVER_1_5":
+    case "FULL_TIME_OVER_2_5":
+    case "FULL_TIME_OVER_3_5":
+      return extractProbability(row, "over", "under");
+    default:
+      return null;
+  }
+}
+
 function generateQuestion(template: string, participant1: string, participant2: string) {
   return template
     .replace("{participant1}", participant1)

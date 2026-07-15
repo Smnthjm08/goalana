@@ -7,6 +7,9 @@ import { startFixtureCron, syncFixtures } from "./crons/fixtures.cron";
 import { createTodayMarket, startMarketCron } from "./crons/market.cron";
 import { startScoresWorker } from "./workers/scorer.worker";
 import { startOddsWorker } from "./workers/odds.worker";
+import { computeCurrentReferenceProbability } from "./services/market.service";
+import { SUPPORTED_MARKETS } from "./services/market-definitions";
+import { getMatchTimeline, formatMinute } from "./services/match-timeline.service";
 import path from "path";
 import { fileURLToPath } from "url";
 import { logger } from "./utils/logger";
@@ -90,12 +93,6 @@ app.get("/api/fixtures/:id", async (req, res) => {
             ts: "desc",
           }
         },
-        matchEvents: {
-          orderBy: {
-            seq: "desc",
-          },
-          take: 50,
-        },
       },
     });
 
@@ -103,7 +100,60 @@ app.get("/api/fixtures/:id", async (req, res) => {
       return res.status(404).json({ error: "Fixture not found" });
     }
 
-    return res.status(200).json({ data: fixture });
+    // Live score/status/clock come from the canonical fields scores.processor
+    // maintains on Fixture — never from counting/serializing raw MatchEvent
+    // rows. The normalized, deduplicated timeline is a separate read built
+    // from those raw rows by match-timeline.service, but raw rows themselves
+    // are never sent to the client (audit-only).
+    const isFinal = fixture.finalSeq !== null;
+    const minuteLabel = isFinal
+      ? "FT"
+      : fixture.livePeriodLabel === "HT"
+        ? "HT"
+        : formatMinute(fixture.clockSeconds, fixture.liveStatusId).label;
+
+    const liveScore = {
+      homeScore: fixture.homeScore,
+      awayScore: fixture.awayScore,
+      statusId: fixture.liveStatusId,
+      periodLabel: fixture.livePeriodLabel,
+      clockSeconds: fixture.clockSeconds,
+      clockRunning: fixture.clockRunning,
+      minuteLabel,
+      isFinal,
+      lastUpdate: fixture.lastEventTs !== null ? fixture.lastEventTs.toString() : null,
+    };
+
+    const events = await getMatchTimeline(fixtureId);
+
+    // Attach each market's *current* TxLINE reference probability (from the
+    // already-fetched `odds` current-state rows) alongside the frozen
+    // `initialYesPct`/`initialNoPct` captured at creation time. No extra
+    // query — `odds` is already included above.
+    const marketsWithLiveReference = fixture.markets.map((market) => {
+      const marketDef = (SUPPORTED_MARKETS as Record<string, { txline: { superOddsType: string; marketParameters: string; marketPeriod: string } }>)[market.marketType];
+
+      const liveOdds = marketDef
+        ? fixture.odds.find(
+            (odds) =>
+              odds.superOddsType === marketDef.txline.superOddsType &&
+              odds.marketParameters === marketDef.txline.marketParameters &&
+              odds.marketPeriod === marketDef.txline.marketPeriod
+          )
+        : undefined;
+
+      const reference = computeCurrentReferenceProbability(market.marketType, liveOdds);
+
+      return {
+        ...market,
+        currentYesPct: reference?.yesPct ?? market.initialYesPct,
+        currentNoPct: reference?.noPct ?? market.initialNoPct,
+      };
+    });
+
+    return res.status(200).json({
+      data: { ...fixture, markets: marketsWithLiveReference, liveScore, events },
+    });
   } catch (error) {
     logger.error("api", `Error fetching fixture ${req.params.id}`, error);
     return res.status(500).json({ error: "internal server error" });
@@ -204,10 +254,12 @@ app.post("/api/fixtures/sync", async (_req, res) => {
 });
 
 const oddsWorkerController = new AbortController();
+const scoresWorkerController = new AbortController();
 
 function shutdown(signal: string) {
-  logger.warn("bootstrap", `Received ${signal}, shutting down odds stream worker...`);
+  logger.warn("bootstrap", `Received ${signal}, shutting down stream workers...`);
   oddsWorkerController.abort();
+  scoresWorkerController.abort();
 }
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
@@ -247,7 +299,7 @@ async function bootstrap() {
     logger.error("odds-worker", "Fatal error", error);
   });
 
-  void startScoresWorker().catch((error) => {
+  void startScoresWorker(scoresWorkerController.signal).catch((error) => {
     logger.error("scores-worker", "Fatal error", error);
   });
 
