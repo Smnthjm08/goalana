@@ -25,7 +25,7 @@ bun install
 
 ## 3. Set up Environment Variables
 
-Create your `.env` file on the VM. You can copy the structure from your local environment. 
+Create your `.env` file on the VM. You can copy the structure from your local environment.
 
 > [!CAUTION]
 > **Never commit `.env` or `.env.production` files containing real secrets to version control.** Always inject them securely on the server.

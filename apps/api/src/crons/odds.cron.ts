@@ -1,7 +1,7 @@
 import { prisma } from "@workspace/db";
 import { OddsService } from "@workspace/txline";
+import { processOddsUpdate } from "../workers/odds.processor";
 import { logger } from "../utils/logger";
-
 
 let isRunning = false;
 
@@ -33,51 +33,12 @@ export async function syncOdds() {
 
             if (!oddsSnapshots || oddsSnapshots.length === 0) continue;
 
-            const operations = oddsSnapshots.flatMap((market) => {
-                const baseData = {
-                    messageId: market.MessageId,
-                    ts: BigInt(market.Ts),
-                    bookmaker: market.Bookmaker,
-                    bookmakerId: market.BookmakerId,
-                    superOddsType: market.SuperOddsType,
-                    marketPeriod: market.MarketPeriod ?? "",
-                    marketParameters: market.MarketParameters ?? "",
-                    inRunning: market.InRunning,
-                    gameState: market.GameState ?? null,
-                    priceNames: market.PriceNames ?? [],
-                    prices: market.Prices ?? [],
-                    probabilities: market.Pct ?? [],
-                };
+            // Same canonical persistence/dedup path used by the odds SSE worker —
+            // one place decides how a TxLINE odds row is upserted into Odds/OddsHistory.
+            for (const market of oddsSnapshots) {
+                await processOddsUpdate(market);
+            }
 
-                return [
-                    prisma.odds.upsert({
-                        where: {
-                            fixtureId_bookmakerId_superOddsType_marketPeriod_marketParameters: {
-                                fixtureId: BigInt(market.FixtureId),
-                                bookmakerId: market.BookmakerId,
-                                superOddsType: market.SuperOddsType,
-                                marketPeriod: market.MarketPeriod ?? "",
-                                marketParameters: market.MarketParameters ?? "",
-                            },
-                        },
-                        update: baseData,
-                        create: {
-                            fixtureId: BigInt(market.FixtureId),
-                            ...baseData,
-                        },
-                    }),
-                    prisma.oddsHistory.upsert({
-                        where: { messageId: market.MessageId },
-                        update: {}, // No need to update historical records if they exist
-                        create: {
-                            fixtureId: BigInt(market.FixtureId),
-                            ...baseData,
-                        },
-                    }),
-                ];
-            });
-
-            await prisma.$transaction(operations);
             totalUpserted += oddsSnapshots.length;
         }
 

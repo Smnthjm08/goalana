@@ -1,74 +1,98 @@
+import { OddsService, type SSEEvent, type OddsPayload } from "@workspace/txline";
 import { prisma } from "@workspace/db";
-import { OddsService, type OddsPayload } from "@workspace/txline";
 import { processOddsUpdate } from "./odds.processor";
 import { logger } from "../utils/logger";
 
 const oddsService = new OddsService();
 
+const RECONNECT_DELAY_MS = 5_000;
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function getActiveFixtures() {
-  const now = BigInt(Date.now());
-  // Find fixtures that have a market and have not finished (e.g. start time in the future or within the last 3 hours)
-  const threeHoursAgo = BigInt(Date.now() - 3 * 60 * 60 * 1000);
-  
-  const markets = await prisma.market.findMany({
-    where: {
-      status: "OPEN",
-    },
-    select: {
-      fixtureId: true,
-    }
+// TxLINE's /odds/stream isn't scoped to a single competition, so only persist
+// updates for fixtures Goalana actually tracks (World Cup, synced into Postgres).
+async function isTrackedFixture(fixtureId: number): Promise<boolean> {
+  const fixture = await prisma.fixture.findUnique({
+    where: { fixtureId: BigInt(fixtureId) },
+    select: { fixtureId: true },
   });
-
-  const fixtureIds = markets.map(m => m.fixtureId);
-
-  if (fixtureIds.length === 0) return [];
-
-  return prisma.fixture.findMany({
-    where: {
-      fixtureId: { in: fixtureIds },
-      startTime: { gt: threeHoursAgo },
-    },
-  });
+  return fixture !== null;
 }
 
-function isRelevantOddsMarket(odds: OddsPayload) {
-  return (
-    odds.SuperOddsType === "OVERUNDER_PARTICIPANT_GOALS" &&
-    odds.MarketParameters === "line=2.5" &&
-    !odds.MarketPeriod // null or undefined
-  );
-}
+/**
+ * Live odds freshness via TxLINE's SSE stream. Snapshot-based sync
+ * (odds.cron.ts, chained off fixtures.cron.ts) remains the recovery/
+ * reconciliation mechanism — this worker only keeps things fresh in between.
+ *
+ * Persists through the same canonical `processOddsUpdate` path used by
+ * snapshot sync, so Odds/OddsHistory dedup behavior is identical either way.
+ */
+export async function startOddsWorker(signal: AbortSignal): Promise<void> {
+  logger.info("odds.worker", "Starting...");
 
-export async function syncFixtureOdds(fixtureId: bigint) {
-  const odds = await oddsService.getOddsSnapshots(Number(fixtureId));
-  
-  if (!odds) return;
+  let lastEventId: string | undefined;
 
-  const relevant = odds.filter(isRelevantOddsMarket);
-
-  for (const update of relevant) {
-    await processOddsUpdate(update);
-  }
-}
-
-export async function startOddsWorker() {
-  logger.info("odds-worker", "Started");
-
-  while (true) {
+  while (!signal.aborted) {
     try {
-      const fixtures = await getActiveFixtures();
+      const stream = await oddsService.streamOddsUpdates(undefined, {
+        signal,
+        lastEventId,
+      });
 
-      for (const fixture of fixtures) {
-        await syncFixtureOdds(fixture.fixtureId);
+      logger.success("odds.worker", "Connected to TxLINE odds stream");
+
+      for await (const frame of stream as AsyncIterable<SSEEvent>) {
+        if (frame.id) {
+          lastEventId = frame.id;
+        }
+
+        if (frame.event === "heartbeat") {
+          continue;
+        }
+
+        if (!frame.data?.trim()) {
+          continue;
+        }
+
+        try {
+          const event = JSON.parse(frame.data) as OddsPayload;
+
+          if (!event.FixtureId || !event.MessageId) {
+            continue;
+          }
+
+          if (!(await isTrackedFixture(event.FixtureId))) {
+            continue;
+          }
+
+          await processOddsUpdate(event);
+
+          logger.event(
+            "odds.worker",
+            `Saved fixture=${event.FixtureId} type=${event.SuperOddsType} msg=${event.MessageId}`,
+          );
+        } catch (error) {
+          logger.error("odds.worker", "Failed to parse or save odds event", error);
+        }
+      }
+
+      if (!signal.aborted) {
+        logger.warn("odds.worker", "Stream ended. Reconnecting...");
       }
     } catch (error) {
-      logger.error("odds-worker", "Error", error);
+      if (!signal.aborted) {
+        logger.error("odds.worker", "Stream connection failed", error);
+      }
     }
 
-    await sleep(10_000);
+    if (signal.aborted) {
+      break;
+    }
+
+    await sleep(RECONNECT_DELAY_MS);
   }
+
+  logger.info("odds.worker", "Stopped.");
 }

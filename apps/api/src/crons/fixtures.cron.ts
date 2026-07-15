@@ -4,17 +4,26 @@ import cron from "node-cron";
 import { syncOdds } from "./odds.cron";
 import { logger } from "../utils/logger";
 
+// TxLINE's /fixtures/updates endpoint has no competitionId filter, unlike
+// /fixtures/snapshot — so updates must be filtered client-side to World Cup only.
+const WORLD_CUP_COMPETITION_ID = 72;
+
 let isSnapshotSyncRunning = false;
 let isUpdateSyncRunning = false;
 let isBatchValidationSyncRunning = false;
 
-export async function syncFixtures() {
+export interface SyncResult {
+    success: boolean;
+    reason?: string;
+}
+
+export async function syncFixtures(): Promise<SyncResult> {
     if (isSnapshotSyncRunning) {
         logger.warn(
             "fixture.cron",
             "Snapshot sync already running. Skipping."
         );
-        return;
+        return { success: false, reason: "sync_already_running" };
     }
 
     isSnapshotSyncRunning = true;
@@ -26,7 +35,8 @@ export async function syncFixtures() {
 
         if (!fixtures || fixtures.length === 0) {
             logger.warn("fixture.cron", "No fixtures returned from TxLINE.");
-            return;
+            // A genuinely empty snapshot is not a failure — don't conflate it with an API error.
+            return { success: true };
         }
 
         for (const fixture of fixtures) {
@@ -76,8 +86,14 @@ export async function syncFixtures() {
 
         // Chain odds sync after successful fixture sync
         await syncOdds();
+
+        return { success: true };
     } catch (error) {
         logger.error("fixture.cron", "Fixture sync failed", error);
+        return {
+            success: false,
+            reason: error instanceof Error ? error.message : "unknown_error",
+        };
     } finally {
         isSnapshotSyncRunning = false;
     }
@@ -120,12 +136,14 @@ export async function syncFixtureUpdates() {
             updateMap.set(key, fixture);
         }
 
-        const fixtures = Array.from(updateMap.values()).sort((a, b) => {
-            const aTs = BigInt(a.Ts);
-            const bTs = BigInt(b.Ts);
-        
-            return aTs < bTs ? -1 : aTs > bTs ? 1 : 0;
-        });
+        const fixtures = Array.from(updateMap.values())
+            .filter((fixture) => fixture.CompetitionId === WORLD_CUP_COMPETITION_ID)
+            .sort((a, b) => {
+                const aTs = BigInt(a.Ts);
+                const bTs = BigInt(b.Ts);
+
+                return aTs < bTs ? -1 : aTs > bTs ? 1 : 0;
+            });
 
         if (fixtures.length === 0) {
             return;
@@ -261,15 +279,21 @@ export async function syncPreviousHourBatchValidation() {
 }
 
 export function startFixtureCron() {
+    // Full snapshot reconciliation once per hour — catches new/removed fixtures
+    // that the delta-only /fixtures/updates polling (below) can't surface.
+    const snapshotTask = cron.schedule("0 * * * *", () => {
+        void syncFixtures();
+    });
+
     // Sync updates every 5 minutes
     const updatesTask = cron.schedule("*/5 * * * *", () => {
         void syncFixtureUpdates();
     });
-    
+
     // Sync batch validation once per completed hour (retrying at minutes 5, 20, 35, 50)
     const batchTask = cron.schedule("5,20,35,50 * * * *", () => {
         void syncPreviousHourBatchValidation();
     });
     
-    return { updatesTask, batchTask };
+    return { snapshotTask, updatesTask, batchTask };
 }

@@ -191,12 +191,27 @@ app.get("/api/fixtures/:id/odds/history", async (req, res) => {
 });
 
 app.post("/api/fixtures/sync", async (_req, res) => {
-  await syncFixtures();
+  const result = await syncFixtures();
 
-  res.json({
-    success: true,
-  });
+  if (!result.success) {
+    return res.status(502).json({
+      success: false,
+      error: result.reason ?? "Fixture sync failed",
+    });
+  }
+
+  return res.json({ success: true });
 });
+
+const oddsWorkerController = new AbortController();
+
+function shutdown(signal: string) {
+  logger.warn("bootstrap", `Received ${signal}, shutting down odds stream worker...`);
+  oddsWorkerController.abort();
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
 
 async function bootstrap() {
   logger.info("bootstrap", "Starting Goalana backend");
@@ -228,7 +243,7 @@ async function bootstrap() {
   startMarketCron();
 
   // 5. Start live workers
-  void startOddsWorker().catch((error) => {
+  void startOddsWorker(oddsWorkerController.signal).catch((error) => {
     logger.error("odds-worker", "Fatal error", error);
   });
 

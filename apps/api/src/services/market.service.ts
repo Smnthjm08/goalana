@@ -7,6 +7,11 @@ import { logger } from "../utils/logger";
 
 const oddsService = new OddsService();
 
+// Matches the competitionId Goalana ingests fixtures for (fixtures.cron.ts).
+// Guards against creating markets for a fixture that slipped in from another
+// competition via the unfiltered /fixtures/updates polling path.
+const WORLD_CUP_COMPETITION_ID = 72;
+
 export type GoalanaMarketType = keyof typeof SUPPORTED_MARKETS;
 
 export interface DiscoveredMarket {
@@ -61,6 +66,14 @@ function generateQuestion(template: string, participant1: string, participant2: 
     .replace("{participant2}", participant2);
 }
 
+// Same safe predicate shape for every supported Over line: total goals (HOME_GOALS + AWAY_GOALS)
+// compared against an integer threshold. Only the TxLINE line/threshold pair changes.
+const OVER_UNDER_MARKETS = [
+  SUPPORTED_MARKETS.FULL_TIME_OVER_1_5,
+  SUPPORTED_MARKETS.FULL_TIME_OVER_2_5,
+  SUPPORTED_MARKETS.FULL_TIME_OVER_3_5,
+] as const;
+
 export function discoverMarketsForFixture(
   fixture: { fixtureId: bigint; participant1: string; participant2: string },
   oddsRows: OddsPayload[]
@@ -96,27 +109,29 @@ export function discoverMarketsForFixture(
       marketParameters: params,
     };
 
-    // FULL_TIME_OVER_2_5
-    if (
-      row.SuperOddsType === SUPPORTED_MARKETS.FULL_TIME_OVER_2_5.txline.superOddsType &&
-      params === SUPPORTED_MARKETS.FULL_TIME_OVER_2_5.txline.marketParameters &&
-      period === SUPPORTED_MARKETS.FULL_TIME_OVER_2_5.txline.marketPeriod
-    ) {
-      discovered.push({
-        fixtureId: fixture.fixtureId,
-        type: "FULL_TIME_OVER_2_5",
-        question: SUPPORTED_MARKETS.FULL_TIME_OVER_2_5.label,
-        referenceProbability: extractProbability(row, "over", "under"),
-        source: baseSource,
-        predicate: {
-          statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
-          statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
-          op: { add: {} },
-          threshold: 2,
-          comparison: { greaterThan: {} },
-        },
-        supportedForCreation: true,
-      });
+    // FULL_TIME_OVER_1_5 / 2_5 / 3_5 — identical predicate shape, only the line/threshold differs.
+    for (const marketDef of OVER_UNDER_MARKETS) {
+      if (
+        row.SuperOddsType === marketDef.txline.superOddsType &&
+        params === marketDef.txline.marketParameters &&
+        period === marketDef.txline.marketPeriod
+      ) {
+        discovered.push({
+          fixtureId: fixture.fixtureId,
+          type: marketDef.type,
+          question: marketDef.label,
+          referenceProbability: extractProbability(row, "over", "under"),
+          source: baseSource,
+          predicate: {
+            statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
+            statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
+            op: { add: {} },
+            threshold: marketDef.threshold,
+            comparison: { greaterThan: {} },
+          },
+          supportedForCreation: true,
+        });
+      }
     }
 
     // 1X2 FULL TIME (Home Win, Draw, Away Win)
@@ -190,6 +205,7 @@ export async function processMarketsForUpcomingFixtures() {
   // 1. Find upcoming fixtures (next 24 hours)
   const fixtures = await prisma.fixture.findMany({
     where: {
+      competitionId: WORLD_CUP_COMPETITION_ID,
       startTime: {
         gt: BigInt(now),
         lte: BigInt(until),

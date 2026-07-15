@@ -18,8 +18,36 @@ const marketTypeLabels: Record<string, string> = {
   FULL_TIME_HOME_WIN: "MATCH RESULT / FULL TIME",
   FULL_TIME_DRAW: "MATCH RESULT / FULL TIME",
   FULL_TIME_AWAY_WIN: "MATCH RESULT / FULL TIME",
+  FULL_TIME_OVER_1_5: "TOTAL GOALS / FULL TIME",
   FULL_TIME_OVER_2_5: "TOTAL GOALS / FULL TIME",
-  FULL_TIME_UNDER_2_5: "TOTAL GOALS / FULL TIME",
+  FULL_TIME_OVER_3_5: "TOTAL GOALS / FULL TIME",
+}
+
+// Section grouping for the Markets tab — keeps the six supported markets
+// organized as MATCH RESULT / TOTAL GOALS instead of one flat, unlabeled grid.
+const MARKET_GROUPS: Record<string, string> = {
+  FULL_TIME_HOME_WIN: "MATCH RESULT",
+  FULL_TIME_DRAW: "MATCH RESULT",
+  FULL_TIME_AWAY_WIN: "MATCH RESULT",
+  FULL_TIME_OVER_1_5: "TOTAL GOALS",
+  FULL_TIME_OVER_2_5: "TOTAL GOALS",
+  FULL_TIME_OVER_3_5: "TOTAL GOALS",
+}
+const MARKET_GROUP_ORDER = ["MATCH RESULT", "TOTAL GOALS", "OTHER"]
+
+function groupMarkets(markets: any[]): Array<{ group: string; markets: any[] }> {
+  const byGroup = new Map<string, any[]>()
+
+  for (const market of markets) {
+    const group = MARKET_GROUPS[market.marketType] ?? "OTHER"
+    const bucket = byGroup.get(group) ?? []
+    bucket.push(market)
+    byGroup.set(group, bucket)
+  }
+
+  return MARKET_GROUP_ORDER
+    .map((group) => ({ group, markets: byGroup.get(group) ?? [] }))
+    .filter((entry) => entry.markets.length > 0)
 }
 
 function MarketCard({ market }: { market: any }) {
@@ -42,7 +70,7 @@ function MarketCard({ market }: { market: any }) {
       </CardHeader>
       <CardContent className="p-5 flex flex-col gap-4">
         <span className="font-mono text-[10px] text-muted-foreground tracking-widest text-center mb-[-4px]">
-          OPENING PROBABILITY
+          TXLINE REFERENCE (OPENING) — NOT THE ON-CHAIN POOL PRICE
         </span>
         <div className="grid grid-cols-2 gap-4">
           <Button 
@@ -132,6 +160,8 @@ export default function FixtureDetailPage() {
     setVisibleSeries(prev => ({ ...prev, [series]: !prev[series] }))
   }
 
+  const marketGroups = groupMarkets(fixture.markets ?? [])
+
   // Chart config
   const chartConfig = {
     home: {
@@ -220,9 +250,18 @@ export default function FixtureDetailPage() {
                 </span>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {fixture.markets?.map((market: any) => (
-                  <MarketCard key={market.id} market={market} />
+              <div className="flex flex-col gap-8">
+                {marketGroups.map(({ group, markets }) => (
+                  <div key={group} className="flex flex-col gap-4">
+                    <h3 className="font-heading text-sm uppercase tracking-widest text-muted-foreground border-b border-border pb-2">
+                      {group}
+                    </h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {markets.map((market: any) => (
+                        <MarketCard key={market.id} market={market} />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
