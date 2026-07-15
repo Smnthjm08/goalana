@@ -6,6 +6,7 @@ import { prisma } from "@workspace/db";
 import { startFixtureCron, syncFixtures } from "./crons/fixtures.cron";
 import { createTodayMarket, startMarketCron } from "./crons/market.cron";
 import { startScoresWorker } from "./workers/scorer.worker";
+import { reconcileLiveFixtures } from "./workers/scores.backfill";
 import { startOddsWorker } from "./workers/odds.worker";
 import { computeCurrentReferenceProbability } from "./services/market.service";
 import { SUPPORTED_MARKETS } from "./services/market-definitions";
@@ -288,13 +289,23 @@ async function bootstrap() {
     logger.error("bootstrap", "Market creation failed", error);
   }
 
-  // 3. Start scheduled fixture refresh
+  // 3. Catch up any fixture that was already mid-match when this process
+  // started (deploy restart, crash, manual restart, etc.) — the live scores
+  // worker's SSE resume position only lives in memory, so a restart alone
+  // would otherwise leave a silent gap in that fixture's match events.
+  try {
+    await reconcileLiveFixtures();
+  } catch (error) {
+    logger.error("bootstrap", "Live fixture reconciliation failed", error);
+  }
+
+  // 4. Start scheduled fixture refresh
   startFixtureCron();
 
-  // 4. Periodically discover/create missing markets
+  // 5. Periodically discover/create missing markets
   startMarketCron();
 
-  // 5. Start live workers
+  // 6. Start live workers
   void startOddsWorker(oddsWorkerController.signal).catch((error) => {
     logger.error("odds-worker", "Fatal error", error);
   });

@@ -15,8 +15,14 @@ bun install --frozen-lockfile
 echo "🗄️ Running Prisma production migrations..."
 bun run db:deploy
 
+echo "⚙️ Generating Prisma Client..."
+bun run db:generate
+
 echo "♻️ Reloading Goalana API..."
 pm2 reload goalana-api --update-env
+
+echo "🩹 Reconciling in-progress fixtures (catches any match events missed during the restart)..."
+(cd apps/api && bun run src/scripts/reconcile-scores.ts)
 
 echo "💾 Saving PM2 process list..."
 pm2 save

@@ -99,7 +99,8 @@ export async function processScoresUpdate(raw: ScoresRecord): Promise<void> {
   const ts = record.Ts as number | undefined;
 
   if (fixtureIdNum === undefined || seq === undefined || !action || ts === undefined) {
-    throw new Error("Missing FixtureId, Seq, Action, or Ts");
+    logger.warn("scores.processor", `Skipping invalid score event (missing FixtureId, Seq, Action, or Ts)`);
+    return;
   }
 
   const fixtureId = BigInt(fixtureIdNum);

@@ -1,4 +1,5 @@
 import { ScoresService } from "@workspace/txline";
+import { prisma } from "@workspace/db";
 import { processScoresUpdate } from "./scores.processor";
 import { logger } from "../utils/logger";
 
@@ -48,4 +49,53 @@ export async function backfillFixtureScores(fixtureId: number): Promise<{ proces
   );
 
   return { processed, failed };
+}
+
+/**
+ * Re-syncs every fixture that isn't finished yet (`finalSeq` still null) and
+ * has already kicked off (`startTime` in the past).
+ *
+ * Why this exists: `scorer.worker.ts` keeps its SSE resume position
+ * (`lastEventId`) purely in memory. Every process restart — a deploy via
+ * `deploy.sh`'s `pm2 reload`, a crash, a manual restart — throws that away,
+ * so the worker reconnects and only sees events emitted *after* it comes
+ * back up. `backfillFixtureScores` was previously only ever called once, at
+ * the moment a fixture was first created (fixtures.cron.ts) — nothing
+ * re-ran it for a fixture that was already being tracked and happened to be
+ * mid-match when the process restarted. Any events TxLINE sent during that
+ * restart window were silently and permanently lost.
+ *
+ * This closes that gap: call it once on every process boot (see
+ * bootstrap() in index.ts) so a restart mid-match self-heals via the same
+ * idempotent `processScoresUpdate` path instead of leaving a silent hole in
+ * the match-event history.
+ */
+export async function reconcileLiveFixtures(): Promise<void> {
+  const now = BigInt(Date.now());
+
+  const liveFixtures = await prisma.fixture.findMany({
+    where: {
+      startTime: { lte: now },
+      finalSeq: null,
+    },
+    select: { fixtureId: true },
+  });
+
+  if (liveFixtures.length === 0) {
+    logger.info("scores.backfill", "No in-progress fixtures to reconcile.");
+    return;
+  }
+
+  logger.info(
+    "scores.backfill",
+    `Reconciling ${liveFixtures.length} in-progress fixture(s) after restart...`,
+  );
+
+  for (const { fixtureId } of liveFixtures) {
+    try {
+      await backfillFixtureScores(Number(fixtureId));
+    } catch (error) {
+      logger.error("scores.backfill", `Reconciliation failed for fixture=${fixtureId}`, error);
+    }
+  }
 }
