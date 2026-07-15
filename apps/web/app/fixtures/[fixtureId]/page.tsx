@@ -11,6 +11,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@workspace/ui/components/chart"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, ReferenceLine, ResponsiveContainer } from "recharts"
 
 const marketTypeLabels: Record<string, string> = {
@@ -54,7 +55,7 @@ function MarketCard({ market }: { market: any }) {
             }`}
           >
             <span className={`font-mono text-xs ${selected === "YES" ? "text-black/70" : "text-muted-foreground group-hover/yes:text-lime-400"} transition-colors`}>YES</span>
-            <span className={`font-heading text-xl ${selected === "YES" ? "text-black" : "text-foreground group-hover/yes:text-lime-400"} transition-colors`}>{market.initialYesPct}%</span>
+            <span className={`font-heading text-xl ${selected === "YES" ? "text-black" : "text-foreground group-hover/yes:text-lime-400"} transition-colors`}>{Number(market.initialYesPct).toFixed(2)}%</span>
           </Button>
           <Button 
             variant="outline"
@@ -66,7 +67,7 @@ function MarketCard({ market }: { market: any }) {
             }`}
           >
             <span className={`font-mono text-xs ${selected === "NO" ? "text-white/70" : "text-muted-foreground group-hover/no:text-rose-600"} transition-colors`}>NO</span>
-            <span className={`font-heading text-xl ${selected === "NO" ? "text-white" : "text-foreground group-hover/no:text-rose-600"} transition-colors`}>{market.initialNoPct}%</span>
+            <span className={`font-heading text-xl ${selected === "NO" ? "text-white" : "text-foreground group-hover/no:text-rose-600"} transition-colors`}>{Number(market.initialNoPct).toFixed(2)}%</span>
           </Button>
         </div>
       </CardContent>
@@ -79,7 +80,6 @@ export default function FixtureDetailPage() {
   
   const [fixture, setFixture] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<"MARKETS" | "ODDS_MOVEMENT">("MARKETS")
   const [oddsData, setOddsData] = useState<any>(null)
   const [visibleSeries, setVisibleSeries] = useState({ home: true, draw: true, away: true })
 
@@ -98,6 +98,7 @@ export default function FixtureDetailPage() {
     axiosInstance.get(`/fixtures/${fixtureId}/odds/history`)
       .then(res => {
         if (res.data?.data) {
+          console.log("[DEBUG] Odds History Data:", res.data.data.history)
           setOddsData(res.data.data)
         }
       })
@@ -194,58 +195,56 @@ export default function FixtureDetailPage() {
              </span>
           </div>
         </div>
-
         {/* Tabs */}
-        <div className="flex border-b border-border w-full gap-8">
-          <button
-            onClick={() => setActiveTab("MARKETS")}
-            className={`font-heading uppercase tracking-widest pb-4 text-sm transition-colors border-b-2 ${activeTab === "MARKETS" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-          >
-            Markets
-          </button>
-          <button
-            onClick={() => setActiveTab("ODDS_MOVEMENT")}
-            className={`font-heading uppercase tracking-widest pb-4 text-sm transition-colors border-b-2 ${activeTab === "ODDS_MOVEMENT" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-          >
-            Odds & Movement
-          </button>
-        </div>
+        <Tabs defaultValue="MARKETS" className="w-full">
+          <TabsList variant="line" className="w-full justify-start border-b border-border rounded-none h-auto p-0 gap-8">
+            <TabsTrigger 
+              value="MARKETS"
+              className="font-heading uppercase tracking-widest pb-4 pt-0 px-0 text-sm bg-transparent data-[state=active]:bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-primary after:bg-primary"
+            >
+              Markets
+            </TabsTrigger>
+            <TabsTrigger 
+              value="ODDS_MOVEMENT"
+              className="font-heading uppercase tracking-widest pb-4 pt-0 px-0 text-sm bg-transparent data-[state=active]:bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-primary after:bg-primary"
+            >
+              Odds & Movement
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Tab Content */}
-        {activeTab === "MARKETS" && (
-          <div className="flex flex-col gap-6">
-            {!fixture.markets || fixture.markets.length === 0 ? (
-               <div className="border border-border p-8 text-center bg-card">
-                 <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
-                   No markets available for this fixture yet.
-                 </span>
-               </div>
+          <TabsContent value="MARKETS" className="mt-8 border-none p-0 outline-none">
+            {fixture._count?.markets === 0 ? (
+              <div className="border border-border p-8 text-center bg-card rounded-sm">
+                <span className="font-mono text-sm text-muted-foreground uppercase tracking-wider">
+                  No prediction markets available for this fixture.
+                </span>
+              </div>
             ) : (
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 {fixture.markets.map((market: any) => (
-                   <MarketCard key={market.id} market={market} />
-                 ))}
-               </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {fixture.markets?.map((market: any) => (
+                  <MarketCard key={market.id} market={market} />
+                ))}
+              </div>
             )}
-          </div>
-        )}
+          </TabsContent>
 
-        {activeTab === "ODDS_MOVEMENT" && (
-          <div className="flex flex-col gap-6">
-            {!oddsData || !oddsData.history || oddsData.history.length === 0 ? (
-              <div className="border border-border p-8 text-center bg-card">
-                 <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
-                   No historical odds data available for this match.
-                 </span>
-               </div>
+          <TabsContent value="ODDS_MOVEMENT" className="mt-8 border-none p-0 outline-none">
+            {!oddsData?.history?.length ? (
+              <div className="border border-border p-8 text-center bg-card rounded-sm">
+                <span className="font-mono text-sm text-muted-foreground uppercase tracking-wider">
+                  Fetching immutable line history...
+                </span>
+              </div>
             ) : (
-              <div className="flex flex-col border border-border bg-card p-6 gap-8">
-                {/* Controls & Summary */}
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div className="flex flex-col">
-                    <span className="font-sans font-bold text-lg text-foreground">MATCH RESULT</span>
-                    <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-                      IMPLIED PROBABILITIES
+              <div className="border border-border bg-card rounded-sm p-6 lg:p-8 relative">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="font-heading text-xl uppercase tracking-widest text-foreground">
+                      Match Result
+                    </h3>
+                    <span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">
+                      Implied Probabilities
                     </span>
                   </div>
                   
@@ -280,16 +279,57 @@ export default function FixtureDetailPage() {
                 </div>
 
                 {/* Graph */}
-                <div className="w-full h-[400px]">
-                  <ChartContainer config={chartConfig} className="w-full h-[400px]">
-                    <LineChart data={oddsData.history}>
+                <div className="w-full mt-6">
+                  <ChartContainer config={chartConfig} className="h-[400px] w-full aspect-auto">
+                    <LineChart data={oddsData.history} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                      
+                      <XAxis 
+                        dataKey="timestamp" 
+                        type="number"
+                        domain={['dataMin', 'dataMax']}
+                        tickFormatter={(val) => new Date(val).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={10}
+                      />
+                      
+                      <YAxis 
+                        domain={[0, 100]}
+                        tickFormatter={(val) => `${val}%`}
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={10}
+                      />
+
+                      <ChartTooltip 
+                        content={<ChartTooltipContent 
+                          labelFormatter={(label) => new Date(label).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        />}
+                        cursor={{ stroke: "hsl(var(--muted-foreground))", strokeWidth: 1, strokeDasharray: "3 3" }}
+                      />
+
+                      {fixture.startTime && oddsData.history.some((h: any) => h.timestamp > new Date(fixture.startTime).getTime()) && (
+                        <ReferenceLine 
+                          x={new Date(fixture.startTime).getTime()} 
+                          stroke="hsl(var(--primary))" 
+                          strokeDasharray="3 3"
+                          label={{ position: 'top', value: 'KICKOFF', fill: 'hsl(var(--primary))', fontSize: 10, fontFamily: 'monospace' }}
+                        />
+                      )}
+
                       {visibleSeries.home && (
                         <Line 
                           type="stepAfter" 
                           dataKey="home" 
-                          stroke="#22c55e" 
+                          stroke="var(--color-home)" 
                           strokeWidth={2} 
                           dot={false} 
+                          activeDot={{ r: 4, fill: "var(--color-home)" }}
                           isAnimationActive={false}
                         />
                       )}
@@ -297,9 +337,10 @@ export default function FixtureDetailPage() {
                         <Line 
                           type="stepAfter" 
                           dataKey="draw" 
-                          stroke="#737373" 
+                          stroke="var(--color-draw)" 
                           strokeWidth={2} 
                           dot={false} 
+                          activeDot={{ r: 4, fill: "var(--color-draw)" }}
                           isAnimationActive={false}
                         />
                       )}
@@ -307,9 +348,10 @@ export default function FixtureDetailPage() {
                         <Line 
                           type="stepAfter" 
                           dataKey="away" 
-                          stroke="#f43f5e" 
+                          stroke="var(--color-away)" 
                           strokeWidth={2} 
                           dot={false} 
+                          activeDot={{ r: 4, fill: "var(--color-away)" }}
                           isAnimationActive={false}
                         />
                       )}
@@ -330,8 +372,8 @@ export default function FixtureDetailPage() {
                 </div>
               </div>
             )}
-          </div>
-        )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

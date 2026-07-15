@@ -4,6 +4,19 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": [
+        "NODE_ENV",
+        "BE_PORT",
+        "API_ONLY",
+        "FRONTEND_URL",
+        "DATABASE_URL",
+        "SOLANA_RPC_URL",
+        "WALLET_PRIVATE_KEY",
+        "TXLINE_ENV",
+        "TXLINE_API_ORIGIN",
+        "TXLINE_JWT",
+        "TXLINE_API_TOKEN"
+      ],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**", "dist/**"]
     },

@@ -3,6 +3,8 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import axiosInstance from "@/lib/axios-instance"
 import { Card, CardHeader, CardContent, CardFooter } from "@workspace/ui/components/card"
+import { Badge } from "@workspace/ui/components/badge"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 
 export default function Page() {
   const [fixtures, setFixtures] = useState<any[]>([])
@@ -27,10 +29,10 @@ export default function Page() {
         </h2>
 
         {loading ? (
-          <div className="border border-border p-8 text-center bg-card">
-            <span className="font-mono text-sm text-muted-foreground uppercase tracking-wider animate-pulse">
-              [ Fetching Immutable Ledger... ]
-            </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-48 w-full rounded-sm" />
+            ))}
           </div>
         ) : fixtures.length === 0 ? (
           <div className="border border-border p-8 text-center bg-card">
@@ -55,9 +57,15 @@ export default function Page() {
                       <span className="font-mono text-[10px] text-muted-foreground uppercase">
                         {fixture.competition}
                       </span>
-                      <span className="font-mono text-[10px] text-primary">
-                        {fixture.gameState === 3 ? "LIVE" : date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      {fixture.gameState === 3 ? (
+                        <Badge variant="outline" className="text-[10px] text-primary border-primary/20 bg-primary/5 rounded-sm">
+                          ● LIVE
+                        </Badge>
+                      ) : (
+                        <span className="font-mono text-[10px] text-primary">
+                          {date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
                     </CardHeader>
                     
                     {/* Body: Teams */}

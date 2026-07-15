@@ -34,9 +34,9 @@ describe("ScoresService", () => {
             expect(result.length).toBeGreaterThanOrEqual(0);
             if (result.length > 0) {
                 const first = result[0]!;
-                expect(first.fixtureId).toBe(KNOWN_FIXTURE_ID);
-                expect(first).toHaveProperty("gameState");
-                expect(first).toHaveProperty("action");
+                expect(first.FixtureId).toBe(KNOWN_FIXTURE_ID);
+                expect(first).toHaveProperty("GameState");
+                expect(first).toHaveProperty("Action");
             }
         }
     }, 30_000);
@@ -51,8 +51,8 @@ describe("ScoresService", () => {
             expect(result.length).toBeGreaterThanOrEqual(0);
             if (result.length > 0) {
                 const first = result[0]!;
-                expect(first).toHaveProperty("fixtureId");
-                expect(first).toHaveProperty("gameState");
+                expect(first).toHaveProperty("FixtureId");
+                expect(first).toHaveProperty("GameState");
             }
         }
     }, 30_000);
@@ -67,8 +67,8 @@ describe("ScoresService", () => {
             expect(result.length).toBeGreaterThanOrEqual(0);
             if (result.length > 0) {
                 const first = result[0]!;
-                expect(first).toHaveProperty("fixtureId");
-                expect(first).toHaveProperty("seq");
+                expect(first).toHaveProperty("FixtureId");
+                expect(first).toHaveProperty("Seq");
             }
         }
     }, 30_000);
@@ -76,7 +76,7 @@ describe("ScoresService", () => {
     it("getScoresStatValidation(params) returns Merkle proof for stats", async () => {
         const snapshot = await service.getScoresSnapshot(KNOWN_FIXTURE_ID);
         if (snapshot && Array.isArray(snapshot) && snapshot.length > 0) {
-            const seq = snapshot[0]!.seq;
+            const seq = snapshot[0]!.Seq;
             console.log(`\n🔍 Querying stat validation for fixtureId: ${KNOWN_FIXTURE_ID}, seq: ${seq}`);
             
             const result = await service.getScoresStatValidation({
@@ -134,7 +134,7 @@ describe("ScoresService", () => {
             } else {
                 const parsed = JSON.parse(event.data as string);
                 console.log("📌 Parsed scores payload:", JSON.stringify(parsed, null, 2));
-                expect(parsed).toHaveProperty("fixtureId");
+                expect(parsed).toHaveProperty("FixtureId");
             }
         } else {
             console.log("⚠️ No event received (stream may have been aborted or errored)");

@@ -9,37 +9,25 @@ const DEFAULT_STALE_TIMEOUT_MS = 30_000;
 
 export class OddsService {
     // 1. Get snapshots of the latest odds for a fixture
-    async getOddsSnapshots(fixtureId: number): Promise<OddsPayload[] | undefined> {
-        try {
-            const { data } = await txlineClient.get<OddsPayload[]>(`/odds/snapshot/${fixtureId}`);
-            return data;
-        } catch (error) {
-            console.error("Error fetching odds snapshots", error);
-        }
+    async getOddsSnapshots(fixtureId: number): Promise<OddsPayload[]> {
+        const { data } = await txlineClient.get<OddsPayload[]>(`/odds/snapshot/${fixtureId}`);
+        return data;
     }
 
     // 2. Get currently live odds updates for a single fixture
-    async getLiveOddsUpdates(fixtureId: number): Promise<OddsPayload[] | undefined> {
-        try {
-            const { data } = await txlineClient.get<OddsPayload[]>(`/odds/updates/${fixtureId}`);
-            return data;
-        } catch (error) {
-            console.error("Error fetching live Odds Update", error);
-        }
+    async getLiveOddsUpdates(fixtureId: number): Promise<OddsPayload[]> {
+        const { data } = await txlineClient.get<OddsPayload[]>(`/odds/updates/${fixtureId}`);
+        return data;
     }
 
     // 3. Get a json array of all odd updates from a specific historical 5-minute interval
-    async getOddsIntervalUpdates(epochDay: number, hourOfDay: number, interval: number, fixtureId?: number): Promise<OddsPayload[] | undefined> {
-        try {
-            const { data } = await txlineClient.get<OddsPayload[]>(`/odds/updates/${epochDay}/${hourOfDay}/${interval}`, {
-                params: {
-                    ...(fixtureId != null ? { fixtureId } : {})
-                }
-            });
-            return data;
-        } catch (error) {
-            console.error("Error fetching historical odds interval updates", error);
-        }
+    async getOddsIntervalUpdates(epochDay: number, hourOfDay: number, interval: number, fixtureId?: number): Promise<OddsPayload[]> {
+        const { data } = await txlineClient.get<OddsPayload[]>(`/odds/updates/${epochDay}/${hourOfDay}/${interval}`, {
+            params: {
+                ...(fixtureId != null ? { fixtureId } : {})
+            }
+        });
+        return data;
     }
 
     /**
@@ -131,17 +119,13 @@ export class OddsService {
     }
 
     // 5. Get a Merkle proof for a specific odds update
-    async getOddsValidation(messageId: string, ts: number): Promise<OddsValidation | undefined> {
-        try {
-            const { data } = await txlineClient.get<OddsValidation>("/odds/validation", {
-                params: {
-                    messageId,
-                    ts
-                }
-            });
-            return data;
-        } catch (error) {
-            console.error("Error fetching odds validation proof", error);
-        }
+    async getOddsValidation(messageId: string, ts: number): Promise<OddsValidation> {
+        const { data } = await txlineClient.get<OddsValidation>("/odds/validation", {
+            params: {
+                messageId,
+                ts
+            }
+        });
+        return data;
     }
 }
