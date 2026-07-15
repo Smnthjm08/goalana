@@ -130,7 +130,7 @@ export function OddsMovementChart({
   const chartConfig = {
     home: { label: participant1, color: "var(--primary)" },
     draw: { label: "Draw", color: "var(--muted-foreground)" },
-    away: { label: participant2, color: "var(--chart-2)" },
+    away: { label: participant2, color: "var(--chart-3)" },
   } satisfies ChartConfig
 
   const chartData = toChartData(oddsData)
@@ -209,7 +209,7 @@ export function OddsMovementChart({
             <Button
               variant="outline"
               onClick={() => toggleSeries("away")}
-              className={`h-auto py-2 px-3 flex-col items-start gap-1 rounded-sm border transition-colors ${visibleSeries.away ? "border-chart-2/50 bg-chart-2/5" : "border-border bg-transparent opacity-50 hover:opacity-100"}`}
+              className={`h-auto py-2 px-3 flex-col items-start gap-1 rounded-sm border transition-colors ${visibleSeries.away ? "border-chart-3/50 bg-chart-3/5" : "border-border bg-transparent opacity-50 hover:opacity-100"}`}
             >
               <span className="font-mono text-[10px] uppercase text-muted-foreground">{participant2}</span>
               <span className="font-heading text-lg text-foreground leading-none">{latest.away.toFixed(2)}%</span>

@@ -40,7 +40,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ChartLineMultiple() {
+export default function ChartLineMultiple() {
   return (
     <Card>
       <CardHeader>
