@@ -145,3 +145,46 @@ export class SSEParser extends Transform {
         this.eventId = undefined;
     }
 }
+
+/**
+ * Synchronously parses a *complete* (already-buffered, non-streaming) blob
+ * of SSE-formatted text into an array of JSON payloads.
+ *
+ * Some TxLINE REST endpoints that are documented/expected to return a plain
+ * JSON array (e.g. `/scores/historical/{fixtureId}`) have been observed, in
+ * practice, returning their body in the same `data: {...}\n\n` wire format
+ * the SSE endpoints use — without a `text/event-stream` content-type, so
+ * axios hands the caller raw text instead of a parsed array. Blindly
+ * treating that string as an array (e.g. `[...text]`) iterates it character
+ * by character instead of record by record, silently discarding 100% of
+ * the data. This recovers the real records from that text.
+ */
+export function parseSseTextToPayloads<T>(text: string): T[] {
+    const payloads: T[] = [];
+
+    for (const block of text.split(/\r?\n\r?\n/)) {
+        const dataLines: string[] = [];
+
+        for (const rawLine of block.split(/\r?\n/)) {
+            if (!rawLine || rawLine.startsWith(":")) continue;
+
+            const colonIdx = rawLine.indexOf(":");
+            const field = colonIdx === -1 ? rawLine : rawLine.slice(0, colonIdx);
+            if (field !== "data") continue;
+
+            let value = colonIdx === -1 ? "" : rawLine.slice(colonIdx + 1);
+            if (value.startsWith(" ")) value = value.slice(1);
+            dataLines.push(value);
+        }
+
+        if (dataLines.length === 0) continue;
+
+        try {
+            payloads.push(JSON.parse(dataLines.join("\n")) as T);
+        } catch {
+            // Not a JSON data block (stray comment/heartbeat) — skip it.
+        }
+    }
+
+    return payloads;
+}

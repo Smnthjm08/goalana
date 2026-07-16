@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { PublicKey } from "@solana/web3.js";
 
 import { prisma } from "@workspace/db";
 import { startFixtureCron, syncFixtures } from "./crons/fixtures.cron";
@@ -12,6 +13,7 @@ import { startOddsWorker } from "./workers/odds.worker";
 import { computeCurrentReferenceProbability } from "./services/market.service";
 import { SUPPORTED_MARKETS } from "./services/market-definitions";
 import { getMatchTimeline, formatMinute } from "./services/match-timeline.service";
+import { upsertUserForWallet } from "./services/user.service";
 import path from "path";
 import { fileURLToPath } from "url";
 import { logger } from "./utils/logger";
@@ -54,6 +56,32 @@ app.get("/", async (req, res) => {
 
 app.get("/health", async (req, res) => {
   res.status(200).json({ status: "UP", timestamp: new Date().toISOString() });
+});
+
+// Wallet is the only identity Goalana has — the frontend calls this right
+// after a wallet connects. Upsert-based, so it doubles as both "register a
+// new wallet" and "recognize an existing one" in a single idempotent call.
+app.post("/api/users/connect", async (req, res) => {
+  try {
+    const walletAddress = req.body?.walletAddress;
+
+    if (typeof walletAddress !== "string" || walletAddress.length === 0) {
+      return res.status(400).json({ error: "walletAddress is required" });
+    }
+
+    try {
+      new PublicKey(walletAddress);
+    } catch {
+      return res.status(400).json({ error: "walletAddress is not a valid Solana address" });
+    }
+
+    const { user, isNewUser } = await upsertUserForWallet(walletAddress);
+
+    return res.status(200).json({ data: { user, isNewUser } });
+  } catch (error) {
+    logger.error("api", "Error registering wallet", error);
+    return res.status(500).json({ error: "internal server error" });
+  }
 });
 
 app.get("/api/fixtures", async (_req, res) => {

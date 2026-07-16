@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { PassThrough } from "stream";
-import { SSEParser, type SSEEvent } from "../utils/sse-parser";
+import { SSEParser, parseSseTextToPayloads, type SSEEvent } from "../utils/sse-parser";
 
 /** Helper: collect all SSEEvent objects emitted by a parser. */
 function collectEvents(parser: SSEParser): Promise<SSEEvent[]> {
@@ -170,6 +170,46 @@ describe("SSEParser", () => {
         expect(events).toHaveLength(1);
         expect(events[0]!.id).toBe("1");
         expect(events[0]!.data).toBe("piped");
+    });
+
+    it("handles fields with no value (no colon)", async () => {
+        const parser = new SSEParser();
+        const collecting = collectEvents(parser);
+
+        // "data" with no colon → field="data", value=""
+        parser.write(Buffer.from("data\n\n"));
+        parser.end();
+
+        const events = await collecting;
+        expect(events).toHaveLength(1);
+        expect(events[0]!.data).toBe("");
+    });
+});
+
+describe("parseSseTextToPayloads", () => {
+    it("recovers JSON payloads from a buffered SSE-formatted text blob", () => {
+        const text = 'data: {"FixtureId":1,"Seq":1}\n\ndata: {"FixtureId":1,"Seq":2}\n\n';
+        const payloads = parseSseTextToPayloads<{ FixtureId: number; Seq: number }>(text);
+
+        expect(payloads).toHaveLength(2);
+        expect(payloads[0]).toEqual({ FixtureId: 1, Seq: 1 });
+        expect(payloads[1]).toEqual({ FixtureId: 1, Seq: 2 });
+    });
+
+    it("skips non-JSON / comment-only blocks instead of throwing", () => {
+        const text = ': keep-alive\n\ndata: {"FixtureId":1,"Seq":1}\n\nevent: heartbeat\ndata: \n\n';
+        const payloads = parseSseTextToPayloads<{ FixtureId: number; Seq: number }>(text);
+
+        expect(payloads).toHaveLength(1);
+        expect(payloads[0]).toEqual({ FixtureId: 1, Seq: 1 });
+    });
+
+    it("returns an empty array for a plain (non-SSE) JSON string", () => {
+        // Guards the original failure mode: if this were spread with `[...text]`
+        // instead of parsed, it would silently produce one bogus entry per
+        // character rather than zero.
+        const payloads = parseSseTextToPayloads("not sse data at all");
+        expect(payloads).toEqual([]);
     });
 
     it("handles fields with no value (no colon)", async () => {

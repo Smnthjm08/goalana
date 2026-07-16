@@ -3,4 +3,4 @@ export * from "./services/odds-service"
 export * from "./services/scores-service"
 
 export * from "./types/index"
-export { SSEParser, type SSEEvent } from "./utils/sse-parser"
+export { SSEParser, type SSEEvent, parseSseTextToPayloads } from "./utils/sse-parser"

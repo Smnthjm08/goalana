@@ -3,7 +3,7 @@ import { txlineClient } from "../client";
 import type { Readable } from "stream";
 import type { ScoresRecord, ScoresStatValidation, ScoresStatValidationV2 } from "../types/index";
 import type { StreamOptions } from "../types/stream-options";
-import { SSEParser } from "../utils/sse-parser";
+import { SSEParser, parseSseTextToPayloads } from "../utils/sse-parser";
 
 const DEFAULT_STALE_TIMEOUT_MS = 30_000;
 
@@ -33,9 +33,18 @@ export class ScoresService {
     }
 
     // 4. Get the full sequence of score updates for a single fixture
+    //
+    // Observed in practice returning its body in SSE wire format
+    // (`data: {...}\n\n`) without a matching content-type, rather than a
+    // plain JSON array — axios then hands back raw text. Handle both shapes
+    // so a naive `[...data]` never silently iterates the response
+    // character-by-character instead of record-by-record (see
+    // parseSseTextToPayloads's doc comment for how that was diagnosed).
     async getHistoricalScores(fixtureId: number): Promise<ScoresRecord[]> {
-        const { data } = await txlineClient.get<ScoresRecord[]>(`/scores/historical/${fixtureId}`);
-        return data;
+        const { data } = await txlineClient.get<ScoresRecord[] | string>(`/scores/historical/${fixtureId}`);
+        if (Array.isArray(data)) return data;
+        if (typeof data === "string") return parseSseTextToPayloads<ScoresRecord>(data);
+        return [];
     }
 
     /**
