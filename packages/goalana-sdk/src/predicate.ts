@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { type IdlTypes } from "@coral-xyz/anchor";
-import { type GoalanaProgram } from "./types/goalana_program.js";
+import { type GoalanaProgram } from "./types/goalana_program";
 
 export type Predicate = IdlTypes<GoalanaProgram>["predicate"];
 

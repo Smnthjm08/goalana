@@ -3,7 +3,10 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./constants": "./src/constants.ts",
+    "./pdas": "./src/pdas.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

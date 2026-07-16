@@ -2,14 +2,25 @@
 
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
+import { toast } from "sonner"
+import { PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js"
+import { BN } from "@coral-xyz/anchor"
+import { useWalletModal } from "@solana/wallet-adapter-react-ui"
+import { getVaultPda, getPositionPda } from "@workspace/goalana-sdk/pdas"
 import axiosInstance from "@/lib/axios-instance"
+import { explorerTxUrl, explorerAddressUrl } from "@/lib/solana-explorer"
 import { Card, CardHeader, CardContent } from "@workspace/ui/components/card"
 import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
+import { Input } from "@workspace/ui/components/input"
+import { Spinner } from "@workspace/ui/components/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import { OddsMovementChart } from "@/components/fixtures/odds-movement-chart"
 import { LiveScoreHeader } from "@/components/fixtures/live-score-header"
 import { MatchEventTimeline } from "@/components/fixtures/match-event-timeline"
+import { useGoalanaProgram } from "@/hooks/use-goalana-program"
+import { useMarketAccount } from "@/hooks/use-market-account"
+import { usePositionAccount } from "@/hooks/use-position-account"
 
 const marketTypeLabels: Record<string, string> = {
   FULL_TIME_HOME_WIN: "MATCH RESULT / FULL TIME",
@@ -49,12 +60,166 @@ function groupMarkets(markets: any[]): Array<{ group: string; markets: any[] }> 
 
 function MarketCard({ market }: { market: any }) {
   const [selected, setSelected] = useState<"YES" | "NO" | null>(null)
+  const [amount, setAmount] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [claiming, setClaiming] = useState(false)
+  const [txHistory, setTxHistory] = useState<Array<{ signature: string; label: string; ts: number }>>([])
+
+  function recordTx(label: string, signature: string) {
+    setTxHistory((prev) => [{ signature, label, ts: Date.now() }, ...prev].slice(0, 5))
+  }
+
+  const { program, connected, publicKey } = useGoalanaProgram()
+  const { setVisible } = useWalletModal()
+  const { market: onChainMarket, loading: marketLoading, refetch: refetchMarket } = useMarketAccount(market.marketPda)
+  const { position, refetch: refetchPosition } = usePositionAccount(market.marketPda)
 
   // currentYesPct/currentNoPct are the live TxLINE reference probability
   // (server-joined from the current Odds row); fall back to the opening
   // snapshot captured at market creation if a live match isn't available yet.
   const yesPct = Number(market.currentYesPct ?? market.initialYesPct)
   const noPct = Number(market.currentNoPct ?? market.initialNoPct)
+
+  // On-chain status is the source of truth once loaded; the DB's `status`
+  // (mirrored at creation time, never updated by lock/settle) is only a
+  // fallback while the on-chain read is in flight.
+  const status = onChainMarket?.status ?? market.status
+  const isOpen = status === "Open"
+
+  const poolYes = onChainMarket ? Number(onChainMarket.totalYes) / LAMPORTS_PER_SOL : null
+  const poolNo = onChainMarket ? Number(onChainMarket.totalNo) / LAMPORTS_PER_SOL : null
+
+  async function handlePlaceBet() {
+    if (!connected || !publicKey) {
+      setVisible(true)
+      return
+    }
+
+    if (!selected) return
+
+    const parsedAmount = Number(amount)
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      toast.error("Enter a valid SOL amount")
+      return
+    }
+
+    if (onChainMarket && onChainMarket.status !== "Open") {
+      toast.error(`Market is ${onChainMarket.status.toLowerCase()} — betting is closed`)
+      return
+    }
+
+    setSubmitting(true)
+    const toastId = toast.loading("Sending transaction to devnet...")
+
+    try {
+      const marketPubkey = new PublicKey(market.marketPda)
+      const [vaultPda] = getVaultPda(marketPubkey)
+      const [positionPda] = getPositionPda(marketPubkey, publicKey)
+      const lamports = Math.round(parsedAmount * LAMPORTS_PER_SOL)
+
+      const signature = await program.methods
+        .placeBet(selected === "YES" ? { yes: {} } : { no: {} }, new BN(lamports))
+        .accountsPartial({
+          market: marketPubkey,
+          vault: vaultPda,
+          position: positionPda,
+          user: publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc()
+
+      toast.success(`Bet placed: ${parsedAmount} SOL on ${selected}`, {
+        id: toastId,
+        description: `${signature.slice(0, 8)}…${signature.slice(-8)}`,
+      })
+      recordTx(`Bet ${parsedAmount} SOL / ${selected}`, signature)
+
+      setAmount("")
+      setSelected(null)
+      await Promise.all([refetchMarket(), refetchPosition()])
+    } catch (err) {
+      console.error("place_bet failed", err)
+      const message = err instanceof Error ? err.message : "Transaction failed"
+      toast.error("Bet failed", { id: toastId, description: message })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Claimability — mirrors the constraints enforced on-chain by
+  // claim_winnings.rs / claim_refund.rs, so the button only appears when the
+  // transaction would actually succeed.
+  const isSettled = status === "Settled"
+  const isCancelled = status === "Cancelled"
+  const outcome = onChainMarket?.outcome ?? null
+
+  const winningStake =
+    position && outcome !== null ? (outcome ? position.yesAmount : position.noAmount) : 0n
+
+  const canClaimWinnings = Boolean(
+    position && !position.claimed && isSettled && outcome !== null && winningStake > 0n
+  )
+
+  const emptyWinningPool = Boolean(
+    onChainMarket &&
+      isSettled &&
+      outcome !== null &&
+      ((outcome && onChainMarket.totalYes === 0n) || (!outcome && onChainMarket.totalNo === 0n))
+  )
+
+  const canClaimRefund = Boolean(
+    position &&
+      !position.claimed &&
+      (position.yesAmount > 0n || position.noAmount > 0n) &&
+      (isCancelled || emptyWinningPool)
+  )
+
+  const payoutPreview =
+    canClaimWinnings && onChainMarket
+      ? (winningStake * (onChainMarket.totalYes + onChainMarket.totalNo)) /
+        (outcome ? onChainMarket.totalYes : onChainMarket.totalNo)
+      : null
+
+  async function handleClaim(kind: "winnings" | "refund") {
+    if (!connected || !publicKey) {
+      setVisible(true)
+      return
+    }
+
+    setClaiming(true)
+    const toastId = toast.loading(`Claiming ${kind}...`)
+
+    try {
+      const marketPubkey = new PublicKey(market.marketPda)
+      const [vaultPda] = getVaultPda(marketPubkey)
+      const [positionPda] = getPositionPda(marketPubkey, publicKey)
+
+      const methodBuilder = kind === "winnings" ? program.methods.claimWinnings() : program.methods.claimRefund()
+
+      const signature = await methodBuilder
+        .accountsPartial({
+          market: marketPubkey,
+          vault: vaultPda,
+          position: positionPda,
+          user: publicKey,
+        })
+        .rpc()
+
+      toast.success(kind === "winnings" ? "Winnings claimed" : "Refund claimed", {
+        id: toastId,
+        description: `${signature.slice(0, 8)}…${signature.slice(-8)}`,
+      })
+      recordTx(kind === "winnings" ? "Claimed winnings" : "Claimed refund", signature)
+
+      await Promise.all([refetchMarket(), refetchPosition()])
+    } catch (err) {
+      console.error(`claim_${kind} failed`, err)
+      const message = err instanceof Error ? err.message : "Transaction failed"
+      toast.error("Claim failed", { id: toastId, description: message })
+    } finally {
+      setClaiming(false)
+    }
+  }
 
   return (
     <Card className="flex flex-col rounded-sm hover:border-primary/50 transition-colors">
@@ -67,7 +232,7 @@ function MarketCard({ market }: { market: any }) {
             {marketTypeLabels[market.marketType] || market.marketType.replace(/_/g, ' ')}
           </span>
           <Badge variant="outline" className="text-[10px] text-primary border-primary/20 bg-primary/5">
-            ● {market.status}
+            {marketLoading ? <Spinner className="size-2.5" /> : "●"} {status}
           </Badge>
         </div>
       </CardHeader>
@@ -78,6 +243,7 @@ function MarketCard({ market }: { market: any }) {
         <div className="grid grid-cols-2 gap-4">
           <Button
             variant="outline"
+            disabled={!isOpen}
             onClick={() => setSelected(selected === "YES" ? null : "YES")}
             className={`h-auto flex-row items-center justify-between p-4 rounded-sm transition-colors ${
               selected === "YES"
@@ -90,6 +256,7 @@ function MarketCard({ market }: { market: any }) {
           </Button>
           <Button
             variant="outline"
+            disabled={!isOpen}
             onClick={() => setSelected(selected === "NO" ? null : "NO")}
             className={`h-auto flex-row items-center justify-between p-4 rounded-sm transition-colors ${
               selected === "NO"
@@ -101,6 +268,124 @@ function MarketCard({ market }: { market: any }) {
             <span className={`font-heading text-xl ${selected === "NO" ? "text-white" : "text-foreground group-hover/no:text-rose-600"} transition-colors`}>{noPct.toFixed(2)}%</span>
           </Button>
         </div>
+
+        {selected && isOpen && (
+          <div className="flex flex-col gap-2 border-t border-border pt-4">
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Amount in SOL"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                disabled={submitting}
+                className="font-mono"
+              />
+              <Button
+                onClick={handlePlaceBet}
+                disabled={submitting || !amount}
+                className="shrink-0 font-heading uppercase tracking-widest"
+              >
+                {submitting ? <Spinner className="size-3.5" /> : connected ? "Place Bet" : "Connect"}
+              </Button>
+            </div>
+            <span className="font-mono text-[10px] text-muted-foreground">
+              Devnet SOL only. Position is pari-mutuel — payout depends on the final pool split.
+            </span>
+          </div>
+        )}
+
+        {(poolYes !== null || position) && (
+          <div className="flex items-center justify-between border-t border-border pt-3 font-mono text-[10px] text-muted-foreground">
+            <span>
+              POOL — YES {poolYes?.toFixed(3) ?? "…"} / NO {poolNo?.toFixed(3) ?? "…"} SOL
+            </span>
+            {position && (position.yesAmount > 0n || position.noAmount > 0n) && (
+              <span className="text-primary">
+                YOUR POSITION — {position.yesAmount > 0n ? `${Number(position.yesAmount) / LAMPORTS_PER_SOL} YES` : ""}
+                {position.yesAmount > 0n && position.noAmount > 0n ? " / " : ""}
+                {position.noAmount > 0n ? `${Number(position.noAmount) / LAMPORTS_PER_SOL} NO` : ""}
+                {position.claimed ? " (CLAIMED)" : ""}
+              </span>
+            )}
+          </div>
+        )}
+
+        {isSettled && (
+          <div className="flex flex-col gap-1.5 border-t border-border pt-3 font-mono text-[10px] text-muted-foreground">
+            <span className="uppercase tracking-widest text-foreground">
+              Settlement Proof — Outcome: {outcome === true ? "YES" : outcome === false ? "NO" : "…"}
+            </span>
+            {market.oracleTsMs && (
+              <span>
+                Oracle stat timestamp: {new Date(Number(market.oracleTsMs)).toLocaleString()}
+                {" — verified on-chain via CPI into TxLINE's oracle program, not Goalana's backend."}
+              </span>
+            )}
+            {market.settlementTx && (
+              <a
+                href={explorerTxUrl(market.settlementTx)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-primary transition-colors"
+              >
+                settle_market tx: {market.settlementTx.slice(0, 8)}…{market.settlementTx.slice(-8)} ↗
+              </a>
+            )}
+            <a
+              href={explorerAddressUrl(market.marketPda)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-primary transition-colors"
+            >
+              View Market account on Solana Explorer ↗
+            </a>
+          </div>
+        )}
+
+        {(canClaimWinnings || canClaimRefund) && (
+          <div className="flex flex-col gap-2 border-t border-border pt-4">
+            <Button
+              onClick={() => handleClaim(canClaimWinnings ? "winnings" : "refund")}
+              disabled={claiming}
+              className="font-heading uppercase tracking-widest"
+            >
+              {claiming ? (
+                <Spinner className="size-3.5" />
+              ) : canClaimWinnings ? (
+                `Claim Winnings${payoutPreview !== null ? ` (${(Number(payoutPreview) / LAMPORTS_PER_SOL).toFixed(4)} SOL)` : ""}`
+              ) : (
+                "Claim Refund"
+              )}
+            </Button>
+            <span className="font-mono text-[10px] text-muted-foreground text-center">
+              {canClaimWinnings
+                ? "This market settled in your favor — payout comes from the pari-mutuel pool."
+                : "This market has no counter-liquidity or was cancelled — your full stake is refundable."}
+            </span>
+          </div>
+        )}
+
+        {txHistory.length > 0 && (
+          <div className="flex flex-col gap-1 border-t border-border pt-3">
+            <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+              This session
+            </span>
+            {txHistory.map((tx) => (
+              <a
+                key={tx.signature}
+                href={explorerTxUrl(tx.signature)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors"
+              >
+                <span>{tx.label}</span>
+                <span className="underline">{tx.signature.slice(0, 6)}…{tx.signature.slice(-6)} ↗</span>
+              </a>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

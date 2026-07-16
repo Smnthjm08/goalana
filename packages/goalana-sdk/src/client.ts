@@ -1,7 +1,7 @@
 import { Program, type AnchorProvider, type Idl } from "@coral-xyz/anchor";
 import idl from "./idl/goalana_program.json";
 
-import { type GoalanaProgram } from "./types/goalana_program.js";
+import { type GoalanaProgram } from "./types/goalana_program";
 
 /**
  * Instantiates the Anchor Program client for the Goalana on-chain program.

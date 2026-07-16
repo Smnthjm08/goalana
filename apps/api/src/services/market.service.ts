@@ -283,9 +283,24 @@ export async function processMarketsForUpcomingFixtures() {
 
       logger.event("market.service", `Discovered market: ${market.type} (${market.question})`);
       
-      // Determine market times
+      // Determine market times.
+      //
+      // settle_after only needs to rule out a pre-match/stale proof — it is
+      // NOT what decides *whether* a match is over (that's finalSeq, set by
+      // scores.processor.ts once the live feed confirms a terminal event,
+      // and checked off-chain before settlement is ever attempted). The
+      // on-chain check (`oracle_ts_secs >= market.settle_after`,
+      // settle_market.rs) tests the *proof's own* stat-event timestamp —
+      // confirmed empirically against a completed fixture (18241006,
+      // England 1-2 Argentina): TxLINE's stat-validation `ts` exactly
+      // equals the underlying goal event's own timestamp, not a later
+      // root-computation time. A real match's last scoring event lands
+      // well within ~2h of kickoff, so a 3h buffer made the check
+      // impossible to ever satisfy with a genuine proof. A small
+      // post-kickoff buffer is enough to reject a pre-match proof while
+      // staying satisfiable by any real in-match event.
       const locksAt = new Date(Number(fixture.startTime));
-      const settleAfter = new Date(locksAt.getTime() + 3 * 60 * 60 * 1000);
+      const settleAfter = new Date(locksAt.getTime() + 15 * 60 * 1000);
 
       // Create market on Solana
       const result = await createMarketForFixture(
