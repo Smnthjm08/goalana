@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { prisma } from "@workspace/db";
 import { startFixtureCron, syncFixtures } from "./crons/fixtures.cron";
 import { createTodayMarket, startMarketCron } from "./crons/market.cron";
+import { startLifecycleCron } from "./crons/lifecycle.cron";
 import { startScoresWorker } from "./workers/scorer.worker";
 import { reconcileLiveFixtures } from "./workers/scores.backfill";
 import { startOddsWorker } from "./workers/odds.worker";
@@ -305,7 +306,10 @@ async function bootstrap() {
   // 5. Periodically discover/create missing markets
   startMarketCron();
 
-  // 6. Start live workers
+  // 6. Lock markets at kickoff, settle markets once their fixture is final
+  startLifecycleCron();
+
+  // 7. Start live workers
   void startOddsWorker(oddsWorkerController.signal).catch((error) => {
     logger.error("odds-worker", "Fatal error", error);
   });

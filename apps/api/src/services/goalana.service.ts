@@ -1,10 +1,12 @@
 import { AnchorProvider, BN, Wallet } from "@coral-xyz/anchor";
-import { Connection, Keypair, SystemProgram } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import {
   getGoalanaProgram,
   getConfigPda,
   getMarketPda,
+  getDailyScoresRootsPda,
   derivePredicateHash,
+  TXORACLE_PROGRAM_ID,
   type Predicate,
 } from "@workspace/goalana-sdk";
 import bs58 from "bs58";
@@ -97,4 +99,117 @@ export async function createMarketForFixture(
 
   logger.success("goalana.service", `Market created. Signature: ${txSignature}`);
   return { marketPda, predicateHash, txSignature, alreadyExists: false };
+}
+
+export type OnChainMarketStatus = "Open" | "Locked" | "Settled" | "Cancelled";
+
+export interface OnChainMarket {
+  status: OnChainMarketStatus;
+  outcome: boolean | null;
+  predicate: Predicate;
+  locksAt: number;
+  settleAfter: number;
+}
+
+function decodeMarketStatus(raw: Record<string, unknown>): OnChainMarketStatus {
+  const key = Object.keys(raw)[0] ?? "open";
+  return (key.charAt(0).toUpperCase() + key.slice(1)) as OnChainMarketStatus;
+}
+
+/**
+ * Reads a Market account directly from chain — the source of truth for
+ * lock/settlement automation. Postgres's `Market.status` is only a mirror
+ * written at creation time; it is never updated by anything other than the
+ * lock/settlement callers below, so any decision about *whether* to lock or
+ * settle must check the chain first (idempotency against a crashed/partial
+ * previous run, or drift from a manual on-chain action).
+ */
+export async function fetchMarketAccount(marketPda: PublicKey): Promise<OnChainMarket> {
+  const account = await program.account.market.fetch(marketPda);
+
+  return {
+    status: decodeMarketStatus(account.status as unknown as Record<string, unknown>),
+    outcome: (account.outcome as boolean | null) ?? null,
+    predicate: account.predicate as unknown as Predicate,
+    locksAt: Number(account.locksAt),
+    settleAfter: Number(account.settleAfter),
+  };
+}
+
+/**
+ * Locks a Market on-chain (Open -> Locked). Authority-gated by the program
+ * itself (`config.market_authority`) — this wallet is already that
+ * authority since it's the one that created the market.
+ */
+export async function lockMarketOnChain(marketPda: PublicKey): Promise<{ txSignature: string }> {
+  const [configPda] = getConfigPda();
+
+  const txSignature = await program.methods
+    .lockMarket()
+    .accountsPartial({
+      market: marketPda,
+      config: configPda,
+      authority: provider.wallet.publicKey,
+    })
+    .rpc();
+
+  return { txSignature };
+}
+
+export interface SettleMarketParams {
+  marketPda: PublicKey;
+  oracleTsMs: BN;
+  fixtureSummary: {
+    fixtureId: BN;
+    updateStats: {
+      updateCount: number;
+      minTimestamp: BN;
+      maxTimestamp: BN;
+    };
+    eventsSubTreeRoot: number[];
+  };
+  fixtureProof: Array<{ hash: number[]; isRightSibling: boolean }>;
+  mainTreeProof: Array<{ hash: number[]; isRightSibling: boolean }>;
+  statA: {
+    statToProve: { key: number; value: number; period: number };
+    eventStatRoot: number[];
+    statProof: Array<{ hash: number[]; isRightSibling: boolean }>;
+  };
+  statB: SettleMarketParams["statA"] | null;
+}
+
+/**
+ * Submits `settle_market` — permissionless on the program side, but this is
+ * Goalana's automated caller (per the hackathon design: the backend fetches
+ * TxLINE's proof and calls settlement itself once a fixture is final). The
+ * CPI into TxLINE's real oracle program (`txoracle_program` +
+ * `daily_scores_merkle_roots`, derived from the proof's own oracle
+ * timestamp) is what actually verifies the Merkle proof — this function
+ * only handles the plumbing.
+ */
+export async function settleMarketOnChain(
+  params: SettleMarketParams
+): Promise<{ txSignature: string; outcome: boolean | null }> {
+  const oracleTsMs = params.oracleTsMs.toNumber();
+  const [dailyScoresMerkleRoots] = getDailyScoresRootsPda(oracleTsMs);
+
+  const txSignature = await program.methods
+    .settleMarket(
+      params.oracleTsMs,
+      params.fixtureSummary,
+      params.fixtureProof,
+      params.mainTreeProof,
+      params.statA,
+      params.statB
+    )
+    .accountsPartial({
+      market: params.marketPda,
+      txoracleProgram: TXORACLE_PROGRAM_ID,
+      dailyScoresMerkleRoots,
+    })
+    .rpc();
+
+  const updated = await program.account.market.fetch(params.marketPda);
+
+  return { txSignature, outcome: (updated.outcome as boolean | null) ?? null };
 }

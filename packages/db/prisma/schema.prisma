@@ -232,6 +232,16 @@ model Market {
   initialNoPct        Float
   status              String   @default("OPEN")
 
+  // ─── Settlement provenance (settlement.service.ts) ───────────────────────
+  // Not retained on-chain past settlement (Market's account only keeps
+  // outcome/settledAt) — persisted here so the UI can show what proof was
+  // actually used to settle, without re-deriving it.
+  settlementTx  String?
+  // TxLINE's stat-validation `ts` for the proof that settled this market
+  // (ms since epoch) — the timestamp of the underlying stat event itself,
+  // not a wall-clock "when we settled" time (that's Market.settledAt).
+  oracleTsMs    BigInt?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
