@@ -23,7 +23,7 @@ export default function RootLayout({
       suppressHydrationWarning
       suppressContentEditableWarning
       className={cn(
-        "antialiased dark",
+        "antialiased",
         inter.variable,
         spaceGrotesk.variable,
         jetBrainsMono.variable,

@@ -19,6 +19,7 @@ import { OddsMovementChart } from "@/components/fixtures/odds-movement-chart"
 import { LiveScoreHeader } from "@/components/fixtures/live-score-header"
 import { MatchEventTimeline } from "@/components/fixtures/match-event-timeline"
 import { LifecycleStatusStrip } from "@/components/fixtures/lifecycle-status-strip"
+import { TeamBadge } from "@/components/team-badge"
 import { useGoalanaProgram } from "@/hooks/use-goalana-program"
 import { useMarketAccount } from "@/hooks/use-market-account"
 import { usePositionAccount } from "@/hooks/use-position-account"
@@ -483,10 +484,11 @@ export default function FixtureDetailPage() {
           </div>
 
           <div className="border-t border-b border-border py-12 flex items-center justify-between w-full relative">
-            <div className="flex flex-col flex-1 items-start">
-              <span className="font-sans font-black text-3xl md:text-5xl lg:text-6xl text-foreground leading-none">
-                {fixture.participant1}
-              </span>
+            <div className="flex flex-col flex-1 items-start min-w-0">
+              <TeamBadge
+                name={fixture.participant1}
+                className="font-sans font-black text-3xl md:text-5xl lg:text-6xl text-foreground leading-none gap-3"
+              />
             </div>
             
             <div className="absolute left-1/2 -translate-x-1/2">
@@ -496,10 +498,11 @@ export default function FixtureDetailPage() {
               />
             </div>
 
-            <div className="flex flex-col flex-1 items-end">
-              <span className="font-sans font-black text-3xl md:text-5xl lg:text-6xl text-foreground leading-none text-right">
-                {fixture.participant2}
-              </span>
+            <div className="flex flex-col flex-1 items-end min-w-0">
+              <TeamBadge
+                name={fixture.participant2}
+                className="font-sans font-black text-3xl md:text-5xl lg:text-6xl text-foreground leading-none text-right gap-3"
+              />
             </div>
           </div>
 

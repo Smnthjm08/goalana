@@ -52,40 +52,41 @@
     --font-sans: var(--font-sans);
 }
 
+/* Light mode — clean athletic palette; primary lime-green retained for brand consistency */
 :root {
-    --background: #090A0C;
-    --foreground: #FFFFFF;
-    --card: #14161A;
-    --card-foreground: #FFFFFF;
-    --popover: #14161A;
-    --popover-foreground: #FFFFFF;
-    --primary: #C0F830;
+    --background: #F5F6F7;
+    --foreground: #0D0E10;
+    --card: #FFFFFF;
+    --card-foreground: #0D0E10;
+    --popover: #FFFFFF;
+    --popover-foreground: #0D0E10;
+    --primary: #7DC900;
     --primary-foreground: #000000;
-    --secondary: #F83060;
+    --secondary: #E0244F;
     --secondary-foreground: #FFFFFF;
-    --muted: #1C1E23;
-    --muted-foreground: #8B949E;
-    --accent: #1C1E23;
-    --accent-foreground: #FFFFFF;
-    --destructive: #F83060;
+    --muted: #EAEBEE;
+    --muted-foreground: #6B7280;
+    --accent: #EAEBEE;
+    --accent-foreground: #0D0E10;
+    --destructive: #E0244F;
     --destructive-foreground: #FFFFFF;
-    --border: #2A2D35;
-    --input: #2A2D35;
-    --ring: #C0F830;
-    --chart-1: #C0F830;
-    --chart-2: #F83060;
-    --chart-3: #30A0F8;
-    --chart-4: #F8B430;
-    --chart-5: #30F8C0;
+    --border: #D1D5DB;
+    --input: #D1D5DB;
+    --ring: #7DC900;
+    --chart-1: #7DC900;
+    --chart-2: #E0244F;
+    --chart-3: #1E7DD8;
+    --chart-4: #D97706;
+    --chart-5: #059669;
     --radius: 0.125rem;
-    --sidebar: #14161A;
-    --sidebar-foreground: #FFFFFF;
-    --sidebar-primary: #C0F830;
+    --sidebar: #FFFFFF;
+    --sidebar-foreground: #0D0E10;
+    --sidebar-primary: #7DC900;
     --sidebar-primary-foreground: #000000;
-    --sidebar-accent: #1C1E23;
-    --sidebar-accent-foreground: #FFFFFF;
-    --sidebar-border: #2A2D35;
-    --sidebar-ring: #C0F830;
+    --sidebar-accent: #EAEBEE;
+    --sidebar-accent-foreground: #0D0E10;
+    --sidebar-border: #D1D5DB;
+    --sidebar-ring: #7DC900;
 }
 
 .dark {

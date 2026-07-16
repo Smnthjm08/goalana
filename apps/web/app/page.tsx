@@ -5,6 +5,7 @@ import axiosInstance from "@/lib/axios-instance"
 import { Card, CardHeader, CardContent, CardFooter } from "@workspace/ui/components/card"
 import { Badge } from "@workspace/ui/components/badge"
 import { Skeleton } from "@workspace/ui/components/skeleton"
+import { TeamBadge } from "@/components/team-badge"
 
 export default function Page() {
   const [fixtures, setFixtures] = useState<any[]>([])
@@ -70,13 +71,13 @@ export default function Page() {
                     
                     {/* Body: Teams */}
                     <CardContent className="flex flex-col gap-3 p-4 pt-4">
-                      <div className="flex items-center justify-between">
-                        <span className="font-sans font-bold text-foreground">{fixture.participant1}</span>
-                        <span className="font-heading text-xl">0</span>
+                      <div className="flex items-center justify-between gap-3">
+                        <TeamBadge name={fixture.participant1} className="font-sans font-bold text-foreground" />
+                        <span className="font-heading text-xl shrink-0">0</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-sans font-bold text-foreground">{fixture.participant2}</span>
-                        <span className="font-heading text-xl">0</span>
+                      <div className="flex items-center justify-between gap-3">
+                        <TeamBadge name={fixture.participant2} className="font-sans font-bold text-foreground" />
+                        <span className="font-heading text-xl shrink-0">0</span>
                       </div>
                     </CardContent>
 

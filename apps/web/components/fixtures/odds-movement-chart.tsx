@@ -19,6 +19,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import { TeamBadge } from "@/components/team-badge"
 
 const POLL_INTERVAL_MS = 8_000
 
@@ -205,7 +206,7 @@ export function OddsMovementChart({
               onClick={() => toggleSeries("home")}
               className={`h-auto py-2 px-3 flex-col items-start gap-1 rounded-sm border transition-colors ${visibleSeries.home ? "border-primary/50 bg-primary/5" : "border-border bg-transparent opacity-50 hover:opacity-100"}`}
             >
-              <span className="font-mono text-[10px] uppercase text-muted-foreground">{participant1}</span>
+              <TeamBadge name={participant1} className="font-mono text-[10px] uppercase text-muted-foreground gap-1" />
               <span className="font-heading text-lg text-foreground leading-none">{latest.home.toFixed(2)}%</span>
             </Button>
 
@@ -223,7 +224,7 @@ export function OddsMovementChart({
               onClick={() => toggleSeries("away")}
               className={`h-auto py-2 px-3 flex-col items-start gap-1 rounded-sm border transition-colors ${visibleSeries.away ? "border-chart-3/50 bg-chart-3/5" : "border-border bg-transparent opacity-50 hover:opacity-100"}`}
             >
-              <span className="font-mono text-[10px] uppercase text-muted-foreground">{participant2}</span>
+              <TeamBadge name={participant2} className="font-mono text-[10px] uppercase text-muted-foreground gap-1" />
               <span className="font-heading text-lg text-foreground leading-none">{latest.away.toFixed(2)}%</span>
             </Button>
           </div>

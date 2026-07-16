@@ -1,6 +1,6 @@
 # Goalana — Project Checklist
 
-Last updated: 2026-07-16, after the Helius RPC cutover + full lifecycle validation pass (Devnet for create/bet, Localnet for lock/settle/claim — see "Full lifecycle validation" section below).
+Last updated: 2026-07-16, after team-flags lib, TeamBadge wiring, and theme-toggle fix (light palette + removed hardcoded dark class). Typecheck (6/6) and production build clean.
 
 **Status note:** `docs/IMPLEMENTATION_PLAN.md` and `docs/MARKET_LIFECYCLE.md` describe several items below (lock automation, settlement, claims) as "missing." That's stale — they're implemented in the current working tree. This file reflects actual current state, verified by running the code, not by reading older docs.
 
