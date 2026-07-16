@@ -14,6 +14,17 @@ export class FixtureService {
         return data;
     }
 
+    // 1b. Get the latest snapshot across every competition the current subscription
+    // bundle grants, by omitting the competitionId filter entirely. This is the only
+    // legitimate discovery signal TxLINE exposes — there is no "list competitions"
+    // endpoint, and probing arbitrary IDs 403s ("Competition N is not in your bundle").
+    async getAllFixtureSnapshots(startEpochDay?: number): Promise<TxLineFixture[]> {
+        const query = new URLSearchParams();
+        if (startEpochDay != null) query.append("startEpochDay", startEpochDay.toString());
+        const { data } = await txlineClient.get<TxLineFixture[]>(`/fixtures/snapshot?${query.toString()}`);
+        return data;
+    }
+
     // 2. Get all fixture updates for a given epoch day and hour of day (0-23)
     async getFixtureUpdates(epochDay: number, hourOfDay: number): Promise<TxLineFixture[]> {
         const { data } = await txlineClient.get<TxLineFixture[]>(`/fixtures/updates/${epochDay}/${hourOfDay}`);

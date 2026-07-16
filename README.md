@@ -32,6 +32,19 @@ packages/ui          shared shadcn/ui components
 goalana_program      Anchor workspace — the on-chain program (Rust)
 ```
 
+## Validation mode (`COMPETITION_ID`)
+i
+World Cup (TxLINE competition `72`) is **the product** — this is not a multi-competition pivot. `apps/api/src/config/competition.ts` exists purely as Devnet-validation continuity: the hackathon submission needs real evidence of the full on-chain lifecycle (`sync → odds → create_market → bet → lock → settle → claim`), and that depends on a real match actually kicking off and finishing inside the judging window. If the World Cup fixture currently furthest along stalls, there's no fallback fixture to fall back on.
+
+`getActiveCompetitionId()` resolves once per process (cached for its lifetime):
+
+- If `COMPETITION_ID` is set in the environment, it's used as-is (logged on boot).
+- Otherwise, it calls TxLINE's `/fixtures/snapshot` with **no `competitionId` filter** — the only legitimate discovery signal TxLINE exposes (there is no "list competitions" endpoint, and guessing IDs 403s). It groups the results by competition and keeps World Cup (`72`) as long as World Cup has any upcoming fixture. Only if World Cup has none does it fall back to the competition with the soonest upcoming kickoff elsewhere in the subscription bundle (the free tier also includes "International Friendlies", competition `430`).
+
+To reset to World Cup explicitly: unset `COMPETITION_ID`, or set `COMPETITION_ID=72`. To force a specific competition for testing: set `COMPETITION_ID=<id>`.
+
+`apps/api/src/scripts/verify-competition-discovery.ts` and `apps/api/src/scripts/check-live-state.ts` are one-off diagnostic scripts (same pattern as `manual-sync.ts`) for inspecting the discovery decision and live fixture/odds state without waiting on the cron schedule.
+
 ## Adding shadcn components
 
 ```bash

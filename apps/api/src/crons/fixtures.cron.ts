@@ -4,10 +4,7 @@ import cron from "node-cron";
 import { syncOdds } from "./odds.cron";
 import { backfillFixtureScores } from "../workers/scores.backfill";
 import { logger } from "../utils/logger";
-
-// TxLINE's /fixtures/updates endpoint has no competitionId filter, unlike
-// /fixtures/snapshot — so updates must be filtered client-side to World Cup only.
-const WORLD_CUP_COMPETITION_ID = 72;
+import { getActiveCompetitionId } from "../config/competition";
 
 let isSnapshotSyncRunning = false;
 let isUpdateSyncRunning = false;
@@ -32,7 +29,8 @@ export async function syncFixtures(): Promise<SyncResult> {
 
     try {
         const fixtureService = new FixtureService();
-        const fixtures = await fixtureService.getFixtureSnapshot(undefined, 72);
+        const competitionId = await getActiveCompetitionId();
+        const fixtures = await fixtureService.getFixtureSnapshot(undefined, competitionId);
 
         if (!fixtures || fixtures.length === 0) {
             logger.warn("fixture.cron", "No fixtures returned from TxLINE.");
@@ -124,6 +122,7 @@ export async function syncFixtureUpdates() {
 
     try {
         const fixtureService = new FixtureService();
+        const competitionId = await getActiveCompetitionId();
 
         const now = new Date();
         const epochDay = Math.floor(now.getTime() / (1000 * 60 * 60 * 24));
@@ -151,7 +150,7 @@ export async function syncFixtureUpdates() {
         }
 
         const fixtures = Array.from(updateMap.values())
-            .filter((fixture) => fixture.CompetitionId === WORLD_CUP_COMPETITION_ID)
+            .filter((fixture) => fixture.CompetitionId === competitionId)
             .sort((a, b) => {
                 const aTs = BigInt(a.Ts);
                 const bTs = BigInt(b.Ts);

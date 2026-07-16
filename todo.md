@@ -1,6 +1,6 @@
 # Goalana — Project Checklist
 
-Last updated: 2026-07-16, after team-flags lib, TeamBadge wiring, and theme-toggle fix (light palette + removed hardcoded dark class). Typecheck (6/6) and production build clean.
+Last updated: 2026-07-17, after adding `COMPETITION_ID` validation-mode infrastructure (multi-competition Devnet hedge). Typecheck (6/6) clean.
 
 **Status note:** `docs/IMPLEMENTATION_PLAN.md` and `docs/MARKET_LIFECYCLE.md` describe several items below (lock automation, settlement, claims) as "missing." That's stale — they're implemented in the current working tree. This file reflects actual current state, verified by running the code, not by reading older docs.
 
@@ -92,3 +92,36 @@ Placed a real bet: `place_bet` (0.05 SOL, YES) on the HOME_WIN market — tx `5K
 2. Build the on-demand market creation endpoint (`POST /api/fixtures/:id/markets`) — this pass again needed a one-off script to force-create ahead of the 24h cron window.
 3. `docs/IMPLEMENTATION_PLAN.md` / `docs/MARKET_LIFECYCLE.md` stale-status refresh pass.
 4. Point `activate.ts` / `initialize-config.ts` at the Helius RPC too if they're ever going to be run again (currently hardcoded to the public endpoint, but both are dead/manual scripts, not urgent).
+
+## Multi-competition Devnet validation infrastructure (2026-07-17)
+
+World Cup stays the product. This pass added infrastructure to hedge the single-fixture risk called out in the previous milestone (item 1 above): if France v England's odds/lock/settlement path stalls, there was no fallback fixture anywhere in the validation pipeline. No protocol changes, no rebrand, no new user-facing functionality.
+
+**Live-verified findings (correct the original task spec):**
+
+- TxLINE has no "list competitions" endpoint; probing `competitionId=1`/`=2` directly 403s (`"Competition N is not in your bundle"`). The only legitimate discovery signal is calling `GET /fixtures/snapshot` with **no `competitionId` filter** — this returns fixtures across every competition the subscription bundle actually grants. Verified live: exactly two competitions come back, `72` "World Cup" (2 fixtures) and `430` "Friendlies" (5 fixtures) — matching the docs' claim that the free tier bundles "World Cup and International Friendlies."
+- Friendlies is not actually a faster path. Of its 5 fixtures, only one is near-term — Vietnam v Myanmar (`18143850`), kickoff `2026-07-18T12:00:00Z`, ~41h out at time of writing — vs. France v England's ~50h. The other 4 Friendlies fixtures are weeks to months away. **Friendlies odds are not priced yet** (`getOddsSnapshots(18143850)` → 0 rows, re-verified live this pass) — the same "not available until closer to kickoff" pattern already seen with the World Cup semifinals in the prior pass.
+- Schema compatibility confirmed empirically, not just by inspection: Friendlies fixture/odds payloads have byte-identical shape to World Cup's. `market-definitions.ts`'s `SUPPORTED_MARKETS` matchers (`SuperOddsType`/`MarketParameters`/`MarketPeriod`) are generic soccer identifiers, not World-Cup-specific — no parser changes needed.
+- Settlement is inherently competition-agnostic on-chain — `txline_cpi.rs` / `settle_market.rs` derive PDAs from `epoch_day`/timestamp only, no competition-specific logic exists.
+
+**Built:**
+
+- `apps/api/src/config/competition.ts` — `getActiveCompetitionId()`, resolved once per process and cached (mirrors `goalana.service.ts`'s connection singleton). Honors an explicit `COMPETITION_ID` env var; otherwise discovers via the unfiltered snapshot call above, keeps World Cup (`72`) as long as it has any upcoming fixture, and only falls back to the soonest-upcoming alternative competition if World Cup has none. Logs the full ranking table and the decision either way.
+- `packages/txline/src/services/fixtures-service.ts` — added `getAllFixtureSnapshots()` (calls `/fixtures/snapshot` with no `competitionId` param at all) so discovery can see the real bundle. `getFixtureSnapshot()` is unchanged for existing callers.
+- Replaced the three previously-duplicated `WORLD_CUP_COMPETITION_ID = 72` app-level constants (`fixtures.cron.ts`, `market.service.ts`) with calls to `getActiveCompetitionId()`. `fixtures-service.ts` keeps its own `72` as a sane SDK-level default for callers that don't pass a competition ID explicitly.
+- Two diagnostic one-off scripts, same pattern as `manual-sync.ts`: `apps/api/src/scripts/verify-competition-discovery.ts` (prints the discovery decision) and `apps/api/src/scripts/check-live-state.ts` (prints live fixture/odds state for the Friendlies and World Cup candidates).
+
+**Verification run this pass:**
+
+- `bun run typecheck` — 6/6 clean after the refactor.
+- `bun src/scripts/verify-competition-discovery.ts` (no `COMPETITION_ID` set) → `Bundle discovery ranking: Friendlies (430): 5 fixtures, soonest upcoming 41h; World Cup (72): 2 fixtures, soonest upcoming 50h` → `World Cup (72) has an upcoming fixture — keeping it as the active competition.` → resolved `72`.
+- `COMPETITION_ID=430 bun src/scripts/verify-competition-discovery.ts` → explicit-override path resolved `430` as expected.
+- `COMPETITION_ID=72 bun src/scripts/verify-competition-discovery.ts` (regression) → resolved `72`.
+- Triggered `POST /api/fixtures/sync` against the live (already-running) `apps/api` dev process, then `GET /api/fixtures` → all 4 tracked fixtures still `competitionId: 72` — no Friendlies rows leaked into the always-on World Cup pipeline. Frontend fixture list/detail pages read `fixture.competition` generically per-row already (no hardcoded "World Cup" string found in `apps/web`), so no frontend change was needed.
+- `check-live-state.ts` live output: France v England (`18257865`) kickoff `2026-07-18T21:00:00Z`, ~50.3h out, `gameState=1` (not started). Vietnam v Myanmar (`18143850`) kickoff `2026-07-18T12:00:00Z`, ~41.3h out, `gameState=1`, **0 pre-match odds rows** — still not priced.
+
+**Status: infrastructure done, hedge not yet exercised for real evidence.** Primary effort remains on France v England (5 real markets + 1 real bet already placed, per the section above) since switching competitions doesn't shorten the critical path — both candidate fixtures are still 1.5-2 days from kickoff, which is longer than this pass's own remaining window. Once TxLINE prices Vietnam v Myanmar's full-time odds, the plan is: sync Friendlies fixtures for real (one-off `getActiveCompetitionId`-aware sync, not a standing multi-competition cron — out of scope), create real markets via the existing `discoverMarketsForFixture` path, and place a real bet, mirroring what's already done for France v England.
+
+**Honest gap:** neither fixture had locked, settled, or produced a `claim_winnings` payout as of this pass — both are still pre-kickoff. If the submission window closes before either reaches `settle_market`/`claim_winnings` on Devnet, the Localnet suite (26/26 passing, see above) is the fallback evidence for that class of scenario, per the original validation plan.
+
+**Docs:** added a "Validation mode" section to `README.md` explaining `COMPETITION_ID` and how to reset to World Cup; created `llm.txt` at the repo root as a minimal AI-context index.

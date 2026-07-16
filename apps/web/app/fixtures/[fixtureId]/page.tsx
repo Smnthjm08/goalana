@@ -19,6 +19,7 @@ import { OddsMovementChart } from "@/components/fixtures/odds-movement-chart"
 import { LiveScoreHeader } from "@/components/fixtures/live-score-header"
 import { MatchEventTimeline } from "@/components/fixtures/match-event-timeline"
 import { LifecycleStatusStrip } from "@/components/fixtures/lifecycle-status-strip"
+import { SettlementProofReceipt, type SettlementProof } from "@/components/fixtures/settlement-proof-receipt"
 import { TeamBadge } from "@/components/team-badge"
 import { useGoalanaProgram } from "@/hooks/use-goalana-program"
 import { useMarketAccount } from "@/hooks/use-market-account"
@@ -314,7 +315,17 @@ function MarketCard({ market }: { market: any }) {
           </div>
         )}
 
-        {isSettled && (
+        {isSettled && market.settlementProof && (
+          <SettlementProofReceipt
+            proof={market.settlementProof as SettlementProof}
+            settlementTx={market.settlementTx}
+            marketPda={market.marketPda}
+          />
+        )}
+
+        {/* Fallback: settled on-chain but the full proof record isn't persisted
+            (e.g. a market settled before proof-retention shipped). */}
+        {isSettled && !market.settlementProof && (
           <div className="flex flex-col gap-1.5 border-t border-border pt-3 font-mono text-[10px] text-muted-foreground">
             <span className="uppercase tracking-widest text-foreground">
               Settlement Proof — Outcome: {outcome === true ? "YES" : outcome === false ? "NO" : "…"}

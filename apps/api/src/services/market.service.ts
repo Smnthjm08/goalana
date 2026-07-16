@@ -4,13 +4,9 @@ import { type Predicate, TXLINE_STAT_KEYS } from "@workspace/goalana-sdk";
 import { createMarketForFixture, initializeGoalanaConfig } from "./goalana.service";
 import { SUPPORTED_MARKETS } from "./market-definitions";
 import { logger } from "../utils/logger";
+import { getActiveCompetitionId } from "../config/competition";
 
 const oddsService = new OddsService();
-
-// Matches the competitionId Goalana ingests fixtures for (fixtures.cron.ts).
-// Guards against creating markets for a fixture that slipped in from another
-// competition via the unfiltered /fixtures/updates polling path.
-const WORLD_CUP_COMPETITION_ID = 72;
 
 export type GoalanaMarketType = keyof typeof SUPPORTED_MARKETS;
 
@@ -236,13 +232,14 @@ export function discoverMarketsForFixture(
 export async function processMarketsForUpcomingFixtures() {
   await initializeGoalanaConfig();
 
+  const competitionId = await getActiveCompetitionId();
   const now = Date.now();
   const until = now + 24 * 60 * 60 * 1000;
 
   // 1. Find upcoming fixtures (next 24 hours)
   const fixtures = await prisma.fixture.findMany({
     where: {
-      competitionId: WORLD_CUP_COMPETITION_ID,
+      competitionId,
       startTime: {
         gt: BigInt(now),
         lte: BigInt(until),

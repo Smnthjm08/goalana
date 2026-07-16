@@ -241,6 +241,13 @@ model Market {
   // (ms since epoch) — the timestamp of the underlying stat event itself,
   // not a wall-clock "when we settled" time (that's Market.settledAt).
   oracleTsMs    BigInt?
+  // Display-friendly copy of the exact three-stage TxLINE Merkle proof that
+  // settled this market (hex-encoded roots/hashes, sibling directions, the
+  // anchored daily-roots PDA, resolved outcome). Persisted so the UI can
+  // render a verifiable settlement receipt even after TxLINE's free-tier
+  // token expires — the on-chain CPI already verified it; this is the record.
+  // Shape: see buildSettlementProofRecord() in settlement.service.ts.
+  settlementProof Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
