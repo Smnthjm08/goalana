@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/componen
 import { OddsMovementChart } from "@/components/fixtures/odds-movement-chart"
 import { LiveScoreHeader } from "@/components/fixtures/live-score-header"
 import { MatchEventTimeline } from "@/components/fixtures/match-event-timeline"
+import { LifecycleStatusStrip } from "@/components/fixtures/lifecycle-status-strip"
 import { useGoalanaProgram } from "@/hooks/use-goalana-program"
 import { useMarketAccount } from "@/hooks/use-market-account"
 import { usePositionAccount } from "@/hooks/use-position-account"
@@ -518,6 +519,9 @@ export default function FixtureDetailPage() {
             </div>
           )}
         </div>
+
+        <LifecycleStatusStrip liveScore={fixture.liveScore} markets={fixture.markets ?? []} />
+
         {/* Tabs */}
         <Tabs defaultValue="MARKETS" className="w-full">
           <TabsList variant="line" className="w-full justify-start border-b border-border rounded-none h-auto p-0 gap-8">

@@ -1217,6 +1217,23 @@ describe("goalana", () => {
       const user2Position = await program.account.position.fetch(user2PositionPda);
       expect(user2Position.claimed).to.equal(true);
 
+      // Double-claim prevention: User 2 cannot claim winnings a second time.
+      try {
+        await program.methods
+          .claimWinnings()
+          .accounts({
+            market: marketPda,
+            vault: vaultPda,
+            position: user2PositionPda,
+            user: user2.publicKey,
+          } as any)
+          .signers([user2])
+          .rpc();
+        expect.fail("Should have thrown AlreadyClaimed");
+      } catch (e: any) {
+        expect(e.message).to.include("AlreadyClaimed");
+      }
+
       // Loser (User 3) cannot claim winnings
       try {
         await program.methods

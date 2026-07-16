@@ -156,6 +156,27 @@ export async function lockMarketOnChain(marketPda: PublicKey): Promise<{ txSigna
   return { txSignature };
 }
 
+/**
+ * Cancels a Market on-chain (Open or Locked -> Cancelled). Authority-gated,
+ * same as lock — the program takes no proof and unconditionally flips
+ * status, enabling refunds via claim_refund for any positions already
+ * placed.
+ */
+export async function cancelMarketOnChain(marketPda: PublicKey): Promise<{ txSignature: string }> {
+  const [configPda] = getConfigPda();
+
+  const txSignature = await program.methods
+    .cancelMarket()
+    .accountsPartial({
+      market: marketPda,
+      config: configPda,
+      authority: provider.wallet.publicKey,
+    })
+    .rpc();
+
+  return { txSignature };
+}
+
 export interface SettleMarketParams {
   marketPda: PublicKey;
   oracleTsMs: BN;

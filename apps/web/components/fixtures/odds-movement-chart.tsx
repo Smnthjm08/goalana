@@ -171,6 +171,18 @@ export function OddsMovementChart({
   const showKickoffLine =
     Number.isFinite(kickoffMs) && kickoffMs >= domainStart && kickoffMs <= domainEnd
 
+  // Pre-match odds accumulate over days, not minutes — when the data spans
+  // more than one day, a bare HH:MM axis reads as random repeating times.
+  const spansMultipleDays = domainEnd - domainStart > 24 * 60 * 60 * 1000
+  const formatTick = (val: number) =>
+    spansMultipleDays
+      ? new Date(val).toLocaleDateString([], { month: "short", day: "numeric" })
+      : new Date(val).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  const formatTooltipLabel = (val: number) =>
+    spansMultipleDays
+      ? new Date(val).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      : new Date(val).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+
   const latest = oddsData?.latest
 
   return (
@@ -236,7 +248,7 @@ export function OddsMovementChart({
               dataKey="timestamp"
               type="number"
               domain={["dataMin", "dataMax"]}
-              tickFormatter={(val) => new Date(val).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              tickFormatter={formatTick}
               stroke="var(--muted-foreground)"
               fontSize={10}
               tickLine={false}
@@ -257,9 +269,7 @@ export function OddsMovementChart({
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  labelFormatter={(label) =>
-                    new Date(label).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-                  }
+                  labelFormatter={(label) => formatTooltipLabel(Number(label))}
                   formatter={(value, name, item) => (
                     <div className="flex w-full items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
@@ -332,7 +342,7 @@ export function OddsMovementChart({
       {/* Footer Metadata */}
       <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border pt-4 mt-2 gap-4">
         <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest text-center sm:text-left">
-          LATEST UPDATE / {new Date(domainEnd).toLocaleTimeString()}
+          LATEST UPDATE / {formatTooltipLabel(domainEnd)}
         </span>
         <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest text-center sm:text-right">
           HISTORY POINTS / {chartData.length} <br className="sm:hidden" />
