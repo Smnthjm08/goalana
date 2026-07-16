@@ -153,14 +153,19 @@ export function SettlementProofReceipt({
   proof,
   settlementTx,
   marketPda,
+  mode = "settled",
 }: {
   proof: SettlementProof
   settlementTx?: string | null
-  marketPda: string
+  marketPda?: string
+  /** "settled" = this market resolved on-chain; "preview" = a live TxLINE proof
+   *  for a finished fixture, shown before/without our own market settling it. */
+  mode?: "settled" | "preview"
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(mode === "preview")
 
   const outcomeLabel = proof.outcome === true ? "YES" : proof.outcome === false ? "NO" : "—"
+  const isPreview = mode === "preview"
 
   return (
     <div className="flex flex-col gap-3 border border-primary/30 bg-primary/5 rounded-sm p-4">
@@ -168,12 +173,23 @@ export function SettlementProofReceipt({
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <span className="font-heading text-xs uppercase tracking-widest text-primary">
-            Settlement Proof — Verified On-Chain
+            {isPreview ? "Live TxLINE Proof — On-Chain Verifiable" : "Settlement Proof — Verified On-Chain"}
           </span>
           <span className="font-mono text-[10px] text-muted-foreground leading-snug max-w-md">
-            This outcome was decided by a TxLINE Merkle proof verified inside the{" "}
-            <span className="text-foreground">settle_market</span> transaction via CPI into TxLINE&apos;s
-            oracle — not by Goalana&apos;s backend.
+            {isPreview ? (
+              <>
+                This is the exact TxLINE Merkle proof our{" "}
+                <span className="text-foreground">settle_market</span> instruction verifies by CPI into TxLINE&apos;s
+                oracle. Its daily batch root is anchored on-chain, so anyone can re-derive it — the outcome is not
+                asserted by Goalana.
+              </>
+            ) : (
+              <>
+                This outcome was decided by a TxLINE Merkle proof verified inside the{" "}
+                <span className="text-foreground">settle_market</span> transaction via CPI into TxLINE&apos;s
+                oracle — not by Goalana&apos;s backend.
+              </>
+            )}
           </span>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
@@ -228,14 +244,16 @@ export function SettlementProofReceipt({
         >
           TxLINE oracle program (CPI target) ↗
         </a>
-        <a
-          href={explorerAddressUrl(marketPda)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors underline"
-        >
-          Market account ↗
-        </a>
+        {marketPda && (
+          <a
+            href={explorerAddressUrl(marketPda)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors underline"
+          >
+            Market account ↗
+          </a>
+        )}
       </div>
 
       {/* The Merkle chain itself — collapsed by default */}

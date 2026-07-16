@@ -17,7 +17,10 @@ export interface OnChainMarket {
   settledAt: number | null
 }
 
-function decodeStatus(raw: Record<string, unknown>): OnChainMarketStatus {
+// Anchor decodes a Rust enum to `{ open: {} }` / `{ settled: {} }` — turn that
+// into the "Open"/"Settled" label the UI renders. Shared with the positions
+// page, which decodes many Market accounts in one batch.
+export function decodeStatus(raw: Record<string, unknown>): OnChainMarketStatus {
   const key = Object.keys(raw)[0] ?? "open"
   return (key.charAt(0).toUpperCase() + key.slice(1)) as OnChainMarketStatus
 }

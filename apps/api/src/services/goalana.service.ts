@@ -4,6 +4,8 @@ import {
   getGoalanaProgram,
   getConfigPda,
   getMarketPda,
+  getVaultPda,
+  getPositionPda,
   getDailyScoresRootsPda,
   derivePredicateHash,
   TXORACLE_PROGRAM_ID,
@@ -13,7 +15,7 @@ import bs58 from "bs58";
 import { logger } from "../utils/logger";
 
 // Ensure SOLANA_RPC_URL and WALLET_PRIVATE_KEY are set
-const connection = new Connection(process.env.SOLANA_RPC_URL!);
+export const connection = new Connection(process.env.SOLANA_RPC_URL!);
 
 // Handle different private key formats
 let keypair: Keypair;
@@ -171,6 +173,58 @@ export async function cancelMarketOnChain(marketPda: PublicKey): Promise<{ txSig
       market: marketPda,
       config: configPda,
       authority: provider.wallet.publicKey,
+    })
+    .rpc();
+
+  return { txSignature };
+}
+
+/**
+ * Places a bet on-chain from the service wallet. Betting is normally a
+ * client-side (user-signed) action; this server-side variant exists only for
+ * scripted end-to-end validation (e.g. seeding a fully-settled demo market and
+ * exercising the real claim_winnings payout path on Devnet).
+ */
+export async function placeBetOnChain(
+  marketPda: PublicKey,
+  side: "yes" | "no",
+  lamports: number
+): Promise<{ txSignature: string }> {
+  const [vaultPda] = getVaultPda(marketPda);
+  const [positionPda] = getPositionPda(marketPda, provider.wallet.publicKey);
+
+  const txSignature = await program.methods
+    .placeBet(side === "yes" ? { yes: {} } : { no: {} }, new BN(lamports))
+    .accountsPartial({
+      market: marketPda,
+      vault: vaultPda,
+      position: positionPda,
+      user: provider.wallet.publicKey,
+      systemProgram: SystemProgram.programId,
+    })
+    .rpc();
+
+  return { txSignature };
+}
+
+/**
+ * Claims winnings on-chain from the service wallet — the counterpart to the
+ * scripted `placeBetOnChain` above. Used to validate the real win-payout math
+ * on Devnet end-to-end (create → bet → lock → settle → claim).
+ */
+export async function claimWinningsOnChain(
+  marketPda: PublicKey
+): Promise<{ txSignature: string }> {
+  const [vaultPda] = getVaultPda(marketPda);
+  const [positionPda] = getPositionPda(marketPda, provider.wallet.publicKey);
+
+  const txSignature = await program.methods
+    .claimWinnings()
+    .accountsPartial({
+      market: marketPda,
+      vault: vaultPda,
+      position: positionPda,
+      user: provider.wallet.publicKey,
     })
     .rpc();
 

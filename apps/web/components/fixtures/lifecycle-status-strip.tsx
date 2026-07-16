@@ -1,5 +1,7 @@
 "use client"
 
+import { IN_PROGRESS_STATUS_IDS } from "@/lib/match-status"
+
 interface LiveScore {
   statusId: number | null
   isFinal: boolean
@@ -22,9 +24,6 @@ const STEPS: Array<{ stage: Stage; label: string }> = [
   { stage: "FINISHED", label: "Finished" },
   { stage: "SETTLED", label: "Settled" },
 ]
-
-// Mirrors LiveScoreHeader's definition of "ball is (or was recently) in play."
-const IN_PROGRESS_STATUS_IDS = new Set([2, 3, 4, 6, 7, 8, 9, 11, 12])
 
 function deriveStage(liveScore: LiveScore | null | undefined, markets: MarketLike[]): Stage {
   if (markets.length > 0 && markets.every((m) => m.status === "CANCELLED")) {

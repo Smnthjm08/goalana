@@ -3,16 +3,12 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import axiosInstance from "@/lib/axios-instance"
 import { Card, CardHeader, CardContent, CardFooter } from "@workspace/ui/components/card"
-import { Badge } from "@workspace/ui/components/badge"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { TeamBadge } from "@/components/team-badge"
+import { MatchTimeStatus } from "@/components/fixtures/match-time-status"
 import { explorerAddressUrl } from "@/lib/solana-explorer"
+import { IN_PROGRESS_STATUS_IDS } from "@/lib/match-status"
 import { GOALANA_PROGRAM_ID, TRUST_STATEMENT, LIFECYCLE_STEPS } from "@/lib/protocol"
-
-// StatusIds where the ball is (or was recently) in play — mirrors the fixture
-// detail page + lifecycle strip. Used to decide whether a card shows a live
-// score or a kickoff time (never a fake 0–0).
-const IN_PROGRESS_STATUS_IDS = new Set([2, 3, 4, 6, 7, 8, 9, 11, 12])
 
 function Hero() {
   return (
@@ -111,10 +107,6 @@ export default function Page() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {fixtures.map((fixture) => {
-                // Usually timestamps from TxLINE are in ms if 13 digits, else seconds.
-                const tsNum = Number(fixture.startTime)
-                const date = new Date(tsNum > 1e11 ? tsNum : tsNum * 1000)
-
                 const isFinal = fixture.finalSeq != null
                 const isLive =
                   fixture.gameState === 3 ||
@@ -123,29 +115,30 @@ export default function Page() {
                 // never a hardcoded 0–0 for a match that hasn't kicked off.
                 const hasScore = fixture.homeScore != null && fixture.awayScore != null && (isLive || isFinal)
 
+                // The list endpoint returns raw Fixture rows, so there's no
+                // computed `minuteLabel` here (that's built per-fixture in
+                // /api/fixtures/:id) — the period label is the honest stand-in.
+                const liveScore = {
+                  statusId: fixture.liveStatusId ?? null,
+                  minuteLabel: fixture.livePeriodLabel ?? null,
+                  isFinal,
+                }
+
                 return (
                   <Link key={fixture.fixtureId} href={`/fixtures/${fixture.fixtureId}`}>
                     <Card
                       className="group relative flex flex-col transition-colors hover:border-primary cursor-pointer h-full"
                     >
-                      {/* Header: competition + status */}
-                      <CardHeader className="flex flex-row items-center justify-between border-b border-border p-3 pb-3 space-y-0">
+                      {/* Header: competition + what happens next */}
+                      <CardHeader className="flex flex-row items-start justify-between gap-3 border-b border-border p-3 pb-3 space-y-0">
                         <span className="font-mono text-[10px] text-muted-foreground uppercase">
                           {fixture.competition}
                         </span>
-                        {isFinal ? (
-                          <span className="font-mono text-[10px] text-muted-foreground uppercase">
-                            Full time
-                          </span>
-                        ) : isLive ? (
-                          <Badge variant="outline" className="text-[10px] text-primary border-primary/20 bg-primary/5 rounded-sm">
-                            ● LIVE
-                          </Badge>
-                        ) : (
-                          <span className="font-mono text-[10px] text-primary">
-                            {date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        )}
+                        <MatchTimeStatus
+                          startTime={fixture.startTime}
+                          liveScore={liveScore}
+                          variant="card"
+                        />
                       </CardHeader>
 
                       {/* Body: Teams (+ real score only when the match has one) */}

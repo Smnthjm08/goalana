@@ -52,7 +52,7 @@ export async function lockDueMarkets(): Promise<void> {
 
       await prisma.market.update({
         where: { id: market.id },
-        data: { status: "LOCKED" },
+        data: { status: "LOCKED", lockTx: txSignature, lockedAt: new Date() },
       });
 
       logger.success("lock.service", `Locked market ${market.marketPda} (tx ${txSignature})`);

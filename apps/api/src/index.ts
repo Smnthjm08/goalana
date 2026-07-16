@@ -11,6 +11,8 @@ import { startScoresWorker } from "./workers/scorer.worker";
 import { reconcileLiveFixtures } from "./workers/scores.backfill";
 import { startOddsWorker } from "./workers/odds.worker";
 import { computeCurrentReferenceProbability } from "./services/market.service";
+import { getSettlementProofPreview } from "./services/settlement.service";
+import { getHealthSnapshot } from "./services/stream-health.service";
 import { SUPPORTED_MARKETS } from "./services/market-definitions";
 import { getMatchTimeline, formatMinute } from "./services/match-timeline.service";
 import { upsertUserForWallet } from "./services/user.service";
@@ -54,8 +56,25 @@ app.get("/", async (req, res) => {
   res.json({ status: "healthy!" });
 });
 
+// Infra liveness probe — deliberately trivial and dependency-free so a
+// platform health check never fails on a slow DB/RPC round-trip.
 app.get("/health", async (req, res) => {
   res.status(200).json({ status: "UP", timestamp: new Date().toISOString() });
+});
+
+// Rich status for the UI's "TxLINE Connected" indicator: live SSE state, last
+// event, tracked fixtures, and RPC reachability. Lives under /api because only
+// /api/* is proxied to this service by the frontend (apps/web/next.config.ts).
+// Always 200 — "degraded" is a payload state, not a transport error, so the
+// indicator can render *why* rather than just failing to load.
+app.get("/api/health", async (_req, res) => {
+  try {
+    const snapshot = await getHealthSnapshot();
+    return res.status(200).json({ data: snapshot });
+  } catch (error) {
+    logger.error("api", "Error building health snapshot", error);
+    return res.status(500).json({ error: "internal server error" });
+  }
 });
 
 // Wallet is the only identity Goalana has — the frontend calls this right
@@ -190,6 +209,45 @@ app.get("/api/fixtures/:id", async (req, res) => {
   }
 });
 
+// Flat market index for the wallet-scoped /positions page. A position is an
+// on-chain Position PDA that only knows its Market pubkey — this supplies the
+// off-chain metadata (question, fixture, lifecycle txs) to join against, in one
+// request instead of a fixture-by-fixture fan-out. Read-only; on-chain state
+// (pools, status, outcome) is still read from the chain by the client.
+app.get("/api/markets", async (_req, res) => {
+  try {
+    const markets = await prisma.market.findMany({
+      orderBy: { locksAt: "asc" },
+      select: {
+        id: true,
+        marketPda: true,
+        marketType: true,
+        question: true,
+        locksAt: true,
+        settleAfter: true,
+        creationTx: true,
+        lockTx: true,
+        settlementTx: true,
+        status: true,
+        fixture: {
+          select: {
+            fixtureId: true,
+            competition: true,
+            participant1: true,
+            participant2: true,
+            startTime: true,
+          },
+        },
+      },
+    });
+
+    return res.status(200).json({ data: markets });
+  } catch (error) {
+    logger.error("api", "Error fetching markets", error);
+    return res.status(500).json({ error: "internal server error" });
+  }
+});
+
 app.get("/api/fixtures/:id/odds/history", async (req, res) => {
   try {
     const fixtureIdStr = req.params.id;
@@ -266,6 +324,27 @@ app.get("/api/fixtures/:id/odds/history", async (req, res) => {
 
   } catch (error) {
     logger.error("api", `Error fetching odds history for fixture ${req.params.id}`, error);
+    return res.status(500).json({ error: "internal server error" });
+  }
+});
+
+// Live TxLINE Merkle-proof preview for a finished fixture — the exact proof
+// our settle_market CPI verifies on-chain, fetched fresh from TxLINE and
+// returned in the settlement-receipt shape (no on-chain settle involved). Lets
+// the frontend render a verifiable proof for any final match even when none of
+// our own markets settled it. See settlement.service.getSettlementProofPreview.
+app.get("/api/fixtures/:id/proof-preview", async (req, res) => {
+  try {
+    const fixtureId = BigInt(req.params.id);
+    const preview = await getSettlementProofPreview(fixtureId);
+
+    if (!preview) {
+      return res.status(404).json({ error: "No proof available (fixture not final or unpriced by TxLINE)" });
+    }
+
+    return res.status(200).json({ data: preview });
+  } catch (error) {
+    logger.error("api", `Error building proof preview for fixture ${req.params.id}`, error);
     return res.status(500).json({ error: "internal server error" });
   }
 });

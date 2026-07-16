@@ -232,6 +232,15 @@ model Market {
   initialNoPct        Float
   status              String   @default("OPEN")
 
+  // ─── Lifecycle transition provenance (lock.service / settlement.service) ──
+  // Each protocol state change records its on-chain tx + wall-clock time so the
+  // UI can render a verifiable Create → Lock → Settle timeline (Explorer link +
+  // hash + timestamp per stage). `createdAt` is the create time; `creationTx`
+  // above is the create signature; `settlementTx` below is the settle signature.
+  lockTx    String?
+  lockedAt  DateTime?
+  settledAt DateTime?
+
   // ─── Settlement provenance (settlement.service.ts) ───────────────────────
   // Not retained on-chain past settlement (Market's account only keeps
   // outcome/settledAt) — persisted here so the UI can show what proof was

@@ -2,7 +2,7 @@ import { prisma } from "@workspace/db";
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import { ScoresService, type ScoresStatValidation, type ScoresStatValidationV2 } from "@workspace/txline";
-import { getDailyScoresRootsPda } from "@workspace/goalana-sdk";
+import { getDailyScoresRootsPda, TXLINE_STAT_KEYS } from "@workspace/goalana-sdk";
 import { fetchMarketAccount, settleMarketOnChain, type SettleMarketParams } from "./goalana.service";
 import { logger } from "../utils/logger";
 
@@ -35,7 +35,7 @@ function toDisplayStat(stat: { key: number; value: number; period: number }) {
  * anchored daily batch root) the on-chain CPI verified. Rendered by the
  * frontend SettlementProofReceipt; kept in sync with that component's shape.
  */
-function buildSettlementProofRecord(
+export function buildSettlementProofRecord(
   validation: ScoresStatValidation,
   outcome: boolean | null,
   fixtureId: bigint
@@ -113,7 +113,7 @@ export async function settleFinishedFixtures(): Promise<void> {
   }
 }
 
-async function settleOneMarket(
+export async function settleOneMarket(
   marketId: string,
   marketPdaStr: string,
   fixtureId: bigint,
@@ -198,6 +198,7 @@ async function settleOneMarket(
     data: {
       status: "SETTLED",
       settlementTx: txSignature,
+      settledAt: new Date(),
       oracleTsMs: BigInt(validation.ts),
       settlementProof: buildSettlementProofRecord(validation, outcome, fixtureId),
     },
@@ -207,4 +208,44 @@ async function settleOneMarket(
     "settlement.service",
     `Settled ${marketPdaStr}: outcome=${outcome} tx=${txSignature}`
   );
+}
+
+/**
+ * Fetches the REAL TxLINE Merkle proof for a finished fixture's total-goals
+ * (Home + Away) and returns it in the same display shape a persisted settlement
+ * uses — WITHOUT submitting an on-chain settle. This powers the "live proof
+ * preview" panel so the exact cryptographic proof our `settle_market` CPI
+ * verifies is inspectable even before/without a market of ours settling that
+ * fixture (the on-chain CPI itself is covered 26/26 on localnet and runs live
+ * when our own markets on a future fixture finish).
+ *
+ * `settled: false` is always returned here — there is no settle tx; the daily
+ * batch root shown IS anchored on-chain by TxLINE, which is what makes the
+ * proof verifiable. Returns null if the fixture isn't final or TxLINE has no
+ * proof for it.
+ */
+export async function getSettlementProofPreview(
+  fixtureId: bigint
+): Promise<{ proof: ReturnType<typeof buildSettlementProofRecord>; settled: false } | null> {
+  const fixture = await prisma.fixture.findUnique({ where: { fixtureId } });
+  if (!fixture || fixture.finalSeq === null) return null;
+
+  const statKey = TXLINE_STAT_KEYS.HOME_GOALS;
+  const statKey2 = TXLINE_STAT_KEYS.AWAY_GOALS;
+
+  const validation = await scoresService.getScoresStatValidation({
+    fixtureId: Number(fixtureId),
+    seq: fixture.finalSeq,
+    statKey,
+    statKey2,
+  });
+
+  if (!isLegacyValidation(validation)) return null;
+
+  // Total goals = Home + Away; the panel frames this as "Over 1.5?" (> 1).
+  const homeGoals = validation.statToProve.value;
+  const awayGoals = validation.statToProve2?.value ?? 0;
+  const outcome = homeGoals + awayGoals > 1;
+
+  return { proof: buildSettlementProofRecord(validation, outcome, fixtureId), settled: false };
 }

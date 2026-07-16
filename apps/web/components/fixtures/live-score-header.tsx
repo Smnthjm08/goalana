@@ -1,5 +1,9 @@
 "use client"
 
+import { useNow } from "@/hooks/use-now"
+import { IN_PROGRESS_STATUS_IDS } from "@/lib/match-status"
+import { formatDuration, toMs } from "@/lib/time"
+
 interface LiveScore {
   homeScore: number | null
   awayScore: number | null
@@ -14,19 +18,19 @@ interface LiveScore {
 interface LiveScoreHeaderProps {
   liveScore: LiveScore | null | undefined
   kickoffLabel: string
+  /** Kickoff (ms/s epoch) — drives the pre-match countdown. */
+  startTime?: string | number | null
 }
 
-// Soccer StatusId values that mean "ball is (or was very recently) in play,
-// show the pulsing LIVE indicator" — H1, HT, H2, and the extra-time/penalty
-// equivalents. Matches the documented Status Id table; only H1/HT/H2 (2/3/4)
-// are exercised by real fixture data so far.
-const IN_PROGRESS_STATUS_IDS = new Set([2, 3, 4, 6, 7, 8, 9, 11, 12])
-
-export function LiveScoreHeader({ liveScore, kickoffLabel }: LiveScoreHeaderProps) {
+export function LiveScoreHeader({ liveScore, kickoffLabel, startTime }: LiveScoreHeaderProps) {
+  const now = useNow(1_000)
   const hasStarted = liveScore != null && liveScore.statusId !== null
   const isLive = hasStarted && !liveScore!.isFinal && IN_PROGRESS_STATUS_IDS.has(liveScore!.statusId!)
 
   if (!hasStarted) {
+    const kickoffMs = toMs(startTime)
+    const untilKickoff = kickoffMs !== null && now !== null ? kickoffMs - now : null
+
     return (
       <div className="flex flex-col items-center justify-center px-4">
         <span className="font-mono text-sm md:text-base text-muted-foreground tracking-widest mb-2">
@@ -38,6 +42,11 @@ export function LiveScoreHeader({ liveScore, kickoffLabel }: LiveScoreHeaderProp
         <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mt-2">
           {kickoffLabel}
         </span>
+        {untilKickoff !== null && (
+          <span className="font-mono text-[10px] uppercase tracking-widest text-primary mt-1 tabular-nums">
+            {untilKickoff <= 0 ? "Starting soon" : `Starts in ${formatDuration(untilKickoff)}`}
+          </span>
+        )}
       </div>
     )
   }

@@ -49,6 +49,15 @@ interface OddsHistoryResponse {
 
 type ChartPoint = RawHistoryPoint
 
+/** Which slice of the already-fetched history to plot. */
+type TimeRange = "ALL" | "PRE" | "LIVE"
+
+const RANGE_LABELS: Record<TimeRange, string> = {
+  ALL: "All",
+  PRE: "Pre-match",
+  LIVE: "In-play",
+}
+
 /**
  * The single normalization pass for this chart: filter out any non-finite
  * values a partial/corrupt update could produce, then sort chronologically.
@@ -70,6 +79,17 @@ function toChartData(raw: OddsHistoryResponse | null): ChartPoint[] {
     .sort((a, b) => a.timestamp - b.timestamp)
 }
 
+/**
+ * Split the dataset at kickoff. Purely client-side over data the chart already
+ * has — switching ranges never refetches. The boundary point (timestamp exactly
+ * at kickoff) belongs to both sides so neither line starts in mid-air.
+ */
+function filterByRange(data: ChartPoint[], range: TimeRange, kickoffMs: number): ChartPoint[] {
+  if (range === "PRE") return data.filter((point) => point.timestamp <= kickoffMs)
+  if (range === "LIVE") return data.filter((point) => point.timestamp >= kickoffMs)
+  return data
+}
+
 export function OddsMovementChart({
   fixtureId,
   participant1,
@@ -84,6 +104,7 @@ export function OddsMovementChart({
     draw: true,
     away: true,
   })
+  const [range, setRange] = useState<TimeRange>("ALL")
 
   useEffect(() => {
     if (!fixtureId) return
@@ -167,10 +188,33 @@ export function OddsMovementChart({
   }
 
   const kickoffMs = Number(startTime)
-  const domainStart = chartData[0]!.timestamp
-  const domainEnd = chartData[chartData.length - 1]!.timestamp
+  const fullDomainStart = chartData[0]!.timestamp
+  const fullDomainEnd = chartData[chartData.length - 1]!.timestamp
   const showKickoffLine =
-    Number.isFinite(kickoffMs) && kickoffMs >= domainStart && kickoffMs <= domainEnd
+    Number.isFinite(kickoffMs) && kickoffMs >= fullDomainStart && kickoffMs <= fullDomainEnd
+
+  // Splitting at kickoff only means something when the history actually
+  // straddles it — for a match that hasn't started, "In-play" would be empty
+  // and "Pre-match" would be identical to "All", so offer no choice at all.
+  const canSplitAtKickoff = showKickoffLine
+
+  const rangeCounts: Record<TimeRange, number> = {
+    ALL: chartData.length,
+    PRE: canSplitAtKickoff ? filterByRange(chartData, "PRE", kickoffMs).length : 0,
+    LIVE: canSplitAtKickoff ? filterByRange(chartData, "LIVE", kickoffMs).length : 0,
+  }
+
+  // A single point draws nothing, so treat such a range as unavailable rather
+  // than letting the user select their way into a blank chart.
+  const isRangeAvailable = (r: TimeRange) => rangeCounts[r] >= 2
+  const activeRange = canSplitAtKickoff && isRangeAvailable(range) ? range : "ALL"
+
+  const visibleData = canSplitAtKickoff
+    ? filterByRange(chartData, activeRange, kickoffMs)
+    : chartData
+
+  const domainStart = visibleData[0]?.timestamp ?? fullDomainStart
+  const domainEnd = visibleData[visibleData.length - 1]?.timestamp ?? fullDomainEnd
 
   // Pre-match odds accumulate over days, not minutes — when the data spans
   // more than one day, a bare HH:MM axis reads as random repeating times.
@@ -190,13 +234,47 @@ export function OddsMovementChart({
     <div className="border border-border bg-card rounded-sm p-6 lg:p-8 relative">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-        <div className="flex flex-col gap-1">
-          <h3 className="font-heading text-xl uppercase tracking-widest text-foreground">
-            Match Result
-          </h3>
-          <span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">
-            TxLINE Reference — Implied Probabilities
-          </span>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <h3 className="font-heading text-xl uppercase tracking-widest text-foreground">
+              Match Result
+            </h3>
+            <span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">
+              TxLINE Reference — Implied Probabilities
+            </span>
+          </div>
+
+          {canSplitAtKickoff && (
+            <div className="flex items-center gap-1">
+              {(Object.keys(RANGE_LABELS) as TimeRange[]).map((r) => {
+                const available = isRangeAvailable(r)
+                const active = activeRange === r
+
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    disabled={!available}
+                    onClick={() => setRange(r)}
+                    title={
+                      available
+                        ? `${rangeCounts[r]} points`
+                        : "Not enough history in this range"
+                    }
+                    className={`rounded-sm border px-2 py-1 font-mono text-[10px] uppercase tracking-widest transition-colors ${
+                      active
+                        ? "border-primary/50 bg-primary/10 text-primary"
+                        : available
+                          ? "border-border bg-transparent text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                          : "cursor-not-allowed border-border/50 bg-transparent text-muted-foreground/40"
+                    }`}
+                  >
+                    {RANGE_LABELS[r]}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {latest && (
@@ -242,7 +320,7 @@ export function OddsMovementChart({
       {/* Graph */}
       <div className="w-full mt-6">
         <ChartContainer config={chartConfig} className="h-100 w-full aspect-auto">
-          <LineChart accessibilityLayer data={chartData} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+          <LineChart accessibilityLayer data={visibleData} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
 
             <XAxis
@@ -342,11 +420,14 @@ export function OddsMovementChart({
 
       {/* Footer Metadata */}
       <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border pt-4 mt-2 gap-4">
+        {/* Always the true latest, not the end of the selected range. */}
         <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest text-center sm:text-left">
-          LATEST UPDATE / {formatTooltipLabel(domainEnd)}
+          LATEST UPDATE / {formatTooltipLabel(fullDomainEnd)}
         </span>
         <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest text-center sm:text-right">
-          HISTORY POINTS / {chartData.length} <br className="sm:hidden" />
+          HISTORY POINTS / {visibleData.length}
+          {visibleData.length !== chartData.length && ` of ${chartData.length}`}
+          <br className="sm:hidden" />
           <span className="hidden sm:inline"> • </span>
           SOURCE / TXLINE
         </span>

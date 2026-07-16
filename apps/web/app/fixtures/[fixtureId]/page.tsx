@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useParams } from "next/navigation"
 import { toast } from "sonner"
 import { PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js"
@@ -20,6 +21,10 @@ import { LiveScoreHeader } from "@/components/fixtures/live-score-header"
 import { MatchEventTimeline } from "@/components/fixtures/match-event-timeline"
 import { LifecycleStatusStrip } from "@/components/fixtures/lifecycle-status-strip"
 import { SettlementProofReceipt, type SettlementProof } from "@/components/fixtures/settlement-proof-receipt"
+import { SettlementProofPanel } from "@/components/fixtures/settlement-proof-panel"
+import { MarketLifecycleTimeline } from "@/components/fixtures/market-lifecycle-timeline"
+import { MatchTimeStatus, MarketLockStatus } from "@/components/fixtures/match-time-status"
+import { OddsDelta } from "@/components/fixtures/odds-delta"
 import { TeamBadge } from "@/components/team-badge"
 import { useGoalanaProgram } from "@/hooks/use-goalana-program"
 import { useMarketAccount } from "@/hooks/use-market-account"
@@ -230,13 +235,16 @@ function MarketCard({ market }: { market: any }) {
         <span className="font-sans font-bold text-lg text-foreground">
           {market.question}
         </span>
-        <div className="flex items-center justify-between mt-3">
+        <div className="flex items-center justify-between gap-3 mt-3">
           <span className="font-mono text-[10px] text-muted-foreground uppercase">
             {marketTypeLabels[market.marketType] || market.marketType.replace(/_/g, ' ')}
           </span>
-          <Badge variant="outline" className="text-[10px] text-primary border-primary/20 bg-primary/5">
-            {marketLoading ? <Spinner className="size-2.5" /> : "●"} {status}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <MarketLockStatus locksAt={market.locksAt} status={status} />
+            <Badge variant="outline" className="text-[10px] text-primary border-primary/20 bg-primary/5">
+              {marketLoading ? <Spinner className="size-2.5" /> : "●"} {status}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-5 flex flex-col gap-4">
@@ -255,7 +263,10 @@ function MarketCard({ market }: { market: any }) {
             }`}
           >
             <span className={`font-mono text-xs ${selected === "YES" ? "text-black/70" : "text-muted-foreground group-hover/yes:text-lime-400"} transition-colors`}>YES</span>
-            <span className={`font-heading text-xl ${selected === "YES" ? "text-black" : "text-foreground group-hover/yes:text-lime-400"} transition-colors`}>{yesPct.toFixed(2)}%</span>
+            <span className="flex flex-col items-end gap-0.5">
+              <span className={`font-heading text-xl ${selected === "YES" ? "text-black" : "text-foreground group-hover/yes:text-lime-400"} transition-colors`}>{yesPct.toFixed(2)}%</span>
+              <OddsDelta current={yesPct} initial={Number(market.initialYesPct)} dimmed={selected === "YES"} />
+            </span>
           </Button>
           <Button
             variant="outline"
@@ -268,7 +279,10 @@ function MarketCard({ market }: { market: any }) {
             }`}
           >
             <span className={`font-mono text-xs ${selected === "NO" ? "text-white/70" : "text-muted-foreground group-hover/no:text-rose-600"} transition-colors`}>NO</span>
-            <span className={`font-heading text-xl ${selected === "NO" ? "text-white" : "text-foreground group-hover/no:text-rose-600"} transition-colors`}>{noPct.toFixed(2)}%</span>
+            <span className="flex flex-col items-end gap-0.5">
+              <span className={`font-heading text-xl ${selected === "NO" ? "text-white" : "text-foreground group-hover/no:text-rose-600"} transition-colors`}>{noPct.toFixed(2)}%</span>
+              <OddsDelta current={noPct} initial={Number(market.initialNoPct)} dimmed={selected === "NO"} />
+            </span>
           </Button>
         </div>
 
@@ -380,25 +394,17 @@ function MarketCard({ market }: { market: any }) {
           </div>
         )}
 
-        {txHistory.length > 0 && (
-          <div className="flex flex-col gap-1 border-t border-border pt-3">
-            <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-              This session
-            </span>
-            {txHistory.map((tx) => (
-              <a
-                key={tx.signature}
-                href={explorerTxUrl(tx.signature)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors"
-              >
-                <span>{tx.label}</span>
-                <span className="underline">{tx.signature.slice(0, 6)}…{tx.signature.slice(-6)} ↗</span>
-              </a>
-            ))}
-          </div>
-        )}
+        <MarketLifecycleTimeline
+          creationTx={market.creationTx}
+          createdAt={market.createdAt}
+          lockTx={market.lockTx}
+          lockedAt={market.lockedAt}
+          settlementTx={market.settlementTx}
+          settledAt={market.settledAt}
+          onChainStatus={onChainMarket?.status ?? null}
+          sessionTxs={txHistory}
+          positionClaimed={position?.claimed}
+        />
       </CardContent>
     </Card>
   )
@@ -452,22 +458,40 @@ export default function FixtureDetailPage() {
     }
   }, [fixtureId])
 
+  // Skeletons mirror the real layout (header band → strip → tab row → market
+  // grid) so the page doesn't reflow when the data lands.
   if (loading) {
     return (
-      <div className="flex w-full flex-col p-4 md:p-8 lg:p-12 items-center justify-center min-h-[50vh]">
-         <span className="font-mono text-sm text-muted-foreground uppercase tracking-wider animate-pulse">
-            [ Fetching Fixture Data... ]
-         </span>
+      <div className="flex w-full flex-col p-4 md:p-8 lg:p-12">
+        <div className="flex w-full max-w-5xl flex-col gap-8 mx-auto">
+          <Skeleton className="h-48 w-full rounded-sm" />
+          <Skeleton className="h-12 w-full rounded-sm" />
+          <Skeleton className="h-10 w-full rounded-sm" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-64 w-full rounded-sm" />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
 
   if (!fixture) {
     return (
-      <div className="flex w-full flex-col p-4 md:p-8 lg:p-12 items-center justify-center min-h-[50vh]">
-         <span className="font-mono text-sm text-destructive uppercase tracking-wider">
-            [ Fixture Not Found ]
-         </span>
+      <div className="flex w-full flex-col p-4 md:p-8 lg:p-12">
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4 rounded-sm border border-dashed border-border bg-card px-6 py-16 text-center">
+          <span className="font-heading text-lg uppercase tracking-widest text-foreground">
+            Fixture not found
+          </span>
+          <p className="max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground">
+            This fixture isn&apos;t in Goalana&apos;s tracked set. It may have been
+            removed from the TxLINE feed.
+          </p>
+          <Button asChild className="mt-1 font-heading uppercase tracking-widest">
+            <Link href="/">Browse Markets</Link>
+          </Button>
+        </div>
       </div>
     )
   }
@@ -483,15 +507,15 @@ export default function FixtureDetailPage() {
         
         {/* Match Header */}
         <div className="flex flex-col w-full mb-2">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-start justify-between gap-4 mb-6">
              <span className="font-mono text-xs md:text-sm text-foreground uppercase tracking-widest">
                {fixture.competition}
              </span>
-             <span className="font-mono text-xs md:text-sm text-primary uppercase tracking-widest">
-               {fixture.liveScore?.statusId != null
-                 ? (fixture.liveScore.periodLabel ?? "LIVE")
-                 : date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-             </span>
+             <MatchTimeStatus
+               startTime={fixture.startTime}
+               liveScore={fixture.liveScore}
+               variant="detail"
+             />
           </div>
 
           <div className="border-t border-b border-border py-12 flex items-center justify-between w-full relative">
@@ -505,6 +529,7 @@ export default function FixtureDetailPage() {
             <div className="absolute left-1/2 -translate-x-1/2">
               <LiveScoreHeader
                 liveScore={fixture.liveScore}
+                startTime={fixture.startTime}
                 kickoffLabel={date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               />
             </div>
@@ -557,6 +582,12 @@ export default function FixtureDetailPage() {
             >
               Match Events
             </TabsTrigger>
+            <TabsTrigger
+              value="SETTLEMENT_PROOF"
+              className="font-heading uppercase tracking-widest pb-4 pt-0 px-0 text-sm bg-transparent data-[state=active]:bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-primary after:bg-primary"
+            >
+              Settlement Proof
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="MARKETS" className="mt-8 border-none p-0 outline-none">
@@ -599,6 +630,13 @@ export default function FixtureDetailPage() {
               participant1={fixture.participant1}
               participant2={fixture.participant2}
               participant1IsHome={fixture.participant1IsHome}
+            />
+          </TabsContent>
+
+          <TabsContent value="SETTLEMENT_PROOF" className="mt-8 border-none p-0 outline-none">
+            <SettlementProofPanel
+              fixtureId={fixture.fixtureId}
+              isFinal={Boolean(fixture.liveScore?.isFinal)}
             />
           </TabsContent>
         </Tabs>

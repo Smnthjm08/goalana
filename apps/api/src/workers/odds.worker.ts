@@ -1,6 +1,11 @@
 import { OddsService, type SSEEvent, type OddsPayload } from "@workspace/txline";
 import { prisma } from "@workspace/db";
 import { processOddsUpdate } from "./odds.processor";
+import {
+  markStreamConnected,
+  markStreamDisconnected,
+  markStreamFrame,
+} from "../services/stream-health.service";
 import { logger } from "../utils/logger";
 
 const oddsService = new OddsService();
@@ -42,6 +47,7 @@ export async function startOddsWorker(signal: AbortSignal): Promise<void> {
       });
 
       logger.success("odds.worker", "Connected to TxLINE odds stream");
+      markStreamConnected("odds");
 
       for await (const frame of stream as AsyncIterable<SSEEvent>) {
         if (frame.id) {
@@ -49,8 +55,11 @@ export async function startOddsWorker(signal: AbortSignal): Promise<void> {
         }
 
         if (frame.event === "heartbeat") {
+          markStreamFrame("odds", false);
           continue;
         }
+
+        markStreamFrame("odds", true);
 
         if (!frame.data?.trim()) {
           continue;
@@ -85,6 +94,9 @@ export async function startOddsWorker(signal: AbortSignal): Promise<void> {
       if (!signal.aborted) {
         logger.error("odds.worker", "Stream connection failed", error);
       }
+    } finally {
+      // Covers both exits: the stream ending normally and a connection throw.
+      markStreamDisconnected("odds");
     }
 
     if (signal.aborted) {

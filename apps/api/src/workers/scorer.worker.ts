@@ -1,5 +1,10 @@
 import { ScoresService, type SSEEvent, type ScoresRecord } from "@workspace/txline";
 import { processScoresUpdate } from "./scores.processor";
+import {
+  markStreamConnected,
+  markStreamDisconnected,
+  markStreamFrame,
+} from "../services/stream-health.service";
 import { logger } from "../utils/logger";
 
 const scoresService = new ScoresService();
@@ -34,6 +39,7 @@ export async function startScoresWorker(signal: AbortSignal): Promise<void> {
       });
 
       logger.success("scores.worker", "Connected to TxLINE scores stream");
+      markStreamConnected("scores");
 
       for await (const frame of stream as AsyncIterable<SSEEvent>) {
         if (frame.id) {
@@ -41,8 +47,11 @@ export async function startScoresWorker(signal: AbortSignal): Promise<void> {
         }
 
         if (frame.event === "heartbeat") {
+          markStreamFrame("scores", false);
           continue;
         }
+
+        markStreamFrame("scores", true);
 
         if (!frame.data?.trim()) {
           continue;
@@ -68,6 +77,9 @@ export async function startScoresWorker(signal: AbortSignal): Promise<void> {
       if (!signal.aborted) {
         logger.error("scores.worker", "Stream connection failed", error);
       }
+    } finally {
+      // Covers both exits: the stream ending normally and a connection throw.
+      markStreamDisconnected("scores");
     }
 
     if (signal.aborted) {
