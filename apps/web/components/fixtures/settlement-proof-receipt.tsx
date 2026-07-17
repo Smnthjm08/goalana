@@ -1,6 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import {
+  TXLINE_PERIOD_LABELS,
+  TXLINE_STAT_LABELS,
+} from "@workspace/goalana-sdk"
 import { explorerTxUrl, explorerAddressUrl } from "@/lib/solana-explorer"
 import { TXLINE_ORACLE_PROGRAM_ID } from "@/lib/protocol"
 
@@ -29,31 +33,14 @@ export interface SettlementProof {
   dailyRootsPda: string
 }
 
-// TxLINE stat-key encoding (confirmed against the live feed — see
-// TXLINE_ENDPOINTS.md). statKey = period*1000 + baseKey.
-const BASE_STAT_LABELS: Record<number, string> = {
-  1: "Home goals",
-  2: "Away goals",
-  3: "Home yellow cards",
-  4: "Away yellow cards",
-  5: "Home red cards",
-  6: "Away red cards",
-  7: "Home corners",
-  8: "Away corners",
-}
-const PERIOD_LABELS: Record<number, string> = {
-  0: "Full match",
-  1: "1st half",
-  2: "2nd half",
-  3: "Extra time 1",
-  4: "Extra time 2",
-  5: "Penalties",
-}
-
+// Stat/period labels live in the SDK (txline-stats.ts) so settlement, this
+// receipt, and the proof-integrity panel all decode a key the same way. Real
+// full-match proofs carry period=100, not the documented 0 — the SDK's map
+// covers both; see its comment for the evidence.
 function describeStat(stat: Stat): string {
   const base = stat.key % 1000
-  const label = BASE_STAT_LABELS[base] ?? `Stat #${base}`
-  const period = PERIOD_LABELS[stat.period] ?? `Period ${stat.period}`
+  const label = TXLINE_STAT_LABELS[base] ?? `Stat #${base}`
+  const period = TXLINE_PERIOD_LABELS[stat.period] ?? `Period ${stat.period}`
   return `${label} (${period}) = ${stat.value}`
 }
 
@@ -64,7 +51,10 @@ function shortHash(hex: string): string {
 
 function Hash({ hex }: { hex: string }) {
   return (
-    <span className="font-mono text-[10px] text-foreground break-all" title={hex}>
+    <span
+      className="font-mono text-[10px] break-all text-foreground"
+      title={hex}
+    >
       0x{shortHash(hex)}
     </span>
   )
@@ -88,11 +78,15 @@ function ProofChain({ nodes }: { nodes: ProofNode[] }) {
                 ? "border-primary/30 text-primary"
                 : "border-border text-muted-foreground"
             }`}
-            title={node.isRightSibling ? "sibling on the right" : "sibling on the left"}
+            title={
+              node.isRightSibling
+                ? "sibling on the right"
+                : "sibling on the left"
+            }
           >
             {node.isRightSibling ? "R" : "L"}
           </span>
-          <span className="text-muted-foreground break-all" title={node.hash}>
+          <span className="break-all text-muted-foreground" title={node.hash}>
             0x{shortHash(node.hash)}
           </span>
         </div>
@@ -117,24 +111,32 @@ function Stage({
   nodes: ProofNode[]
 }) {
   return (
-    <div className="flex flex-col gap-2 border border-border rounded-sm p-3 bg-background">
+    <div className="flex flex-col gap-2 rounded-sm border border-border bg-background p-3">
       <div className="flex items-center gap-2">
-        <span className="font-mono text-[10px] text-primary">{String(index).padStart(2, "0")}</span>
-        <span className="font-heading text-[11px] uppercase tracking-widest text-foreground">{title}</span>
+        <span className="font-mono text-[10px] text-primary">
+          {String(index).padStart(2, "0")}
+        </span>
+        <span className="font-heading text-[11px] tracking-widest text-foreground uppercase">
+          {title}
+        </span>
       </div>
       <div className="flex flex-col gap-1.5 pl-1">
         <div className="flex flex-col gap-0.5">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Input</span>
+          <span className="font-mono text-[9px] tracking-widest text-muted-foreground uppercase">
+            Input
+          </span>
           {from}
         </div>
         <div className="flex flex-col gap-0.5">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+          <span className="font-mono text-[9px] tracking-widest text-muted-foreground uppercase">
             Merkle path ({nodes.length} sibling{nodes.length === 1 ? "" : "s"})
           </span>
           <ProofChain nodes={nodes} />
         </div>
         <div className="flex flex-col gap-0.5">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">↓ {toLabel}</span>
+          <span className="font-mono text-[9px] tracking-widest text-muted-foreground uppercase">
+            ↓ {toLabel}
+          </span>
           {to}
         </div>
       </div>
@@ -164,39 +166,51 @@ export function SettlementProofReceipt({
 }) {
   const [open, setOpen] = useState(mode === "preview")
 
-  const outcomeLabel = proof.outcome === true ? "YES" : proof.outcome === false ? "NO" : "—"
+  const outcomeLabel =
+    proof.outcome === true ? "YES" : proof.outcome === false ? "NO" : "—"
   const isPreview = mode === "preview"
 
   return (
-    <div className="flex flex-col gap-3 border border-primary/30 bg-primary/5 rounded-sm p-4">
+    <div className="flex flex-col gap-3 rounded-sm border border-primary/30 bg-primary/5 p-4">
       {/* Header — the trust claim + resolved outcome */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <span className="font-heading text-xs uppercase tracking-widest text-primary">
-            {isPreview ? "Live TxLINE Proof — On-Chain Verifiable" : "Settlement Proof — Verified On-Chain"}
+          <span className="font-heading text-xs tracking-widest text-primary uppercase">
+            {isPreview
+              ? "Live TxLINE Proof — On-Chain Verifiable"
+              : "Settlement Proof — Verified On-Chain"}
           </span>
-          <span className="font-mono text-[10px] text-muted-foreground leading-snug max-w-md">
+          <span className="max-w-md font-mono text-[10px] leading-snug text-muted-foreground">
             {isPreview ? (
               <>
                 This is the exact TxLINE Merkle proof our{" "}
-                <span className="text-foreground">settle_market</span> instruction verifies by CPI into TxLINE&apos;s
-                oracle. Its daily batch root is anchored on-chain, so anyone can re-derive it — the outcome is not
-                asserted by Goalana.
+                <span className="text-foreground">settle_market</span>{" "}
+                instruction verifies by CPI into TxLINE&apos;s oracle. Its daily
+                batch root is anchored on-chain, so anyone can re-derive it —
+                the outcome is not asserted by Goalana.
               </>
             ) : (
               <>
-                This outcome was decided by a TxLINE Merkle proof verified inside the{" "}
-                <span className="text-foreground">settle_market</span> transaction via CPI into TxLINE&apos;s
-                oracle — not by Goalana&apos;s backend.
+                This outcome was decided by a TxLINE Merkle proof verified
+                inside the{" "}
+                <span className="text-foreground">settle_market</span>{" "}
+                transaction via CPI into TxLINE&apos;s oracle — not by
+                Goalana&apos;s backend.
               </>
             )}
           </span>
         </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Outcome</span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className="font-mono text-[9px] tracking-widest text-muted-foreground uppercase">
+            Outcome
+          </span>
           <span
             className={`font-heading text-lg leading-none ${
-              proof.outcome === true ? "text-lime-400" : proof.outcome === false ? "text-rose-500" : "text-foreground"
+              proof.outcome === true
+                ? "text-lime-400"
+                : proof.outcome === false
+                  ? "text-rose-500"
+                  : "text-foreground"
             }`}
           >
             {outcomeLabel}
@@ -206,10 +220,16 @@ export function SettlementProofReceipt({
 
       {/* What was proven */}
       <div className="flex flex-col gap-1 border-t border-primary/20 pt-3">
-        <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Stat proven</span>
-        <span className="font-mono text-[11px] text-foreground">{describeStat(proof.statToProve)}</span>
+        <span className="font-mono text-[9px] tracking-widest text-muted-foreground uppercase">
+          Stat proven
+        </span>
+        <span className="font-mono text-[11px] text-foreground">
+          {describeStat(proof.statToProve)}
+        </span>
         {proof.statToProve2 && (
-          <span className="font-mono text-[11px] text-foreground">+ {describeStat(proof.statToProve2)}</span>
+          <span className="font-mono text-[11px] text-foreground">
+            + {describeStat(proof.statToProve2)}
+          </span>
         )}
         <span className="font-mono text-[9px] text-muted-foreground">
           Oracle stat timestamp: {new Date(proof.ts).toLocaleString()}
@@ -223,24 +243,26 @@ export function SettlementProofReceipt({
             href={explorerTxUrl(settlementTx)}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors underline"
+            className="font-mono text-[10px] text-muted-foreground underline transition-colors hover:text-primary"
           >
-            settle_market tx: {settlementTx.slice(0, 8)}…{settlementTx.slice(-8)} ↗
+            settle_market tx: {settlementTx.slice(0, 8)}…
+            {settlementTx.slice(-8)} ↗
           </a>
         )}
         <a
           href={explorerAddressUrl(proof.dailyRootsPda)}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors underline"
+          className="font-mono text-[10px] text-muted-foreground underline transition-colors hover:text-primary"
         >
-          Anchored daily-roots PDA: {proof.dailyRootsPda.slice(0, 8)}…{proof.dailyRootsPda.slice(-8)} ↗
+          Anchored daily-roots PDA: {proof.dailyRootsPda.slice(0, 8)}…
+          {proof.dailyRootsPda.slice(-8)} ↗
         </a>
         <a
           href={explorerAddressUrl(TXLINE_ORACLE_PROGRAM_ID)}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors underline"
+          className="font-mono text-[10px] text-muted-foreground underline transition-colors hover:text-primary"
         >
           TxLINE oracle program (CPI target) ↗
         </a>
@@ -249,7 +271,7 @@ export function SettlementProofReceipt({
             href={explorerAddressUrl(marketPda)}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[10px] text-muted-foreground hover:text-primary transition-colors underline"
+            className="font-mono text-[10px] text-muted-foreground underline transition-colors hover:text-primary"
           >
             Market account ↗
           </a>
@@ -259,7 +281,7 @@ export function SettlementProofReceipt({
       {/* The Merkle chain itself — collapsed by default */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center justify-between border-t border-primary/20 pt-3 font-mono text-[10px] uppercase tracking-widest text-primary hover:text-foreground transition-colors"
+        className="flex items-center justify-between border-t border-primary/20 pt-3 font-mono text-[10px] tracking-widest text-primary uppercase transition-colors hover:text-foreground"
       >
         <span>{open ? "Hide" : "Inspect"} the Merkle proof chain</span>
         <span>{open ? "−" : "+"}</span>
@@ -272,7 +294,11 @@ export function SettlementProofReceipt({
             title="Stat leaf → event stat root"
             toLabel="Event stat root"
             nodes={proof.statProof}
-            from={<span className="font-mono text-[10px] text-foreground">{describeStat(proof.statToProve)}</span>}
+            from={
+              <span className="font-mono text-[10px] text-foreground">
+                {describeStat(proof.statToProve)}
+              </span>
+            }
             to={<Hash hex={proof.eventStatRoot} />}
           />
           <Stage
@@ -294,16 +320,19 @@ export function SettlementProofReceipt({
                 href={explorerAddressUrl(proof.dailyRootsPda)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-mono text-[10px] text-primary underline break-all"
+                className="font-mono text-[10px] break-all text-primary underline"
               >
-                daily_scores_roots PDA {proof.dailyRootsPda.slice(0, 8)}…{proof.dailyRootsPda.slice(-8)} ↗
+                daily_scores_roots PDA {proof.dailyRootsPda.slice(0, 8)}…
+                {proof.dailyRootsPda.slice(-8)} ↗
               </a>
             }
           />
-          <span className="font-mono text-[9px] text-muted-foreground leading-snug px-1">
-            TxLINE anchors the daily batch root on-chain. The oracle program re-hashes this path during the CPI; if any
-            hash or sibling direction is wrong, <span className="text-foreground">validate_stat</span> fails and{" "}
-            <span className="text-foreground">settle_market</span> reverts — so a false outcome cannot be settled.
+          <span className="px-1 font-mono text-[9px] leading-snug text-muted-foreground">
+            TxLINE anchors the daily batch root on-chain. The oracle program
+            re-hashes this path during the CPI; if any hash or sibling direction
+            is wrong, <span className="text-foreground">validate_stat</span>{" "}
+            fails and <span className="text-foreground">settle_market</span>{" "}
+            reverts — so a false outcome cannot be settled.
           </span>
         </div>
       )}

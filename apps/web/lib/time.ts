@@ -53,7 +53,10 @@ export function formatDuration(ms: number): string {
 }
 
 /** "12s ago", "4m ago", "3h ago" — for "last event received". */
-export function formatRelativeAgo(ms: number, now: number = Date.now()): string {
+export function formatRelativeAgo(
+  ms: number,
+  now: number = Date.now()
+): string {
   const delta = now - ms
   if (delta < 0) return "just now"
   if (delta < 10_000) return "just now"

@@ -84,9 +84,15 @@ function toChartData(raw: OddsHistoryResponse | null): ChartPoint[] {
  * has — switching ranges never refetches. The boundary point (timestamp exactly
  * at kickoff) belongs to both sides so neither line starts in mid-air.
  */
-function filterByRange(data: ChartPoint[], range: TimeRange, kickoffMs: number): ChartPoint[] {
-  if (range === "PRE") return data.filter((point) => point.timestamp <= kickoffMs)
-  if (range === "LIVE") return data.filter((point) => point.timestamp >= kickoffMs)
+function filterByRange(
+  data: ChartPoint[],
+  range: TimeRange,
+  kickoffMs: number
+): ChartPoint[] {
+  if (range === "PRE")
+    return data.filter((point) => point.timestamp <= kickoffMs)
+  if (range === "LIVE")
+    return data.filter((point) => point.timestamp >= kickoffMs)
   return data
 }
 
@@ -159,8 +165,8 @@ export function OddsMovementChart({
 
   if (loading) {
     return (
-      <div className="border border-border p-8 text-center bg-card rounded-sm">
-        <span className="font-mono text-sm text-muted-foreground uppercase tracking-wider animate-pulse">
+      <div className="rounded-sm border border-border bg-card p-8 text-center">
+        <span className="animate-pulse font-mono text-sm tracking-wider text-muted-foreground uppercase">
           [ Loading odds movement... ]
         </span>
       </div>
@@ -169,8 +175,8 @@ export function OddsMovementChart({
 
   if (error && chartData.length === 0) {
     return (
-      <div className="border border-destructive/40 p-8 text-center bg-card rounded-sm">
-        <span className="font-mono text-sm text-destructive uppercase tracking-wider">
+      <div className="rounded-sm border border-destructive/40 bg-card p-8 text-center">
+        <span className="font-mono text-sm tracking-wider text-destructive uppercase">
           [ {error} ]
         </span>
       </div>
@@ -179,8 +185,8 @@ export function OddsMovementChart({
 
   if (chartData.length === 0) {
     return (
-      <div className="border border-border p-8 text-center bg-card rounded-sm">
-        <span className="font-mono text-sm text-muted-foreground uppercase tracking-wider">
+      <div className="rounded-sm border border-border bg-card p-8 text-center">
+        <span className="font-mono text-sm tracking-wider text-muted-foreground uppercase">
           No odds history available yet for this fixture.
         </span>
       </div>
@@ -191,7 +197,9 @@ export function OddsMovementChart({
   const fullDomainStart = chartData[0]!.timestamp
   const fullDomainEnd = chartData[chartData.length - 1]!.timestamp
   const showKickoffLine =
-    Number.isFinite(kickoffMs) && kickoffMs >= fullDomainStart && kickoffMs <= fullDomainEnd
+    Number.isFinite(kickoffMs) &&
+    kickoffMs >= fullDomainStart &&
+    kickoffMs <= fullDomainEnd
 
   // Splitting at kickoff only means something when the history actually
   // straddles it — for a match that hasn't started, "In-play" would be empty
@@ -200,21 +208,27 @@ export function OddsMovementChart({
 
   const rangeCounts: Record<TimeRange, number> = {
     ALL: chartData.length,
-    PRE: canSplitAtKickoff ? filterByRange(chartData, "PRE", kickoffMs).length : 0,
-    LIVE: canSplitAtKickoff ? filterByRange(chartData, "LIVE", kickoffMs).length : 0,
+    PRE: canSplitAtKickoff
+      ? filterByRange(chartData, "PRE", kickoffMs).length
+      : 0,
+    LIVE: canSplitAtKickoff
+      ? filterByRange(chartData, "LIVE", kickoffMs).length
+      : 0,
   }
 
   // A single point draws nothing, so treat such a range as unavailable rather
   // than letting the user select their way into a blank chart.
   const isRangeAvailable = (r: TimeRange) => rangeCounts[r] >= 2
-  const activeRange = canSplitAtKickoff && isRangeAvailable(range) ? range : "ALL"
+  const activeRange =
+    canSplitAtKickoff && isRangeAvailable(range) ? range : "ALL"
 
   const visibleData = canSplitAtKickoff
     ? filterByRange(chartData, activeRange, kickoffMs)
     : chartData
 
   const domainStart = visibleData[0]?.timestamp ?? fullDomainStart
-  const domainEnd = visibleData[visibleData.length - 1]?.timestamp ?? fullDomainEnd
+  const domainEnd =
+    visibleData[visibleData.length - 1]?.timestamp ?? fullDomainEnd
 
   // Pre-match odds accumulate over days, not minutes — when the data spans
   // more than one day, a bare HH:MM axis reads as random repeating times.
@@ -222,24 +236,36 @@ export function OddsMovementChart({
   const formatTick = (val: number) =>
     spansMultipleDays
       ? new Date(val).toLocaleDateString([], { month: "short", day: "numeric" })
-      : new Date(val).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : new Date(val).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
   const formatTooltipLabel = (val: number) =>
     spansMultipleDays
-      ? new Date(val).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-      : new Date(val).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      ? new Date(val).toLocaleString([], {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : new Date(val).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
 
   const latest = oddsData?.latest
 
   return (
-    <div className="border border-border bg-card rounded-sm p-6 lg:p-8 relative">
+    <div className="relative rounded-sm border border-border bg-card p-6 lg:p-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-            <h3 className="font-heading text-xl uppercase tracking-widest text-foreground">
+            <h3 className="font-heading text-xl tracking-widest text-foreground uppercase">
               Match Result
             </h3>
-            <span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">
+            <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
               TxLINE Reference — Implied Probabilities
             </span>
           </div>
@@ -261,7 +287,7 @@ export function OddsMovementChart({
                         ? `${rangeCounts[r]} points`
                         : "Not enough history in this range"
                     }
-                    className={`rounded-sm border px-2 py-1 font-mono text-[10px] uppercase tracking-widest transition-colors ${
+                    className={`rounded-sm border px-2 py-1 font-mono text-[10px] tracking-widest uppercase transition-colors ${
                       active
                         ? "border-primary/50 bg-primary/10 text-primary"
                         : available
@@ -282,28 +308,42 @@ export function OddsMovementChart({
             <Button
               variant="outline"
               onClick={() => toggleSeries("home")}
-              className={`h-auto py-2 px-3 flex-col items-start gap-1 rounded-sm border transition-colors ${visibleSeries.home ? "border-primary/50 bg-primary/5" : "border-border bg-transparent opacity-50 hover:opacity-100"}`}
+              className={`h-auto flex-col items-start gap-1 rounded-sm border px-3 py-2 transition-colors ${visibleSeries.home ? "border-primary/50 bg-primary/5" : "border-border bg-transparent opacity-50 hover:opacity-100"}`}
             >
-              <TeamBadge name={participant1} className="font-mono text-[10px] uppercase text-muted-foreground gap-1" />
-              <span className="font-heading text-lg text-foreground leading-none">{latest.home.toFixed(2)}%</span>
+              <TeamBadge
+                name={participant1}
+                className="gap-1 font-mono text-[10px] text-muted-foreground uppercase"
+              />
+              <span className="font-heading text-lg leading-none text-foreground">
+                {latest.home.toFixed(2)}%
+              </span>
             </Button>
 
             <Button
               variant="outline"
               onClick={() => toggleSeries("draw")}
-              className={`h-auto py-2 px-3 flex-col items-start gap-1 rounded-sm border transition-colors ${visibleSeries.draw ? "border-muted-foreground/50 bg-muted/20" : "border-border bg-transparent opacity-50 hover:opacity-100"}`}
+              className={`h-auto flex-col items-start gap-1 rounded-sm border px-3 py-2 transition-colors ${visibleSeries.draw ? "border-muted-foreground/50 bg-muted/20" : "border-border bg-transparent opacity-50 hover:opacity-100"}`}
             >
-              <span className="font-mono text-[10px] uppercase text-muted-foreground">DRAW</span>
-              <span className="font-heading text-lg text-foreground leading-none">{latest.draw.toFixed(2)}%</span>
+              <span className="font-mono text-[10px] text-muted-foreground uppercase">
+                DRAW
+              </span>
+              <span className="font-heading text-lg leading-none text-foreground">
+                {latest.draw.toFixed(2)}%
+              </span>
             </Button>
 
             <Button
               variant="outline"
               onClick={() => toggleSeries("away")}
-              className={`h-auto py-2 px-3 flex-col items-start gap-1 rounded-sm border transition-colors ${visibleSeries.away ? "border-chart-3/50 bg-chart-3/5" : "border-border bg-transparent opacity-50 hover:opacity-100"}`}
+              className={`h-auto flex-col items-start gap-1 rounded-sm border px-3 py-2 transition-colors ${visibleSeries.away ? "border-chart-3/50 bg-chart-3/5" : "border-border bg-transparent opacity-50 hover:opacity-100"}`}
             >
-              <TeamBadge name={participant2} className="font-mono text-[10px] uppercase text-muted-foreground gap-1" />
-              <span className="font-heading text-lg text-foreground leading-none">{latest.away.toFixed(2)}%</span>
+              <TeamBadge
+                name={participant2}
+                className="gap-1 font-mono text-[10px] text-muted-foreground uppercase"
+              />
+              <span className="font-heading text-lg leading-none text-foreground">
+                {latest.away.toFixed(2)}%
+              </span>
             </Button>
           </div>
         )}
@@ -311,17 +351,28 @@ export function OddsMovementChart({
 
       {error && (
         <div className="mt-3 text-right">
-          <span className="font-mono text-[10px] text-destructive uppercase tracking-widest">
+          <span className="font-mono text-[10px] tracking-widest text-destructive uppercase">
             [ {error} ]
           </span>
         </div>
       )}
 
       {/* Graph */}
-      <div className="w-full mt-6">
-        <ChartContainer config={chartConfig} className="h-100 w-full aspect-auto">
-          <LineChart accessibilityLayer data={visibleData} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+      <div className="mt-6 w-full">
+        <ChartContainer
+          config={chartConfig}
+          className="aspect-auto h-100 w-full"
+        >
+          <LineChart
+            accessibilityLayer
+            data={visibleData}
+            margin={{ top: 20, right: 20, bottom: 20, left: 0 }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="var(--border)"
+              vertical={false}
+            />
 
             <XAxis
               dataKey="timestamp"
@@ -367,7 +418,11 @@ export function OddsMovementChart({
                   )}
                 />
               }
-              cursor={{ stroke: "var(--muted-foreground)", strokeWidth: 1, strokeDasharray: "3 3" }}
+              cursor={{
+                stroke: "var(--muted-foreground)",
+                strokeWidth: 1,
+                strokeDasharray: "3 3",
+              }}
             />
 
             <ChartLegend content={<ChartLegendContent />} />
@@ -377,7 +432,13 @@ export function OddsMovementChart({
                 x={kickoffMs}
                 stroke="var(--primary)"
                 strokeDasharray="3 3"
-                label={{ position: "top", value: "KICKOFF", fill: "var(--primary)", fontSize: 10, fontFamily: "monospace" }}
+                label={{
+                  position: "top",
+                  value: "KICKOFF",
+                  fill: "var(--primary)",
+                  fontSize: 10,
+                  fontFamily: "monospace",
+                }}
               />
             )}
 
@@ -419,12 +480,12 @@ export function OddsMovementChart({
       </div>
 
       {/* Footer Metadata */}
-      <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border pt-4 mt-2 gap-4">
+      <div className="mt-2 flex flex-col items-center justify-between gap-4 border-t border-border pt-4 sm:flex-row">
         {/* Always the true latest, not the end of the selected range. */}
-        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest text-center sm:text-left">
+        <span className="text-center font-mono text-[10px] tracking-widest text-muted-foreground uppercase sm:text-left">
           LATEST UPDATE / {formatTooltipLabel(fullDomainEnd)}
         </span>
-        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest text-center sm:text-right">
+        <span className="text-center font-mono text-[10px] tracking-widest text-muted-foreground uppercase sm:text-right">
           HISTORY POINTS / {visibleData.length}
           {visibleData.length !== chartData.length && ` of ${chartData.length}`}
           <br className="sm:hidden" />

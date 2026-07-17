@@ -1,5 +1,5 @@
 import { AnchorProvider, BN, Wallet } from "@coral-xyz/anchor";
-import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { ComputeBudgetProgram, Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import {
   getGoalanaProgram,
   getConfigPda,
@@ -33,6 +33,14 @@ if (process.env.WALLET_PRIVATE_KEY) {
   logger.warn("goalana.service", "WALLET_PRIVATE_KEY is not set. Creating a dummy wallet. Transactions will fail.");
   keypair = Keypair.generate();
 }
+
+/**
+ * The service (keeper) signer. Exported so callers that must build and sign a
+ * raw transaction themselves — rather than go through an Anchor method — can
+ * reuse the same identity (see proof-integrity.service, which submits
+ * hand-built `validate_stat` instructions to TxLINE's oracle).
+ */
+export const serviceKeypair = keypair;
 
 const wallet = new Wallet(keypair);
 const provider = new AnchorProvider(connection, wallet, {
@@ -231,6 +239,34 @@ export async function claimWinningsOnChain(
   return { txSignature };
 }
 
+/**
+ * Compute budget for `settle_market`, which must cover BOTH Goalana's own
+ * checks and the whole `validate_stat` CPI — a CPI shares the transaction's
+ * budget rather than getting its own.
+ *
+ * The default for a single-instruction transaction is 200,000 CU, which is NOT
+ * enough. The oracle's cost scales with Merkle proof depth; measured against the
+ * real devnet program (apps/api/src/scripts/record-proof-integrity.ts):
+ *
+ *   fixture 18237038  goals → 131,986   corners → 200,460   cards → 200,458
+ *   fixture 18241006  goals → 198,959   corners → 198,965   cards → 198,963
+ *
+ * Two of those already EXCEED the 200,000 default outright, and the rest clear
+ * it by ~1,000 CU — before `settle_market` has done any of its own work. A CPI
+ * shares the caller's compute budget rather than getting its own, so without an
+ * explicit limit a deeper-proof fixture exhausts the budget mid-CPI and
+ * settlement fails on chain.
+ *
+ * The localnet suite cannot surface this: `txoracle_mock` never hashes anything,
+ * so its CPI is effectively free.
+ *
+ * 400k is ~2x the worst cost observed, leaving headroom for deeper proofs while
+ * staying well under the 1.4M per-transaction ceiling. Raising the limit does
+ * not raise the fee on its own — base fees are per-signature, and no priority
+ * fee is attached here.
+ */
+const SETTLE_COMPUTE_UNIT_LIMIT = 400_000;
+
 export interface SettleMarketParams {
   marketPda: PublicKey;
   oracleTsMs: BN;
@@ -282,6 +318,9 @@ export async function settleMarketOnChain(
       txoracleProgram: TXORACLE_PROGRAM_ID,
       dailyScoresMerkleRoots,
     })
+    .preInstructions([
+      ComputeBudgetProgram.setComputeUnitLimit({ units: SETTLE_COMPUTE_UNIT_LIMIT }),
+    ])
     .rpc();
 
   const updated = await program.account.market.fetch(params.marketPda);

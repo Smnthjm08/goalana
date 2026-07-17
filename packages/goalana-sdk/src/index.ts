@@ -9,4 +9,6 @@
 export * from "./constants";
 export * from "./pdas";
 export * from "./client";
-export * from "./predicate";export * from "./txline-stats";
+export * from "./predicate";
+export * from "./txline-stats";
+export * from "./txoracle";

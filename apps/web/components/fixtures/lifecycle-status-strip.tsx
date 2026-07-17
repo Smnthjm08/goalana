@@ -25,7 +25,10 @@ const STEPS: Array<{ stage: Stage; label: string }> = [
   { stage: "SETTLED", label: "Settled" },
 ]
 
-function deriveStage(liveScore: LiveScore | null | undefined, markets: MarketLike[]): Stage {
+function deriveStage(
+  liveScore: LiveScore | null | undefined,
+  markets: MarketLike[]
+): Stage {
   if (markets.length > 0 && markets.every((m) => m.status === "CANCELLED")) {
     return "CANCELLED"
   }
@@ -35,7 +38,10 @@ function deriveStage(liveScore: LiveScore | null | undefined, markets: MarketLik
   if (liveScore?.isFinal) {
     return "FINISHED"
   }
-  const hasStarted = liveScore != null && liveScore.statusId !== null && IN_PROGRESS_STATUS_IDS.has(liveScore.statusId)
+  const hasStarted =
+    liveScore != null &&
+    liveScore.statusId !== null &&
+    IN_PROGRESS_STATUS_IDS.has(liveScore.statusId)
   return hasStarted ? "LIVE" : "SCHEDULED"
 }
 
@@ -46,13 +52,16 @@ function deriveStage(liveScore: LiveScore | null | undefined, markets: MarketLik
  * overall," derived off Fixture.liveScore + the DB market-status mirror
  * (a fine source for a summary view; per-bet decisions still read on-chain).
  */
-export function LifecycleStatusStrip({ liveScore, markets }: LifecycleStatusStripProps) {
+export function LifecycleStatusStrip({
+  liveScore,
+  markets,
+}: LifecycleStatusStripProps) {
   const stage = deriveStage(liveScore, markets)
 
   if (stage === "CANCELLED") {
     return (
-      <div className="flex items-center justify-center gap-2 border border-border bg-card rounded-sm py-2.5">
-        <span className="font-mono text-[10px] text-destructive uppercase tracking-widest">
+      <div className="flex items-center justify-center gap-2 rounded-sm border border-border bg-card py-2.5">
+        <span className="font-mono text-[10px] tracking-widest text-destructive uppercase">
           [ Markets Cancelled — Refunds Available ]
         </span>
       </div>
@@ -62,26 +71,33 @@ export function LifecycleStatusStrip({ liveScore, markets }: LifecycleStatusStri
   const currentIndex = STEPS.findIndex((s) => s.stage === stage)
 
   return (
-    <div className="flex items-center w-full border border-border bg-card rounded-sm px-4 py-3">
+    <div className="flex w-full items-center rounded-sm border border-border bg-card px-4 py-3">
       {STEPS.map((step, index) => {
         const isDone = index < currentIndex
         const isCurrent = index === currentIndex
         const isFuture = index > currentIndex
 
         return (
-          <div key={step.stage} className="flex items-center flex-1 last:flex-none">
-            <div className="flex items-center gap-2 shrink-0">
+          <div
+            key={step.stage}
+            className="flex flex-1 items-center last:flex-none"
+          >
+            <div className="flex shrink-0 items-center gap-2">
               <span
                 className={`relative flex h-2 w-2 shrink-0 rounded-full ${
-                  isCurrent ? "bg-primary" : isDone ? "bg-foreground" : "bg-border"
+                  isCurrent
+                    ? "bg-primary"
+                    : isDone
+                      ? "bg-foreground"
+                      : "bg-border"
                 }`}
               >
                 {isCurrent && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
                 )}
               </span>
               <span
-                className={`font-mono text-[10px] uppercase tracking-widest ${
+                className={`font-mono text-[10px] tracking-widest uppercase ${
                   isCurrent
                     ? "text-primary"
                     : isDone
@@ -95,7 +111,9 @@ export function LifecycleStatusStrip({ liveScore, markets }: LifecycleStatusStri
               </span>
             </div>
             {index < STEPS.length - 1 && (
-              <div className={`h-px flex-1 mx-3 ${isDone ? "bg-foreground" : "bg-border"}`} />
+              <div
+                className={`mx-3 h-px flex-1 ${isDone ? "bg-foreground" : "bg-border"}`}
+              />
             )}
           </div>
         )

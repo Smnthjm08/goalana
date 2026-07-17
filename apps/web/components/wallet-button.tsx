@@ -27,7 +27,10 @@ export function CustomWalletButton() {
   // Close dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setDropdownOpen(false)
       }
     }
@@ -37,9 +40,9 @@ export function CustomWalletButton() {
 
   if (!publicKey) {
     return (
-      <Button 
+      <Button
         onClick={() => setVisible(true)}
-        className="h-9 rounded-sm border border-primary bg-background px-4 font-heading text-xs font-bold uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_15px_rgba(192,248,48,0.4)]"
+        className="h-9 rounded-sm border border-primary bg-background px-4 font-heading text-xs font-bold tracking-widest text-primary uppercase transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_15px_rgba(192,248,48,0.4)]"
       >
         Connect Terminal
       </Button>
@@ -59,14 +62,18 @@ export function CustomWalletButton() {
       >
         <div
           className="h-4 w-4 shrink-0 rounded-full border border-black/10"
-          style={{ background: `linear-gradient(135deg, hsl(${hue} 85% 55%), hsl(${(hue + 60) % 360} 85% 45%))` }}
+          style={{
+            background: `linear-gradient(135deg, hsl(${hue} 85% 55%), hsl(${(hue + 60) % 360} 85% 45%))`,
+          }}
         />
         {shortAddress}
-        {registering && <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
+        {registering && (
+          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+        )}
       </Button>
 
       {dropdownOpen && (
-        <div className="absolute right-0 mt-2 w-48 rounded-sm border border-border bg-card p-1 shadow-lg z-50">
+        <div className="absolute right-0 z-50 mt-2 w-48 rounded-sm border border-border bg-card p-1 shadow-lg">
           <button
             onClick={() => {
               navigator.clipboard.writeText(base58)

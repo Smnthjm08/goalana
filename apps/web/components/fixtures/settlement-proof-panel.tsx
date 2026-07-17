@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react"
 import axiosInstance from "@/lib/axios-instance"
-import { SettlementProofReceipt, type SettlementProof } from "./settlement-proof-receipt"
+import {
+  SettlementProofReceipt,
+  type SettlementProof,
+} from "./settlement-proof-receipt"
 
 /**
  * Fetches and renders the live TxLINE Merkle proof for a finished fixture
@@ -12,7 +15,13 @@ import { SettlementProofReceipt, type SettlementProof } from "./settlement-proof
  * DID settle on-chain, its own persisted receipt (with a real settle tx) renders
  * inside the market card; this panel is the fixture-wide, always-available view.
  */
-export function SettlementProofPanel({ fixtureId, isFinal }: { fixtureId: string | number; isFinal: boolean }) {
+export function SettlementProofPanel({
+  fixtureId,
+  isFinal,
+}: {
+  fixtureId: string | number
+  isFinal: boolean
+}) {
   const [proof, setProof] = useState<SettlementProof | null>(null)
   const [state, setState] = useState<"loading" | "ready" | "empty">("loading")
 
@@ -43,8 +52,8 @@ export function SettlementProofPanel({ fixtureId, isFinal }: { fixtureId: string
 
   if (!isFinal) {
     return (
-      <div className="border border-border p-8 text-center bg-card rounded-sm">
-        <span className="font-mono text-sm text-muted-foreground uppercase tracking-wider">
+      <div className="rounded-sm border border-border bg-card p-8 text-center">
+        <span className="font-mono text-sm tracking-wider text-muted-foreground uppercase">
           Settlement proof becomes available once the match is final.
         </span>
       </div>
@@ -53,8 +62,8 @@ export function SettlementProofPanel({ fixtureId, isFinal }: { fixtureId: string
 
   if (state === "loading") {
     return (
-      <div className="border border-border p-8 text-center bg-card rounded-sm">
-        <span className="font-mono text-sm text-muted-foreground uppercase tracking-wider animate-pulse">
+      <div className="rounded-sm border border-border bg-card p-8 text-center">
+        <span className="animate-pulse font-mono text-sm tracking-wider text-muted-foreground uppercase">
           [ Fetching TxLINE Merkle proof… ]
         </span>
       </div>
@@ -63,8 +72,8 @@ export function SettlementProofPanel({ fixtureId, isFinal }: { fixtureId: string
 
   if (state === "empty" || !proof) {
     return (
-      <div className="border border-border p-8 text-center bg-card rounded-sm">
-        <span className="font-mono text-sm text-muted-foreground uppercase tracking-wider">
+      <div className="rounded-sm border border-border bg-card p-8 text-center">
+        <span className="font-mono text-sm tracking-wider text-muted-foreground uppercase">
           No TxLINE proof available for this fixture yet.
         </span>
       </div>
@@ -73,10 +82,12 @@ export function SettlementProofPanel({ fixtureId, isFinal }: { fixtureId: string
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="font-mono text-[10px] text-muted-foreground leading-snug">
-        Total goals for this match, proven from TxLINE&apos;s signed feed. This is the same three-stage Merkle proof
-        our on-chain <span className="text-foreground">settle_market</span> instruction verifies by CPI into TxLINE&apos;s
-        oracle program — the daily batch root is anchored on Solana Devnet.
+      <p className="font-mono text-[10px] leading-snug text-muted-foreground">
+        Total goals for this match, proven from TxLINE&apos;s signed feed. This
+        is the same three-stage Merkle proof our on-chain{" "}
+        <span className="text-foreground">settle_market</span> instruction
+        verifies by CPI into TxLINE&apos;s oracle program — the daily batch root
+        is anchored on Solana Devnet.
       </p>
       <SettlementProofReceipt proof={proof} mode="preview" />
     </div>

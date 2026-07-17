@@ -25,7 +25,9 @@ export type MatchPhase = "upcoming" | "live" | "final"
  * non-standard StatusId (100 via "game_finalised" — see scores.processor.ts),
  * and a finished match must never render as LIVE.
  */
-export function getMatchPhase(liveScore: LiveScoreLike | null | undefined): MatchPhase {
+export function getMatchPhase(
+  liveScore: LiveScoreLike | null | undefined
+): MatchPhase {
   if (!liveScore || liveScore.statusId === null) return "upcoming"
   if (liveScore.isFinal) return "final"
   return IN_PROGRESS_STATUS_IDS.has(liveScore.statusId) ? "live" : "upcoming"

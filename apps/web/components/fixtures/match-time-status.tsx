@@ -2,7 +2,12 @@
 
 import { useNow } from "@/hooks/use-now"
 import { getMatchPhase, type LiveScoreLike } from "@/lib/match-status"
-import { formatDate, formatDuration, formatTimeWithZone, toMs } from "@/lib/time"
+import {
+  formatDate,
+  formatDuration,
+  formatTimeWithZone,
+  toMs,
+} from "@/lib/time"
 
 // Every time surface answers one question: "what happens next?"
 //   before kickoff → when it starts, and how long that is from now
@@ -45,13 +50,13 @@ export function MatchTimeStatus({
   if (phase === "live") {
     return (
       <div className={`flex flex-col gap-0.5 ${align} ${className}`}>
-        <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-primary">
+        <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-widest text-primary uppercase">
           <LiveDot />
           Live
         </span>
         {liveScore?.minuteLabel && (
           <span
-            className={`font-heading tabular-nums text-foreground ${compact ? "text-xs" : "text-sm"}`}
+            className={`font-heading text-foreground tabular-nums ${compact ? "text-xs" : "text-sm"}`}
           >
             {liveScore.minuteLabel}
           </span>
@@ -63,7 +68,7 @@ export function MatchTimeStatus({
   if (phase === "final") {
     return (
       <div className={`flex flex-col gap-0.5 ${align} ${className}`}>
-        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
           Final
         </span>
         {kickoffMs !== null && (
@@ -84,23 +89,25 @@ export function MatchTimeStatus({
 
   return (
     <div className={`flex flex-col gap-0.5 ${align} ${className}`}>
-      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+      <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
         Kickoff
       </span>
       <span
-        className={`font-mono tabular-nums text-foreground ${compact ? "text-[10px]" : "text-xs"}`}
+        className={`font-mono text-foreground tabular-nums ${compact ? "text-[10px]" : "text-xs"}`}
       >
         {formatDate(kickoffMs)}
       </span>
       <span
-        className={`font-mono tabular-nums text-muted-foreground ${compact ? "text-[10px]" : "text-xs"}`}
+        className={`font-mono text-muted-foreground tabular-nums ${compact ? "text-[10px]" : "text-xs"}`}
       >
         {formatTimeWithZone(kickoffMs)}
       </span>
 
       {untilKickoff !== null && (
-        <span className="mt-1 font-mono text-[10px] uppercase tracking-widest text-primary">
-          {startingSoon ? "Starting soon" : `Starts in ${formatDuration(untilKickoff)}`}
+        <span className="mt-1 font-mono text-[10px] tracking-widest text-primary uppercase">
+          {startingSoon
+            ? "Starting soon"
+            : `Starts in ${formatDuration(untilKickoff)}`}
         </span>
       )}
     </div>
@@ -126,7 +133,7 @@ export function MarketLockStatus({ locksAt, status }: MarketLockStatusProps) {
 
   if (status === "Locked") {
     return (
-      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+      <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
         Locked
       </span>
     )
@@ -145,7 +152,7 @@ export function MarketLockStatus({ locksAt, status }: MarketLockStatusProps) {
   // say so rather than counting into negative time.
   if (untilLock <= 0) {
     return (
-      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+      <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
         Locking…
       </span>
     )
@@ -156,7 +163,7 @@ export function MarketLockStatus({ locksAt, status }: MarketLockStatusProps) {
 
   return (
     <span
-      className={`font-mono text-[10px] uppercase tracking-widest tabular-nums ${
+      className={`font-mono text-[10px] tracking-widest uppercase tabular-nums ${
         urgent ? "text-primary" : "text-muted-foreground"
       }`}
     >

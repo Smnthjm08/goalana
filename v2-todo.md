@@ -81,20 +81,20 @@ Ordered by **(impact ÷ effort)**, then risk. Effort in half-days. All fit the 3
 | ✅ | **1b** | **🚨 Stat-key correctness fix + conclusive validation** (SDK `HOME_GOALS/AWAY_GOALS` 7/8→1/2; triangulated across every completed fixture) — emerged while building #1; gates the France v England recreate | 🔥🔥🔥 | 0.5d | Med | Without it, every live settlement resolves on **corners**, not goals — fatal to the whole trust story. |
 | ✅ | **5** | **Lifecycle theater on the market card** (tx link at every transition: create → bet → lock → settle → claim; "tampered proof rejected" trust callout) | 🔥🔥 | 0.5d | Low | Makes the trustless claim tangible per-market. Reuses Explorer helpers. |
 | ☐ | **1c** | **Execute France v England cancel → recreate** (dry-run script ready; needs user go — touches a real external bet) | 🔥🔥🔥 | 0.25d | Med | Makes the genuine on-chain settlement (2026-07-18) resolve on goals, not corners. |
-| ☐ | **4** | **My Positions page** (`/positions`, wallet-scoped: each bet's market, side, stake, status, claim action, tx links) | 🔥🔥 | 1d | Med | Track "Prediction Market Viewer." Lets a judge replay their own bet with proof. |
-| ☐ | **6** | **`/health` + status endpoint surfaced** (TxLINE stream connected, last event ts, tracked fixtures) + a tiny "feed live" indicator in the header | 🔥 | 0.5d | Low | Proves the pipeline is live even when matches aren't. GoalChain-style trust. |
-| ☐ | **7** | **Directional odds arrows** (▲▼ + % since open) on market cards | 🔥 | 0.5d | Low | Cheap polish; we already store odds history. |
+| ✅ | **4** | **My Positions page** (`/positions`, wallet-scoped: each bet's market, side, stake, status, claim action, tx links) | 🔥🔥 | 1d | Med | Track "Prediction Market Viewer." Lets a judge replay their own bet with proof. |
+| ✅ | **6** | **`/health` + status endpoint surfaced** (TxLINE stream connected, last event ts, tracked fixtures) + a tiny "feed live" indicator in the header | 🔥 | 0.5d | Low | Proves the pipeline is live even when matches aren't. GoalChain-style trust. |
+| ✅ | **7** | **Directional odds arrows** (▲▼ + % since open) on market cards | 🔥 | 0.5d | Low | Cheap polish; we already store odds history. |
 | ☐ | **8** | **RISKS.md + tampered-proof evidence writeup + compute-cost stat** | 🔥 | 0.5d | None | Honest-scope trust points; Quovra/FWM parity. |
 | ☐ | 9 | **User-requested markets (house-verified queue)** — users submit a market request; house reviews + signs `create_market`. Keeps house-only on-chain model. | 🔥 | 1.5d | Med | User asked for it. Fits the model (house still signs). Lower priority: backend + moderation surface, not settlement-differentiating. |
 | ☐ | 10 | **More markets** (BTTS / first-scorer / extra O/U lines) — only if TxLINE prices them and matchers + settlement path already generalize | 🔥 | 1d | Med | Visible depth, but risks the settlement path; only if 1–8 done. |
 | | | _— new bets (2026-07-17 idea pass; full reasoning in §5) —_ | | | | |
-| ☐ | **11** | **Parametric prop markets (corners / cards) via the SAME proof engine** — "Total corners > 9.5", "Total cards > 3.5" settle on keys 7/8 & 3/4 (both just validated) with the identical add+greaterThan predicate | 🔥🔥🔥 | 0.5d | **Low** | Track *explicitly* suggests prop bets ("Team A + Team B corners > 10"). Proves our settlement engine generalizes to ANY TxLINE stat, not just goals. Low risk — keys verified, same code path. **Top new pick.** |
-| ☐ | **12** | **Live tampered-proof rejection demo** — one-click "settle with a mutated proof → `validate_stat` CPI reverts" on Devnet, failed-tx + logs shown in UI | 🔥🔥🔥 | 0.75d | Med | The single strongest trust artifact in the field (Final Whistle has it). Directly hits the track's **custom-check-gate bonus**. We already prove it 26/26 on localnet — surface it as a real failed Devnet tx. **Top new pick.** |
+| ⚠️ | **11** | ~~Parametric prop markets (corners / cards)~~ — **BLOCKED as specified; intent delivered via #12's evidence panel** | 🔥🔥🔥 | — | — | TxLINE prices **no corners/cards odds** (only 1X2 / OVERUNDER / ASIANHANDICAP, all goals-based), and market creation is odds-gated — so tradeable prop markets can't exist. The *claim* ("engine settles any stat") is now proven on-chain instead: real Devnet `validate_stat` txs accepting genuine **corners** and **cards** proofs. See progress log. |
+| ✅ | **12** | **Live tampered-proof rejection demo** — real Devnet `validate_stat` txs: genuine proof accepted, forged value / forged Merkle path **rejected** (`InvalidStatProof` 6023), logs + failed-tx links in a **Proof Integrity** tab | 🔥🔥🔥 | 0.75d | Med | The single strongest trust artifact in the field. Hits the track's **custom-check-gate bonus**. ⚠️ The premise that "we already prove it 26/26 on localnet" was **false** — see progress log. |
 | ☐ | **13** | **AI-Agent API** (discover markets, read positions, build unsigned bet/claim txs, `llm.txt`/OpenAPI) | 🔥🔥 | 1d | Low-Med | The track **explicitly names AI agents** as eligible builders — almost nobody will do this. "Agent-native prediction market" is a distinctive second wedge. Mostly additive REST + docs. |
 | ☐ | **14** | **Protocol Inspector page** (`/inspector`) — live on-chain state: config PDA, every Market (status/predicate/pools/settle_after), vault balances, the anchored `daily_scores_roots` freshness | 🔥🔥 | 1d | Low | A mini block-explorer scoped to Goalana = "verify the whole protocol yourself." Strong verifier trust artifact, pure on-chain reads. |
 | ☐ | **15** | **Client-side proof re-verification** — recompute the Merkle root in the browser from leaf+siblings, show "✓ matches the on-chain anchored root" | 🔥🔥 | 1d | **High** | The ultimate "don't trust us" moment + track's Experimental-Verification bonus. Gated on exactly matching TxLINE's hash algorithm — **spike it first**, ship only if the root reproduces. Stretch. |
-| ☐ | **16** | **Countdown / protocol-time UI** — live countdown to lock (kickoff) and to `settle_after` on each market, reinforcing the time-gated automatic lifecycle | 🔥 | 0.5d | Low | Cheap polish; we already store `locksAt`/`settleAfter`. Makes "automatic lifecycle" tangible. |
-| ⏸ | **17** | **Extra-Time / Penalty markets** — DEFER | 🔥 | 1d | High | Thematically perfect for knockouts, BUT needs a *non-full-match period* stat proof, and real proofs return `period=100` (not the doc's 0–5) — period semantics are **unverified** and TxLINE may not price ET/pen odds. Verify period handling in `settle_market` first; skip otherwise. |
+| ✅ | **16** | **Countdown / protocol-time UI** — live countdown to lock (kickoff) and to `settle_after` on each market, reinforcing the time-gated automatic lifecycle | 🔥 | 0.5d | Low | Cheap polish; we already store `locksAt`/`settleAfter`. Makes "automatic lifecycle" tangible. |
+| ⏸ | **17** | **Extra-Time / Penalty markets** — DEFER (user-confirmed 2026-07-17) | 🔥 | 1d | High | Needs a _non-full-match period_ stat proof; real proofs return `period=100` (not the doc's 0–5), so period semantics remain **unverified** against `settle_market`. ⚠️ Correction: the "TxLINE may not price ET/pen odds" half of this reasoning is **wrong** — the feed does carry `period=et` and `period=penalties` odds (in-play only; creation uses pre-match rows). The `period` gate alone still justifies deferring. |
 
 **Explicitly NOT doing** (per constraints + judge lens): LMSR/AMM, micro/living-graph markets, permissionless on-chain creation, leaderboards, social, auth systems, push/i18n/faucet/match-watcher, any protocol redesign.
 
@@ -131,6 +131,17 @@ Progress is tracked inline below as each item lands.
   - **Schema:** migration `20260716201322_add_lifecycle_transitions` added `Market.lockTx / lockedAt / settledAt` (create tx/time + settle tx already existed). `lock.service.ts` now persists lockTx+lockedAt; `settlement.service.ts` persists settledAt. All flow through `GET /api/fixtures/:id` (verified live).
   - **Frontend:** `market-lifecycle-timeline.tsx` — a collapsible **Create → Bet → Lock → Settle → Claim** vertical timeline in each market card. Protocol stages (create/lock/settle) come from the market record; the wallet's Bet/Claim come from the session's signed txs. Each stage shows status (done/pending/n·a), timestamp, and an Explorer tx link. Replaces the old flat "This session" list.
   - Typecheck 6/6 throughout; both running dev services healthy; pages 200.
+
+- **2026-07-17 — #12 Proof integrity DONE (+ item 11's intent delivered a different way). Typecheck 6/6.**
+  - _User decision:_ #17 skipped (deferred as written); #11 redirected after its premise failed. See below.
+  - **🚨 The premise of #12 was false.** This roadmap claimed "we already prove it 26/26 on localnet (`StaleOracleSnapshot`, wrong stat key, wrong root)". We do not. `txoracle_mock` (`programs/txoracle_mock/src/lib.rs:76`) **ignores the proof entirely** and returns `threshold >= 100`. All three cited tests are Goalana's own _binding_ checks in `settle_market.rs` (stat-key match, stale snapshot, PDA derivation) — none is a Merkle verification. Real proof verification exists **only** in TxLINE's deployed oracle, so Devnet was the only place this property could ever be demonstrated. The README asserted the same false claim ("including the CPI Merkle path and tampered-proof rejection") — **corrected**.
+  - **What shipped:** `packages/goalana-sdk/src/txoracle.ts` — `buildValidateStatIx()`, a client-side builder mirroring `txline_cpi.rs` byte-for-byte (Uint8Array/DataView, so it stays browser-safe). `validate_stat` takes one read-only account and returns its verdict via `set_return_data`, so it can be called **top-level** — the only way to isolate the cryptographic check, since `settle_market`'s own guards all fire before the CPI and the program deliberately cannot settle a fixture that finished before its market existed.
+  - `apps/api/src/services/proof-integrity.service.ts` + `scripts/record-proof-integrity.ts` submit **real Devnet txs** (`--execute`; dry-run by default) and persist to `Fixture.proofIntegrity Json?` (migration `20260717015645_add_proof_integrity`). Persisted, not live: TxLINE free-tier access ends **on the deadline**, and a recorded signature is stronger evidence than a simulation — same reasoning as `Market.settlementProof`.
+  - **Evidence (England 1–2 Argentina, fixture 18241006)** — all 5 behaved as expected: genuine goals → accepted `YES` (198,959 CU); genuine **corners** → accepted `NO`; genuine **cards** → accepted `YES`; goals with **value forged 1→6** → **reverted `InvalidStatProof` (6023)**; goals with **one sibling-hash byte flipped** → **reverted (6023)**. Signatures in the README's new "Proof integrity" table.
+  - **Frontend:** `components/fixtures/proof-integrity-panel.tsx` + a conditional **Proof Integrity** tab. Leads with "a forged proof cannot settle a market", then "the same engine settles any TxLINE statistic". Verified by server-rendering the component against the real persisted artifact (12/12 assertions).
+  - **Item 11 redirect (user-approved):** prop markets are **impossible as specified** — market creation is odds-gated (`market.service.ts:277`) and TxLINE prices **only** `1X2_PARTICIPANT_RESULT`, `OVERUNDER_PARTICIPANT_GOALS`, `ASIANHANDICAP_PARTICIPANT_GOALS` — all goals. No corners/cards odds exist in the feed (159 stored odds rows, 4 fixtures, ingestion filters nothing), and `initialYesPct/NoPct` are non-nullable. The roadmap's "0.5d, Low risk, keys verified, same code path" costed a TxLINE capability that doesn't exist. The underlying _claim_ is now proven **on-chain** instead, with genuine corners/cards proofs accepted by the real oracle — arguably stronger than an unpriced market would have been.
+  - **⚠️ Also fixed: `settle_market` would have run out of compute.** The oracle's cost scales with proof depth. Measured across both finished fixtures: goals **131,986** / **198,959**, corners **200,460** / **198,965**, cards **200,458** / **198,963** — against a **200,000** default for a single-instruction tx. **Two of those already exceed the default outright**, and the rest clear it by ~1,000 CU, before `settle_market` does any of its own work. A CPI shares the caller's budget, so `settle_market` — which must also do its own PDA derivation, account loads and write — **would have exceeded the limit and failed** on any deeper-proof fixture. `settleMarketOnChain` never set a budget. Added `SETTLE_COMPUTE_UNIT_LIMIT = 400_000` via `preInstructions`. The localnet suite cannot catch this either: the mock CPI hashes nothing, so it's effectively free. **This would plausibly have killed the live France v England settlement** (⑧'s compute stat now comes free from the recorded txs).
+  - **Minor:** `TXLINE_STAT_KEYS` extended with the already-validated corners (7/8) and cards (3/4) keys; stat/period labels moved into the SDK (`TXLINE_STAT_LABELS` / `TXLINE_PERIOD_LABELS`) and shared with the receipt — which fixes a real display bug where every real proof rendered "**Period 100**" instead of "Full match" (the docs say 0–5; the live feed returns 100). `GET /api/fixtures` now omits `proofIntegrity` (full program logs; nothing on the list renders it).
 
 ## Stat-key validation & France v England recreate (2026-07-17)
 
@@ -213,9 +224,54 @@ _None of these require protocol redesign; 11/12/16/⑧ reuse the existing settle
 
 ## Remaining roadmap (next passes)
 
-- **#5 Per-market lifecycle tx links** — surface create/lock/settle tx at each transition on the card (creation tx already stored; lock tx not persisted yet).
-- **#4 My Positions page** (`/positions`, wallet-scoped bets + claim + tx links).
-- **#6 `/health` indicator** in the header (TxLINE stream connected, last event ts).
-- **#7 Directional odds arrows** on market cards.
+- ~~**#5 Per-market lifecycle tx links**~~ ✅ done.
+- ~~**#4 My Positions page**~~ ✅ done — see "Suggested During UX Review" below.
+- ~~**#6 `/health` indicator**~~ ✅ done.
+- ~~**#7 Directional odds arrows**~~ ✅ done.
 - **#8 RISKS.md** + tampered-proof-rejection writeup + `settle_market` compute-unit stat.
 - **#9 (opt) User-requested markets** — house-verified queue (user asked; fits house-only model).
+
+---
+
+## Suggested by Judge Review
+
+Ideas from the §1 competitive teardown — what would move a judge who has already
+watched 50 architecturally identical demos. Legend: ✅ Done · 🚧 In Progress · ⏳ Planned · ⏸ Deferred.
+
+| Status | Item | Origin | Notes |
+|:---:|---|---|---|
+| ⏳ | **Protocol Inspector** (`/inspector`) — live config PDA, every Market (status/predicate/pools/`settle_after`), vault balances, `daily_scores_roots` freshness | Own addition (§5 ④), item 14 | "Inspect the whole protocol yourself." Pure on-chain reads, low risk. Pairs with the receipt: receipt proves *one* settlement, inspector proves the *system*. |
+| ⏳ | **Tampered proof demo** — submit `settle_market` with a mutated proof on Devnet, show the `validate_stat` CPI revert + logs + failed-tx link | Final Whistle (§1 A), item 12 | Strongest trust artifact in the field. Already proven 26/26 on localnet — this surfaces it as a *real failed Devnet tx*. Hits the track's custom-check-gate bonus. |
+| ⏳ | **Parametric prop markets** — "Total corners > 9.5" / "Total cards > 3.5" on keys 7/8 & 3/4 via the identical `add + greaterThan` predicate | Own addition (§5 ⑤), item 11 | Unlocked free by the stat-key validation. Proves the engine is **stat-agnostic**, not "just a goals oracle". Track explicitly suggests prop bets. Top pick. |
+| ⏳ | **AI Agent API** — discover markets, read positions, build *unsigned* bet/claim txs, `llm.txt`/OpenAPI descriptor | Track brief (§5 ②), item 13 | Track explicitly names AI agents as eligible builders; almost nobody will do it. Unsigned-tx builders mean we never custody agent keys. |
+| ✅ | **Countdown UX** — live countdown to kickoff/lock, LIVE + minute, Final | §5 ③, item 16 | Done this pass — see Task 4 below. Makes the time-gated automatic lifecycle tangible. |
+| ⏳ | **Compute statistics** — actual `settle_market` CPI compute units + fee, printed on the receipt and README | Quovra (§1 C), §5 ⑧ | Quovra flexes "118k of 1.4M CU". ~15 min of work for a concrete efficiency number. Blocked on a real Devnet settle. |
+| ⏸ | **Client-side proof verification** — recompute the Merkle root in-browser from leaf + siblings, show "✓ matches the anchored on-chain root" | GoalLine (§1 D), item 15 | The ultimate "don't trust us" + Experimental-Verification bonus. **Deferred: gated on exactly matching TxLINE's hash algorithm** (leaf/node domain separation, byte order). Spike first; ship only if the root reproduces. |
+
+---
+
+## Suggested During UX Review
+
+The 2026-07-17 UX pass — polish that makes the settlement wedge navigable and believable.
+Scoped deliberately to UI: **no protocol, settlement, Anchor, or TxLINE-ingestion changes.**
+
+| Status | Item | Where | Notes |
+|:---:|---|---|---|
+| ✅ | **My Positions page** | `app/positions/page.tsx`, `hooks/use-wallet-positions.ts`, `GET /api/markets` | Wallet-scoped. Position PDAs via memcmp at offset 40, joined with on-chain Market state + DB metadata + Position-PDA signature history. Status: Open/Locked/Settled/Claimable/Claimed, payout, Bet/Settle/Claim Explorer links, polished empty + connect states. |
+| ✅ | **Health indicator** | `components/txline-health-indicator.tsx`, `services/stream-health.service.ts`, `GET /api/health` | 🟢 TxLINE Connected / 🔴 Reconnecting, tooltip with SSE odds+scores, heartbeat, last event, last odds, tracked fixtures, RPC. Workers touched for **reporting only**. |
+| ✅ | **Odds movement arrows** | `components/fixtures/odds-delta.tsx` | ▲ +4.2% / ▼ -2.8% / → unchanged since market creation (`currentYesPct` − `initialYesPct`). No backend change; 0.1pt deadband. |
+| ✅ | **Countdown timers** | `components/fixtures/match-time-status.tsx`, `hooks/use-now.ts` | Kickoff date + zoned time **and** "Starts in 2h 14m" → LIVE + minute → Final. Plus "Locks in 45m" / "Locked" per market. Always answers "what happens next?". |
+| ✅ | **Improved odds graph controls** | `components/fixtures/odds-movement-chart.tsx` | All / Pre-match / In-play, client-side filter of the existing dataset split at kickoff. Hidden when history doesn't straddle kickoff; ranges with <2 points disabled rather than rendering blank. |
+| ✅ | **Team flags** | `components/team-badge.tsx`, `lib/team-flags.ts` | Already shipped in a prior pass; reused on the positions page. |
+| ✅ | **Theme improvements** | throughout | New colours are theme-aware (`lime-600 dark:lime-400`, `rose-600 dark:rose-400`) — the 400-weights alone are too light on white. |
+| ✅ | **Better empty states** | home, fixture markets tab, fixture-not-found, positions | Consistent dashed-border treatment with a reason and a way out. Fixed a latent bug: the markets-tab empty state keyed off `fixture._count`, which `/api/fixtures/:id` never returns — so it could never render. |
+| ⏳ | **Lifecycle animations** | `market-lifecycle-timeline.tsx` | Animate Create → Bet → Lock → Settle → Claim transitions as they land. Deliberately not attempted this pass — pure decoration, and the timeline already reads clearly. |
+
+### Progress log — 2026-07-17 UX pass
+
+- **Tasks 1–6 done; typecheck 6/6 throughout; `/`, `/positions`, `/fixtures/:id` all 200.**
+- **Backend additions are read-only and additive:** `GET /api/health` (rich status; the trivial infra `/health` is untouched) and `GET /api/markets` (flat market index so `/positions` joins in one request instead of a fixture-by-fixture fan-out). `stream-health.service.ts` is observability only.
+- **Devnet probe findings now handled in code:** (1) a Position can hold **both** YES and NO — "your pick" renders `YES + NO` rather than assuming one side; (2) 2 of 4 live Devnet positions reference markets **absent from the DB** — metadata is optional everywhere, on-chain state is the source of truth for anything that decides money; (3) `Position.user` sits at **offset 40** (8 disc + 32 market), confirmed against real accounts.
+- **Dedupe:** `IN_PROGRESS_STATUS_IDS` was copy-pasted in three components (and Task 4 would have made four) → extracted to `lib/match-status.ts` with a shared `getMatchPhase()`. These surfaces must agree or one shows LIVE while another shows a kickoff time for the same fixture.
+- **SSR safety:** `useNow()` returns `null` until mount — seeding state with `Date.now()`/`toLocale*` during SSR would hydration-mismatch on clock skew and timezone.
+- **Not done (out of scope by instruction):** claiming from `/positions` — the fixture card already owns the one signing path, so the page links there rather than duplicating tx logic.

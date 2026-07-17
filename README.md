@@ -66,7 +66,35 @@ Real transactions on Solana Devnet. Append `?cluster=devnet` is already included
 | Vault PDA (escrow, created lazily on first bet) | [`3wHApPpeqVaQnYW8bsNFtJmqg4qgH2jSM43dkf3iwovf`](https://explorer.solana.com/address/3wHApPpeqVaQnYW8bsNFtJmqg4qgH2jSM43dkf3iwovf?cluster=devnet) |
 | On-chain lifecycle test suite | **26 / 26 passing** (localnet, controllable clock) — see [Testing](#testing--evidence) |
 
-**Honest status:** `create_market` / `place_bet` / `lock_market` / `cancel_market` / `claim_refund` are validated on **live Devnet** with real transactions (above). Full `settle_market` + `claim_winnings` are validated end-to-end on **localnet** (26/26, including the CPI Merkle path and tampered-proof rejection); live-Devnet settlement is positioned to fire automatically when the France v England semifinal finishes (2026-07-18). We label what ran where rather than overclaim — see [`todo.md`](./todo.md) for the full validation log.
+### Proof integrity — a forged proof cannot settle a market
+
+Settlement never trusts Goalana. `settle_market` delegates to TxLINE's oracle by CPI into
+`validate_stat`, which re-hashes the Merkle path against a root anchored on-chain. The
+transactions below call **that exact instruction with the exact arguments settlement uses**,
+against the **real** TxLINE oracle on Devnet — for England 1–2 Argentina (fixture `18241006`).
+Rendered in-app under the fixture's **Proof Integrity** tab.
+
+| Case | Proof | Result | Signature |
+|---|---|---|---|
+| Total goals > 1.5 (keys 1+2) | genuine | ✅ accepted → `YES`, 198,959 CU | [`4uB1JMtx…dpt5GEcA`](https://explorer.solana.com/tx/4uB1JMtxtZEr5K5rDfx2e3n4eXK6tpdaVk6QbCFWqzw7sy4PxvEbZkJ6ozo5TtNkc5e7zBaRA6hpDFoxdpt5GEcA?cluster=devnet) |
+| Total corners > 9.5 (keys 7+8) | genuine | ✅ accepted → `NO`, 198,965 CU | [`qMSVSThU…cALVJWi`](https://explorer.solana.com/tx/qMSVSThUULv23wsjNnL2uVBDZt4mq42GcYRVHjU2BcCXN92o2DNPzxqZKxRofd2fofmKnn9QiC34s16fcALVJWi?cluster=devnet) |
+| Total yellow cards > 3.5 (keys 3+4) | genuine | ✅ accepted → `YES`, 198,963 CU | [`22r1dJCS…x4vC7T7B`](https://explorer.solana.com/tx/22r1dJCSeX5MzGPWkRNnPnNz2khCj24QsJV35JBQRc5xJdhQkgfUyZLaBxGUXX2TSNi16AC9HeQMhpkGx4vC7T7B?cluster=devnet) |
+| Same goals proof, **value forged** 1 → 6 | tampered | ❌ **reverted** — `InvalidStatProof` (6023) | [`2fpwYkGU…d56K74Bb`](https://explorer.solana.com/tx/2fpwYkGU3apxRb5WnvXeXNQ6MGwtuDJZikW53ZfZrLi7k64hC9RRJBHZvh7wZ1cVX1kfsd4dUg47PaGQd56K74Bb?cluster=devnet) |
+| Same goals proof, **one sibling-hash byte flipped** | tampered | ❌ **reverted** — `InvalidStatProof` (6023) | [`Zf3XtAxZ…C4HpqX3`](https://explorer.solana.com/tx/Zf3XtAxZtEsZivuvRtHzsfJhS4mHfFmtr5ikzb318v67ukPxb5ScDiXzCjwaRk4iMVvpbyLm8YvVpoRaC4HpqX3?cluster=devnet) |
+
+Two things this shows, neither of them asserted:
+
+1. **Forgery fails.** Change one goal, or one byte of one hash, and the oracle reverts — so the
+   CPI fails and `settle_market` reverts with it. A false outcome cannot be settled.
+2. **Settlement is stat-agnostic.** Goals, corners and cards all verify through the _identical_
+   `add + greaterThan` predicate and the _identical_ instruction; only the stat keys differ.
+   Goalana is not a goals oracle. (Only goals back a tradeable market today — market creation is
+   gated on TxLINE reference odds, and TxLINE prices no corners/cards markets for this
+   competition.)
+
+Reproduce: `bun src/scripts/record-proof-integrity.ts <fixtureId> --execute` (from `apps/api`).
+
+**Honest status:** `create_market` / `place_bet` / `lock_market` / `cancel_market` / `claim_refund` are validated on **live Devnet** with real transactions (above). Merkle verification and tampered-proof rejection are validated on **live Devnet** against TxLINE's real oracle (the table above). Full `settle_market` + `claim_winnings` are exercised end-to-end on **localnet** (26/26) — note that the localnet suite runs against `txoracle_mock`, which returns a canned verdict and does **not** verify Merkle proofs, so it covers Goalana's own guards (stat-key binding, stale-snapshot, PDA derivation, state machine) but proves nothing about proof integrity; that is what the Devnet evidence above is for. Live-Devnet settlement is positioned to fire automatically when the France v England semifinal finishes (2026-07-18). We label what ran where rather than overclaim — see [`todo.md`](./todo.md) for the full validation log.
 
 ---
 

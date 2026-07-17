@@ -104,7 +104,11 @@ export function MarketLifecycleTimeline({
       status: isSettled ? "done" : isCancelled ? "skipped" : "pending",
       tx: settlementTx,
       at: settledAt ? Date.parse(settledAt) : null,
-      note: isSettled ? "verified on-chain via TxLINE CPI" : isCancelled ? "market cancelled" : undefined,
+      note: isSettled
+        ? "verified on-chain via TxLINE CPI"
+        : isCancelled
+          ? "market cancelled"
+          : undefined,
     },
     {
       key: "claim",
@@ -112,7 +116,12 @@ export function MarketLifecycleTimeline({
       status: positionClaimed || claimTx ? "done" : "pending",
       tx: claimTx?.signature,
       at: claimTx?.ts,
-      note: positionClaimed && !claimTx ? "claimed" : claimTx ? claimTx.label : "winners / refunds",
+      note:
+        positionClaimed && !claimTx
+          ? "claimed"
+          : claimTx
+            ? claimTx.label
+            : "winners / refunds",
     },
   ]
 
@@ -122,7 +131,7 @@ export function MarketLifecycleTimeline({
     <div className="flex flex-col gap-2 border-t border-border pt-3">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center justify-between font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+        className="flex items-center justify-between font-mono text-[10px] tracking-widest text-muted-foreground uppercase transition-colors hover:text-primary"
       >
         <span>Lifecycle &amp; transactions ({completed}/5)</span>
         <span>{open ? "−" : "+"}</span>
@@ -134,24 +143,30 @@ export function MarketLifecycleTimeline({
             <div key={stage.key} className="flex gap-3">
               {/* Rail */}
               <div className="flex flex-col items-center">
-                <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${statusDot(stage.status)}`} />
+                <span
+                  className={`mt-1 h-2 w-2 shrink-0 rounded-full ${statusDot(stage.status)}`}
+                />
                 {i < stages.length - 1 && (
-                  <span className={`w-px flex-1 ${stage.status === "done" ? "bg-primary/40" : "bg-border"}`} />
+                  <span
+                    className={`w-px flex-1 ${stage.status === "done" ? "bg-primary/40" : "bg-border"}`}
+                  />
                 )}
               </div>
 
               {/* Content */}
-              <div className="flex flex-col gap-0.5 pb-3 min-w-0 flex-1">
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5 pb-3">
                 <div className="flex items-center justify-between gap-2">
                   <span
-                    className={`font-heading text-[11px] uppercase tracking-widest ${
-                      stage.status === "done" ? "text-foreground" : "text-muted-foreground"
+                    className={`font-heading text-[11px] tracking-widest uppercase ${
+                      stage.status === "done"
+                        ? "text-foreground"
+                        : "text-muted-foreground"
                     }`}
                   >
                     {stage.label}
                   </span>
                   <span
-                    className={`font-mono text-[9px] uppercase tracking-widest ${
+                    className={`font-mono text-[9px] tracking-widest uppercase ${
                       stage.status === "done"
                         ? "text-primary"
                         : stage.status === "skipped"
@@ -159,23 +174,35 @@ export function MarketLifecycleTimeline({
                           : "text-muted-foreground/60"
                     }`}
                   >
-                    {stage.status === "done" ? "done" : stage.status === "skipped" ? "n/a" : "pending"}
+                    {stage.status === "done"
+                      ? "done"
+                      : stage.status === "skipped"
+                        ? "n/a"
+                        : "pending"}
                   </span>
                 </div>
                 {stage.at ? (
-                  <span className="font-mono text-[9px] text-muted-foreground">{fmt(stage.at)}</span>
+                  <span className="font-mono text-[9px] text-muted-foreground">
+                    {fmt(stage.at)}
+                  </span>
                 ) : (
-                  stage.note && <span className="font-mono text-[9px] text-muted-foreground/70">{stage.note}</span>
+                  stage.note && (
+                    <span className="font-mono text-[9px] text-muted-foreground/70">
+                      {stage.note}
+                    </span>
+                  )
                 )}
                 {stage.at && stage.note && (
-                  <span className="font-mono text-[9px] text-muted-foreground/70">{stage.note}</span>
+                  <span className="font-mono text-[9px] text-muted-foreground/70">
+                    {stage.note}
+                  </span>
                 )}
                 {stage.tx && (
                   <a
                     href={explorerTxUrl(stage.tx)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-mono text-[9px] text-muted-foreground hover:text-primary transition-colors underline w-fit"
+                    className="w-fit font-mono text-[9px] text-muted-foreground underline transition-colors hover:text-primary"
                   >
                     {stage.tx.slice(0, 8)}…{stage.tx.slice(-8)} ↗
                   </a>

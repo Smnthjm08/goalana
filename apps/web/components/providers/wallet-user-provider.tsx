@@ -1,6 +1,13 @@
 "use client"
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { toast } from "sonner"
 import axiosInstance from "@/lib/axios-instance"
@@ -83,7 +90,8 @@ export function WalletUserProvider({ children }: { children: ReactNode }) {
         console.error("Wallet registration failed", err)
         registeredForRef.current = null
         toast.error("Couldn't register wallet", {
-          description: "You can still browse, but account features may not work.",
+          description:
+            "You can still browse, but account features may not work.",
         })
       })
       .finally(() => {

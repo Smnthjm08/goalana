@@ -109,6 +109,11 @@ app.get("/api/fixtures", async (_req, res) => {
       orderBy: {
         startTime: "asc",
       },
+      // proofIntegrity carries full program logs per case — useful on a single
+      // fixture, pure dead weight on a list nothing renders it from.
+      omit: {
+        proofIntegrity: true,
+      },
       include: {
         _count: {
           select: { markets: true },

@@ -20,7 +20,10 @@ export function Header() {
       <div className="flex h-16 items-center justify-between gap-4 px-4 md:px-6">
         {/* Left: Logo and Product Name */}
         <div className="flex min-w-0 items-center gap-4 md:gap-6">
-          <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-80">
+          <Link
+            href="/"
+            className="flex items-center gap-3 transition-opacity hover:opacity-80"
+          >
             {/* Minimal Logo: The Electric Turf Square */}
             <div className="flex h-5 w-5 shrink-0 items-center justify-center bg-primary">
               <div className="h-2 w-2 bg-background" />
@@ -34,14 +37,18 @@ export function Header() {
           <nav className="flex items-center gap-4 md:gap-5">
             {NAV_LINKS.map((link) => {
               const active =
-                link.href === "/" ? pathname === "/" : pathname.startsWith(link.href)
+                link.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(link.href)
 
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`whitespace-nowrap font-mono text-[10px] uppercase tracking-widest transition-colors md:text-[11px] ${
-                    active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  className={`font-mono text-[10px] tracking-widest whitespace-nowrap uppercase transition-colors md:text-[11px] ${
+                    active
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {link.label}

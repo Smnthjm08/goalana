@@ -36,7 +36,8 @@ export interface MarketMeta {
  * (cancelled, or settled with an empty winning pool) — in both cases the
  * money is sitting in the vault waiting for the user to pull it.
  */
-export type PositionStatus = "Open" | "Locked" | "Settled" | "Claimable" | "Claimed"
+export type PositionStatus =
+  "Open" | "Locked" | "Settled" | "Claimable" | "Claimed"
 
 export interface WalletPosition {
   positionPda: string
@@ -79,7 +80,11 @@ function derive(
 
   if (market.status === "Cancelled") {
     const staked = yesAmount + noAmount
-    return { status: staked > 0n ? "Claimable" : "Settled", payout: staked, isRefund: true }
+    return {
+      status: staked > 0n ? "Claimable" : "Settled",
+      payout: staked,
+      isRefund: true,
+    }
   }
 
   if (market.status === "Settled" && market.outcome !== null) {
@@ -96,7 +101,8 @@ function derive(
       return { status: "Claimable", payout: winningStake, isRefund: true }
     }
 
-    const payout = (winningStake * (market.totalYes + market.totalNo)) / winningPool
+    const payout =
+      (winningStake * (market.totalYes + market.totalNo)) / winningPool
     return { status: "Claimable", payout, isRefund: false }
   }
 
@@ -131,7 +137,9 @@ export function useWalletPositions() {
 
     try {
       const raw = await program.account.position.all([
-        { memcmp: { offset: POSITION_USER_OFFSET, bytes: publicKey.toBase58() } },
+        {
+          memcmp: { offset: POSITION_USER_OFFSET, bytes: publicKey.toBase58() },
+        },
       ])
 
       if (raw.length === 0) {
@@ -168,14 +176,18 @@ export function useWalletPositions() {
 
         const market: OnChainMarket | null = account
           ? {
-              status: decodeStatus(account.status as unknown as Record<string, unknown>),
+              status: decodeStatus(
+                account.status as unknown as Record<string, unknown>
+              ),
               outcome: (account.outcome as boolean | null) ?? null,
               totalYes: BigInt(account.totalYes.toString()),
               totalNo: BigInt(account.totalNo.toString()),
               locksAt: Number(account.locksAt),
               settleAfter: Number(account.settleAfter),
-              lockedAt: account.lockedAt !== null ? Number(account.lockedAt) : null,
-              settledAt: account.settledAt !== null ? Number(account.settledAt) : null,
+              lockedAt:
+                account.lockedAt !== null ? Number(account.lockedAt) : null,
+              settledAt:
+                account.settledAt !== null ? Number(account.settledAt) : null,
             }
           : null
 
@@ -183,7 +195,12 @@ export function useWalletPositions() {
         const noAmount = BigInt(entry.account.noAmount.toString())
         const claimed = Boolean(entry.account.claimed)
 
-        const { status, payout, isRefund } = derive(yesAmount, noAmount, claimed, market)
+        const { status, payout, isRefund } = derive(
+          yesAmount,
+          noAmount,
+          claimed,
+          market
+        )
 
         // Only place_bet / claim_* ever touch a Position PDA, and place_bet
         // creates it — so the oldest successful signature is the opening bet
@@ -199,7 +216,9 @@ export function useWalletPositions() {
           noAmount,
           claimed,
           market,
-          meta: metaByPda.get((entry.account.market as PublicKey).toBase58()) ?? null,
+          meta:
+            metaByPda.get((entry.account.market as PublicKey).toBase58()) ??
+            null,
           status,
           isRefund,
           payout,

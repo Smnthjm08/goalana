@@ -20,7 +20,9 @@ export interface OnChainMarket {
 // Anchor decodes a Rust enum to `{ open: {} }` / `{ settled: {} }` — turn that
 // into the "Open"/"Settled" label the UI renders. Shared with the positions
 // page, which decodes many Market accounts in one batch.
-export function decodeStatus(raw: Record<string, unknown>): OnChainMarketStatus {
+export function decodeStatus(
+  raw: Record<string, unknown>
+): OnChainMarketStatus {
   const key = Object.keys(raw)[0] ?? "open"
   return (key.charAt(0).toUpperCase() + key.slice(1)) as OnChainMarketStatus
 }
@@ -43,17 +45,22 @@ export function useMarketAccount(marketPda: string | null | undefined) {
     }
 
     try {
-      const account = await program.account.market.fetch(new PublicKey(marketPda))
+      const account = await program.account.market.fetch(
+        new PublicKey(marketPda)
+      )
 
       setMarket({
-        status: decodeStatus(account.status as unknown as Record<string, unknown>),
+        status: decodeStatus(
+          account.status as unknown as Record<string, unknown>
+        ),
         outcome: (account.outcome as boolean | null) ?? null,
         totalYes: BigInt(account.totalYes.toString()),
         totalNo: BigInt(account.totalNo.toString()),
         locksAt: Number(account.locksAt),
         settleAfter: Number(account.settleAfter),
         lockedAt: account.lockedAt !== null ? Number(account.lockedAt) : null,
-        settledAt: account.settledAt !== null ? Number(account.settledAt) : null,
+        settledAt:
+          account.settledAt !== null ? Number(account.settledAt) : null,
       })
       setError(null)
     } catch (err) {

@@ -70,7 +70,10 @@ const TEAM_CODES: Array<[code: string, names: string[]]> = [
   ["ML", ["Mali"]],
   ["BF", ["Burkina Faso"]],
   ["ZA", ["South Africa"]],
-  ["CD", ["DR Congo", "Congo DR", "Democratic Republic of the Congo", "Congo, DR"]],
+  [
+    "CD",
+    ["DR Congo", "Congo DR", "Democratic Republic of the Congo", "Congo, DR"],
+  ],
   ["CG", ["Congo", "Republic of Congo", "Congo Republic"]],
   ["ZM", ["Zambia"]],
   ["ZW", ["Zimbabwe"]],
@@ -107,14 +110,20 @@ const TEAM_CODES: Array<[code: string, names: string[]]> = [
   ["LS", ["Lesotho"]],
   ["SZ", ["Eswatini", "Swaziland"]],
   ["CV", ["Cape Verde", "Cabo Verde"]],
-  ["ST", ["Sao Tome and Principe", "São Tomé and Príncipe", "Sao Tome & Principe"]],
+  [
+    "ST",
+    ["Sao Tome and Principe", "São Tomé and Príncipe", "Sao Tome & Principe"],
+  ],
   ["BI", ["Burundi"]],
   ["RW", ["Rwanda"]],
   ["SC", ["Seychelles"]],
   ["MU", ["Mauritius"]],
 
   // CONCACAF
-  ["US", ["USA", "United States", "United States of America", "U.S.A.", "U.S."]],
+  [
+    "US",
+    ["USA", "United States", "United States of America", "U.S.A.", "U.S."],
+  ],
   ["MX", ["Mexico", "México"]],
   ["CA", ["Canada"]],
   ["CR", ["Costa Rica"]],
@@ -139,9 +148,24 @@ const TEAM_CODES: Array<[code: string, names: string[]]> = [
   ["DM", ["Dominica"]],
   ["GD", ["Grenada"]],
   ["MS", ["Montserrat"]],
-  ["KN", ["St Kitts and Nevis", "Saint Kitts and Nevis", "St. Kitts and Nevis", "St Kitts & Nevis"]],
+  [
+    "KN",
+    [
+      "St Kitts and Nevis",
+      "Saint Kitts and Nevis",
+      "St. Kitts and Nevis",
+      "St Kitts & Nevis",
+    ],
+  ],
   ["LC", ["St Lucia", "Saint Lucia", "St. Lucia"]],
-  ["VC", ["St Vincent and the Grenadines", "Saint Vincent and the Grenadines", "St. Vincent and the Grenadines"]],
+  [
+    "VC",
+    [
+      "St Vincent and the Grenadines",
+      "Saint Vincent and the Grenadines",
+      "St. Vincent and the Grenadines",
+    ],
+  ],
   ["PR", ["Puerto Rico"]],
   ["VI", ["US Virgin Islands"]],
   ["VG", ["British Virgin Islands"]],
@@ -287,7 +311,9 @@ function codeToFlagEmoji(code: string): string {
   return code
     .toUpperCase()
     .split("")
-    .map((letter) => String.fromCodePoint(letter.charCodeAt(0) + REGIONAL_INDICATOR_OFFSET))
+    .map((letter) =>
+      String.fromCodePoint(letter.charCodeAt(0) + REGIONAL_INDICATOR_OFFSET)
+    )
     .join("")
 }
 

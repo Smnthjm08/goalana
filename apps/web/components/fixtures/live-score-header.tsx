@@ -22,29 +22,39 @@ interface LiveScoreHeaderProps {
   startTime?: string | number | null
 }
 
-export function LiveScoreHeader({ liveScore, kickoffLabel, startTime }: LiveScoreHeaderProps) {
+export function LiveScoreHeader({
+  liveScore,
+  kickoffLabel,
+  startTime,
+}: LiveScoreHeaderProps) {
   const now = useNow(1_000)
   const hasStarted = liveScore != null && liveScore.statusId !== null
-  const isLive = hasStarted && !liveScore!.isFinal && IN_PROGRESS_STATUS_IDS.has(liveScore!.statusId!)
+  const isLive =
+    hasStarted &&
+    !liveScore!.isFinal &&
+    IN_PROGRESS_STATUS_IDS.has(liveScore!.statusId!)
 
   if (!hasStarted) {
     const kickoffMs = toMs(startTime)
-    const untilKickoff = kickoffMs !== null && now !== null ? kickoffMs - now : null
+    const untilKickoff =
+      kickoffMs !== null && now !== null ? kickoffMs - now : null
 
     return (
       <div className="flex flex-col items-center justify-center px-4">
-        <span className="font-mono text-sm md:text-base text-muted-foreground tracking-widest mb-2">
+        <span className="mb-2 font-mono text-sm tracking-widest text-muted-foreground md:text-base">
           VS
         </span>
-        <span className="font-heading text-4xl md:text-5xl text-foreground font-bold">
+        <span className="font-heading text-4xl font-bold text-foreground md:text-5xl">
           UPCOMING
         </span>
-        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mt-2">
+        <span className="mt-2 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
           {kickoffLabel}
         </span>
         {untilKickoff !== null && (
-          <span className="font-mono text-[10px] uppercase tracking-widest text-primary mt-1 tabular-nums">
-            {untilKickoff <= 0 ? "Starting soon" : `Starts in ${formatDuration(untilKickoff)}`}
+          <span className="mt-1 font-mono text-[10px] tracking-widest text-primary uppercase tabular-nums">
+            {untilKickoff <= 0
+              ? "Starting soon"
+              : `Starts in ${formatDuration(untilKickoff)}`}
           </span>
         )}
       </div>
@@ -57,24 +67,24 @@ export function LiveScoreHeader({ liveScore, kickoffLabel, startTime }: LiveScor
   return (
     <div className="flex flex-col items-center justify-center px-4">
       {isLive && (
-        <span className="flex items-center gap-1.5 font-mono text-[10px] text-primary tracking-widest mb-2 uppercase">
+        <span className="mb-2 flex items-center gap-1.5 font-mono text-[10px] tracking-widest text-primary uppercase">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
           </span>
           Live
         </span>
       )}
       {!isLive && (
-        <span className="font-mono text-sm md:text-base text-muted-foreground tracking-widest mb-2">
+        <span className="mb-2 font-mono text-sm tracking-widest text-muted-foreground md:text-base">
           {liveScore!.isFinal ? "FULL TIME" : "VS"}
         </span>
       )}
-      <span className="font-heading text-4xl md:text-5xl text-foreground font-bold tabular-nums">
+      <span className="font-heading text-4xl font-bold text-foreground tabular-nums md:text-5xl">
         {home} - {away}
       </span>
       {liveScore!.minuteLabel && (
-        <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest mt-2">
+        <span className="mt-2 font-mono text-xs tracking-widest text-muted-foreground uppercase">
           {liveScore!.minuteLabel}
         </span>
       )}

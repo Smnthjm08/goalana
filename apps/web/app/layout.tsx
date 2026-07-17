@@ -9,8 +9,14 @@ import { SolanaProvider } from "@/components/providers/solana-provider"
 import { WalletUserProvider } from "@/components/providers/wallet-user-provider"
 import { Header } from "@/components/header"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-heading" })
-const jetBrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" })
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-heading",
+})
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+})
 
 export default function RootLayout({
   children,

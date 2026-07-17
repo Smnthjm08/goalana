@@ -39,7 +39,7 @@ const STATUS_HINTS: Record<PositionStatus, string> = {
 function StatusBadge({ status }: { status: PositionStatus }) {
   return (
     <span
-      className={`shrink-0 rounded-sm border px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest ${STATUS_STYLES[status]}`}
+      className={`shrink-0 rounded-sm border px-2 py-0.5 font-mono text-[10px] tracking-widest uppercase ${STATUS_STYLES[status]}`}
     >
       {status}
     </span>
@@ -71,7 +71,7 @@ function Metric({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+      <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
         {label}
       </span>
       <span
@@ -117,7 +117,7 @@ function PositionCard({ position }: { position: WalletPosition }) {
         <div className="flex min-w-0 flex-col gap-1.5">
           {meta ? (
             <>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
                 {meta.fixture.competition}
               </span>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -125,7 +125,9 @@ function PositionCard({ position }: { position: WalletPosition }) {
                   name={meta.fixture.participant1}
                   className="font-sans text-sm font-bold text-foreground"
                 />
-                <span className="font-mono text-[10px] text-muted-foreground">v</span>
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  v
+                </span>
                 <TeamBadge
                   name={meta.fixture.participant2}
                   className="font-sans text-sm font-bold text-foreground"
@@ -134,7 +136,7 @@ function PositionCard({ position }: { position: WalletPosition }) {
             </>
           ) : (
             <>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
                 Fixture unavailable
               </span>
               <span className="font-mono text-xs text-foreground">
@@ -148,10 +150,11 @@ function PositionCard({ position }: { position: WalletPosition }) {
 
       {/* Market */}
       <div className="flex flex-col gap-1">
-        <span className="font-sans text-base font-bold leading-snug text-foreground">
-          {meta?.question ?? "Market metadata unavailable — read from chain only"}
+        <span className="font-sans text-base leading-snug font-bold text-foreground">
+          {meta?.question ??
+            "Market metadata unavailable — read from chain only"}
         </span>
-        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
           {STATUS_HINTS[status]}
         </span>
       </div>
@@ -181,17 +184,23 @@ function PositionCard({ position }: { position: WalletPosition }) {
           {position.betTx ? (
             <TxLink label="Bet" signature={position.betTx} />
           ) : (
-            <span className="font-mono text-[10px] text-muted-foreground/60">Bet —</span>
+            <span className="font-mono text-[10px] text-muted-foreground/60">
+              Bet —
+            </span>
           )}
           {meta?.settlementTx ? (
             <TxLink label="Settle" signature={meta.settlementTx} />
           ) : (
-            <span className="font-mono text-[10px] text-muted-foreground/60">Settle —</span>
+            <span className="font-mono text-[10px] text-muted-foreground/60">
+              Settle —
+            </span>
           )}
           {position.claimTx ? (
             <TxLink label="Claim" signature={position.claimTx} />
           ) : (
-            <span className="font-mono text-[10px] text-muted-foreground/60">Claim —</span>
+            <span className="font-mono text-[10px] text-muted-foreground/60">
+              Claim —
+            </span>
           )}
           <a
             href={explorerAddressUrl(position.positionPda)}
@@ -207,7 +216,7 @@ function PositionCard({ position }: { position: WalletPosition }) {
         {fixtureHref && (
           <Link
             href={fixtureHref}
-            className={`font-mono text-[10px] uppercase tracking-widest underline underline-offset-2 transition-colors ${
+            className={`font-mono text-[10px] tracking-widest uppercase underline underline-offset-2 transition-colors ${
               status === "Claimable"
                 ? "text-primary hover:text-primary/80"
                 : "text-muted-foreground hover:text-foreground"
@@ -226,12 +235,12 @@ function PageShell({ children }: { children: React.ReactNode }) {
     <div className="flex w-full flex-col p-4 md:p-8 lg:p-12">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
         <div className="flex flex-col gap-3 border-b border-border pb-4">
-          <h1 className="font-heading text-2xl uppercase tracking-widest text-primary">
+          <h1 className="font-heading text-2xl tracking-widest text-primary uppercase">
             My Positions
           </h1>
           <p className="max-w-2xl font-mono text-[11px] leading-relaxed text-muted-foreground">
-            Every bet this wallet holds, read straight from its on-chain Position
-            accounts — not from Goalana&apos;s database.
+            Every bet this wallet holds, read straight from its on-chain
+            Position accounts — not from Goalana&apos;s database.
           </p>
         </div>
         {children}
@@ -249,7 +258,7 @@ export default function PositionsPage() {
     return (
       <PageShell>
         <div className="flex flex-col items-center gap-4 rounded-sm border border-dashed border-border bg-card px-6 py-16 text-center">
-          <span className="font-heading text-lg uppercase tracking-widest text-foreground">
+          <span className="font-heading text-lg tracking-widest text-foreground uppercase">
             Connect your wallet
           </span>
           <p className="max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground">
@@ -258,7 +267,7 @@ export default function PositionsPage() {
           </p>
           <Button
             onClick={() => setVisible(true)}
-            className="mt-1 font-heading uppercase tracking-widest"
+            className="mt-1 font-heading tracking-widest uppercase"
           >
             Connect Wallet
           </Button>
@@ -283,7 +292,7 @@ export default function PositionsPage() {
     return (
       <PageShell>
         <div className="flex flex-col items-center gap-2 rounded-sm border border-destructive/40 bg-card px-6 py-12 text-center">
-          <span className="font-mono text-sm uppercase tracking-wider text-destructive">
+          <span className="font-mono text-sm tracking-wider text-destructive uppercase">
             [ {error} ]
           </span>
           <span className="font-mono text-[10px] text-muted-foreground">
@@ -299,16 +308,21 @@ export default function PositionsPage() {
       <PageShell>
         <div className="flex flex-col items-center gap-4 rounded-sm border border-dashed border-border bg-card px-6 py-16 text-center">
           <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-border bg-muted/40">
-            <span className="font-heading text-base text-muted-foreground">0</span>
+            <span className="font-heading text-base text-muted-foreground">
+              0
+            </span>
           </div>
-          <span className="font-heading text-lg uppercase tracking-widest text-foreground">
+          <span className="font-heading text-lg tracking-widest text-foreground uppercase">
             No positions yet
           </span>
           <p className="max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground">
-            This wallet hasn&apos;t bet on a Goalana market. Place one on any open
-            market and it will show up here with its on-chain proof.
+            This wallet hasn&apos;t bet on a Goalana market. Place one on any
+            open market and it will show up here with its on-chain proof.
           </p>
-          <Button asChild className="mt-1 font-heading uppercase tracking-widest">
+          <Button
+            asChild
+            className="mt-1 font-heading tracking-widest uppercase"
+          >
             <Link href="/">Browse Markets</Link>
           </Button>
         </div>
@@ -316,7 +330,10 @@ export default function PositionsPage() {
     )
   }
 
-  const totalStaked = positions.reduce((sum, p) => sum + p.yesAmount + p.noAmount, 0n)
+  const totalStaked = positions.reduce(
+    (sum, p) => sum + p.yesAmount + p.noAmount,
+    0n
+  )
   const totalClaimable = positions
     .filter((p) => p.status === "Claimable")
     .reduce((sum, p) => sum + (p.payout ?? 0n), 0n)
@@ -324,13 +341,15 @@ export default function PositionsPage() {
   return (
     <PageShell>
       {/* One quiet line of totals — enough to orient, not a dashboard. */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
         <span>
           {positions.length} position{positions.length === 1 ? "" : "s"}
         </span>
         <span>{formatSol(totalStaked)} SOL staked</span>
         {totalClaimable > 0n && (
-          <span className="text-primary">{formatSol(totalClaimable)} SOL claimable</span>
+          <span className="text-primary">
+            {formatSol(totalClaimable)} SOL claimable
+          </span>
         )}
       </div>
 

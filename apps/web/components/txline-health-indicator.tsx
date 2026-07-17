@@ -33,10 +33,18 @@ interface HealthSnapshot {
   rpc: { healthy: boolean; slot: number | null }
 }
 
-function Row({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
+function Row({
+  label,
+  value,
+  ok,
+}: {
+  label: string
+  value: string
+  ok?: boolean
+}) {
   return (
     <div className="flex items-center justify-between gap-6">
-      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+      <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
         {label}
       </span>
       <span
@@ -92,7 +100,11 @@ export function TxlineHealthIndicator() {
   const connected = reachable && Boolean(health?.txline.connected)
   const loading = health === null && reachable
 
-  const label = loading ? "Connecting…" : connected ? "TxLINE Connected" : "Reconnecting…"
+  const label = loading
+    ? "Connecting…"
+    : connected
+      ? "TxLINE Connected"
+      : "Reconnecting…"
 
   const lastEventAt = health?.txline.lastEventAt ?? null
   const lastOddsAt = health?.txline.lastOddsUpdateAt ?? null
@@ -101,9 +113,15 @@ export function TxlineHealthIndicator() {
   // "last event" alone would read as a dead stream. The heartbeat is what
   // actually proves the socket is open right now.
   const lastFrameAt = health
-    ? [health.txline.streams.odds.lastFrameAt, health.txline.streams.scores.lastFrameAt]
+    ? [
+        health.txline.streams.odds.lastFrameAt,
+        health.txline.streams.scores.lastFrameAt,
+      ]
         .filter((ts): ts is number => ts !== null)
-        .reduce<number | null>((max, ts) => (max === null || ts > max ? ts : max), null)
+        .reduce<number | null>(
+          (max, ts) => (max === null || ts > max ? ts : max),
+          null
+        )
     : null
 
   return (
@@ -113,7 +131,7 @@ export function TxlineHealthIndicator() {
           <button
             type="button"
             aria-label={`TxLINE feed status: ${label}`}
-            className="flex items-center gap-2 rounded-sm border border-border bg-card px-2 py-1.5 transition-colors hover:border-primary/50 cursor-default"
+            className="flex cursor-default items-center gap-2 rounded-sm border border-border bg-card px-2 py-1.5 transition-colors hover:border-primary/50"
           >
             <span className="relative flex h-2 w-2 shrink-0">
               {connected && (
@@ -130,7 +148,7 @@ export function TxlineHealthIndicator() {
               />
             </span>
             {/* The dot alone carries the state on narrow screens. */}
-            <span className="hidden font-mono text-[10px] uppercase tracking-widest text-muted-foreground sm:inline">
+            <span className="hidden font-mono text-[10px] tracking-widest text-muted-foreground uppercase sm:inline">
               {label}
             </span>
           </button>
@@ -143,11 +161,11 @@ export function TxlineHealthIndicator() {
         >
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-6 border-b border-border pb-2">
-              <span className="font-heading text-[11px] uppercase tracking-widest text-foreground">
+              <span className="font-heading text-[11px] tracking-widest text-foreground uppercase">
                 Live Feed
               </span>
               <span
-                className={`font-mono text-[10px] uppercase tracking-widest ${
+                className={`font-mono text-[10px] tracking-widest uppercase ${
                   connected ? "text-primary" : "text-destructive"
                 }`}
               >
@@ -160,32 +178,49 @@ export function TxlineHealthIndicator() {
                 Backend unreachable — retrying every 15s.
               </span>
             ) : !health ? (
-              <span className="font-mono text-[10px] text-muted-foreground">Loading…</span>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                Loading…
+              </span>
             ) : (
               <>
                 <Row
                   label="SSE Odds"
-                  value={health.txline.streams.odds.connected ? "Connected" : "Down"}
+                  value={
+                    health.txline.streams.odds.connected ? "Connected" : "Down"
+                  }
                   ok={health.txline.streams.odds.connected}
                 />
                 <Row
                   label="SSE Scores"
-                  value={health.txline.streams.scores.connected ? "Connected" : "Down"}
+                  value={
+                    health.txline.streams.scores.connected
+                      ? "Connected"
+                      : "Down"
+                  }
                   ok={health.txline.streams.scores.connected}
                 />
                 <Row
                   label="Heartbeat"
-                  value={lastFrameAt ? formatRelativeAgo(lastFrameAt, now) : "—"}
+                  value={
+                    lastFrameAt ? formatRelativeAgo(lastFrameAt, now) : "—"
+                  }
                 />
                 <Row
                   label="Last event"
-                  value={lastEventAt ? formatRelativeAgo(lastEventAt, now) : "None yet"}
+                  value={
+                    lastEventAt
+                      ? formatRelativeAgo(lastEventAt, now)
+                      : "None yet"
+                  }
                 />
                 <Row
                   label="Last odds"
                   value={lastOddsAt ? formatRelativeAgo(lastOddsAt, now) : "—"}
                 />
-                <Row label="Fixtures" value={`${health.fixtures.tracked} tracked`} />
+                <Row
+                  label="Fixtures"
+                  value={`${health.fixtures.tracked} tracked`}
+                />
                 <Row
                   label="RPC"
                   value={health.rpc.healthy ? "Healthy" : "Unreachable"}

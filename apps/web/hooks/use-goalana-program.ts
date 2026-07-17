@@ -30,19 +30,34 @@ export function useGoalanaProgram() {
   )
 
   const provider = useMemo(() => {
-    if (connected && wallet.publicKey && wallet.signTransaction && wallet.signAllTransactions) {
+    if (
+      connected &&
+      wallet.publicKey &&
+      wallet.signTransaction &&
+      wallet.signAllTransactions
+    ) {
       const signerWallet: Wallet = {
         publicKey: wallet.publicKey,
         signTransaction: wallet.signTransaction,
         signAllTransactions: wallet.signAllTransactions,
       } as unknown as Wallet
 
-      return new AnchorProvider(connection, signerWallet, { commitment: "confirmed" })
+      return new AnchorProvider(connection, signerWallet, {
+        commitment: "confirmed",
+      })
     }
 
-    return new AnchorProvider(connection, READ_ONLY_WALLET, { commitment: "confirmed" })
+    return new AnchorProvider(connection, READ_ONLY_WALLET, {
+      commitment: "confirmed",
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connection, connected, wallet.publicKey, wallet.signTransaction, wallet.signAllTransactions])
+  }, [
+    connection,
+    connected,
+    wallet.publicKey,
+    wallet.signTransaction,
+    wallet.signAllTransactions,
+  ])
 
   const program = useMemo(() => getGoalanaProgram(provider), [provider])
 

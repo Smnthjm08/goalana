@@ -65,6 +65,14 @@ model Fixture {
   lastEventSeq    Int?
   lastEventTs     BigInt?
 
+  // ─── Proof-integrity evidence (proof-integrity.service.ts) ───────────────
+  // Recorded Devnet transactions showing TxLINE's oracle accepting genuine
+  // Merkle proofs for several different statistics and rejecting tampered ones.
+  // Persisted rather than computed on demand: TxLINE free-tier access ends at
+  // the submission deadline, and a recorded tx signature is stronger evidence
+  // than a live simulation — it stays independently inspectable on Explorer.
+  proofIntegrity Json?
+
   odds          Odds[]
   matchEvents   MatchEvent[]
   oddsHistories OddsHistory[]
