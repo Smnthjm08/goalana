@@ -271,5 +271,10 @@ model Market {
 
   fixture Fixture @relation(fields: [fixtureId], references: [fixtureId])
 
+  // Postgres doesn't auto-index foreign keys — fixtureId is joined on every
+  // /api/fixtures/:id request, and status is filtered on every lock/settle
+  // cron tick (every minute); both were full-table scans without these.
+  @@index([fixtureId])
+  @@index([status])
   @@map("markets")
 }

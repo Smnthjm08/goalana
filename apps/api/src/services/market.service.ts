@@ -279,63 +279,76 @@ export async function processMarketsForUpcomingFixtures() {
       }
 
       logger.event("market.service", `Discovered market: ${market.type} (${market.question})`);
-      
-      // Determine market times.
-      //
-      // settle_after only needs to rule out a pre-match/stale proof — it is
-      // NOT what decides *whether* a match is over (that's finalSeq, set by
-      // scores.processor.ts once the live feed confirms a terminal event,
-      // and checked off-chain before settlement is ever attempted). The
-      // on-chain check (`oracle_ts_secs >= market.settle_after`,
-      // settle_market.rs) tests the *proof's own* stat-event timestamp —
-      // confirmed empirically against a completed fixture (18241006,
-      // England 1-2 Argentina): TxLINE's stat-validation `ts` exactly
-      // equals the underlying goal event's own timestamp, not a later
-      // root-computation time. A real match's last scoring event lands
-      // well within ~2h of kickoff, so a 3h buffer made the check
-      // impossible to ever satisfy with a genuine proof. A small
-      // post-kickoff buffer is enough to reject a pre-match proof while
-      // staying satisfiable by any real in-match event.
-      const locksAt = new Date(Number(fixture.startTime));
-      const settleAfter = new Date(locksAt.getTime() + 15 * 60 * 1000);
 
-      // Create market on Solana
-      const result = await createMarketForFixture(
-        fixture.fixtureId,
-        market.predicate,
-        locksAt,
-        settleAfter
-      );
+      try {
+        // Determine market times.
+        //
+        // settle_after only needs to rule out a pre-match/stale proof — it is
+        // NOT what decides *whether* a match is over (that's finalSeq, set by
+        // scores.processor.ts once the live feed confirms a terminal event,
+        // and checked off-chain before settlement is ever attempted). The
+        // on-chain check (`oracle_ts_secs >= market.settle_after`,
+        // settle_market.rs) tests the *proof's own* stat-event timestamp —
+        // confirmed empirically against a completed fixture (18241006,
+        // England 1-2 Argentina): TxLINE's stat-validation `ts` exactly
+        // equals the underlying goal event's own timestamp, not a later
+        // root-computation time. A real match's last scoring event lands
+        // well within ~2h of kickoff, so a 3h buffer made the check
+        // impossible to ever satisfy with a genuine proof. A small
+        // post-kickoff buffer is enough to reject a pre-match proof while
+        // staying satisfiable by any real in-match event.
+        const locksAt = new Date(Number(fixture.startTime));
+        const settleAfter = new Date(locksAt.getTime() + 15 * 60 * 1000);
 
-      logger.success("market.service", `Created on-chain PDA: ${result.marketPda.toBase58()} (already exists: ${result.alreadyExists})`);
+        // Create market on Solana
+        const result = await createMarketForFixture(
+          fixture.fixtureId,
+          market.predicate,
+          locksAt,
+          settleAfter
+        );
 
-      // Store market in DB
-      if (result.marketPda) {
-        await prisma.market.upsert({
-          where: { marketPda: result.marketPda.toBase58() },
-          update: {
-            initialYesPct: market.referenceProbability.yesPct,
-            initialNoPct: market.referenceProbability.noPct,
-            sourceOddsMessageId: market.source.messageId,
-          }, // Could update probabilities or metadata if needed
-          create: {
-            fixtureId: fixture.fixtureId,
-            marketPda: result.marketPda.toBase58(),
-            predicateHash: Array.from(result.predicateHash || []).join(','),
-            marketType: market.type,
-            question: market.question,
-            locksAt,
-            settleAfter,
-            creationTx: result.txSignature,
-            sourceOddsMessageId: market.source.messageId,
-            initialYesPct: market.referenceProbability.yesPct,
-            initialNoPct: market.referenceProbability.noPct,
-            status: "OPEN"
-          }
-        });
+        logger.success("market.service", `Created on-chain PDA: ${result.marketPda.toBase58()} (already exists: ${result.alreadyExists})`);
+
+        // Store market in DB
+        if (result.marketPda) {
+          await prisma.market.upsert({
+            where: { marketPda: result.marketPda.toBase58() },
+            update: {
+              initialYesPct: market.referenceProbability.yesPct,
+              initialNoPct: market.referenceProbability.noPct,
+              sourceOddsMessageId: market.source.messageId,
+            }, // Could update probabilities or metadata if needed
+            create: {
+              fixtureId: fixture.fixtureId,
+              marketPda: result.marketPda.toBase58(),
+              predicateHash: Array.from(result.predicateHash || []).join(','),
+              marketType: market.type,
+              question: market.question,
+              locksAt,
+              settleAfter,
+              creationTx: result.txSignature,
+              sourceOddsMessageId: market.source.messageId,
+              initialYesPct: market.referenceProbability.yesPct,
+              initialNoPct: market.referenceProbability.noPct,
+              status: "OPEN"
+            }
+          });
+        }
+
+        results.push({ fixtureId: fixture.fixtureId, market, result });
+      } catch (error) {
+        // One market/fixture failing to create (RPC hiccup, transient
+        // on-chain error) must not abort discovery for the rest of the
+        // batch — already-created markets are skipped next tick via the
+        // on-chain existence check in createMarketForFixture, so retrying
+        // is safe and cheap.
+        logger.error(
+          "market.service",
+          `Failed to create market ${market.type} for fixture ${fixture.fixtureId}`,
+          error
+        );
       }
-
-      results.push({ fixtureId: fixture.fixtureId, market, result });
     }
   }
 

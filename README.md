@@ -23,7 +23,7 @@ Every project in this track says "trustless settlement." Few make it **visible**
 | Token-voted markets | Voters / dispute rounds | A signed Merkle proof, not a vote. |
 | Off-chain resolver | A script pushes the answer later | The proof is verified **in the same tx that settles**. |
 | Oracle-feed relay | Feed is trusted, then relayed | We **CPI into TxLINE's own oracle program** and it verifies the proof against its anchored daily root. |
-| "Mock CPI" demos | No real proof is checked | Real CPI into the live devnet TxLINE oracle, with a 26-test suite incl. tampered-proof rejection. |
+| "Mock CPI" demos | No real proof is checked | Real CPI into the live Devnet TxLINE oracle (see [Proof integrity — a forged proof cannot settle a market](#proof-integrity--a-forged-proof-cannot-settle-a-market) below); the 26/26 localnet suite covers Goalana's own guards, not proof verification — see Honest status. |
 
 ---
 

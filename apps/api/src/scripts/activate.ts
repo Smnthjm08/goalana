@@ -9,6 +9,7 @@ import {
 import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import axios from "axios";
 import nacl from "tweetnacl";
+import path from "path";
 
 // ---- 1. Pick network (must match RPC, program, mint, JWT origin, activation endpoint) ----
 const NETWORK: "mainnet" | "devnet" = "devnet"; // start on devnet to test safely
@@ -111,8 +112,14 @@ async function main(wallet: anchor.Wallet) {
 
     const apiToken = activationResponse.data.token || activationResponse.data;
 
-    console.log("JWT:", jwt);
-    console.log("API Token:", apiToken);
+    // Full credentials go to a gitignored local file, not stdout — this script
+    // is run interactively and a plaintext JWT/token in scrollback or a
+    // recorded terminal session is a real leak vector for a live TxLINE key.
+    const outPath = path.resolve(import.meta.dirname, "../../.env.activation.local");
+    fs.writeFileSync(outPath, `TXLINE_JWT=${jwt}\nTXLINE_API_TOKEN=${apiToken}\n`, { mode: 0o600 });
+    const mask = (v: string) => `${v.slice(0, 6)}...${v.slice(-4)}`;
+    console.log(`Activation succeeded. JWT ${mask(jwt)}, API token ${mask(apiToken)}.`);
+    console.log(`Full values written to ${outPath} — copy into .env then delete this file.`);
 
     // ---- 6. Use both on data API requests ----
     // headers: {

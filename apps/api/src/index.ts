@@ -27,6 +27,7 @@ dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 const requiredEnv = [
   "DATABASE_URL",
   "TXLINE_ENV",
+  "TXLINE_API_ORIGIN",
   "SOLANA_RPC_URL",
   "TXLINE_JWT",
   "TXLINE_API_TOKEN",
@@ -41,6 +42,19 @@ for (const key of requiredEnv) {
 
 const app = express();
 const port = process.env.BE_PORT ?? 8080;
+
+// Every fixture-id route param goes through this — a non-numeric id (typo,
+// probe, or an accidental /api/fixtures/undefined from the client) must
+// surface as a 400, not fall through to BigInt()'s SyntaxError, which the
+// generic catch block turns into an indistinguishable-from-a-real-fault 500.
+function parseFixtureId(raw: string): bigint | null {
+  if (!/^\d+$/.test(raw)) return null;
+  try {
+    return BigInt(raw);
+  } catch {
+    return null;
+  }
+}
 
 // Serialize Prisma BigInt values globally
 app.set("json replacer", (_key: string, value: unknown) => {
@@ -134,7 +148,10 @@ app.get("/api/fixtures", async (_req, res) => {
 app.get("/api/fixtures/:id", async (req, res) => {
   try {
     const fixtureIdStr = req.params.id;
-    const fixtureId = BigInt(fixtureIdStr);
+    const fixtureId = parseFixtureId(fixtureIdStr);
+    if (fixtureId === null) {
+      return res.status(400).json({ error: "fixture id must be numeric" });
+    }
 
     const fixture = await prisma.fixture.findUnique({
       where: {
@@ -256,7 +273,10 @@ app.get("/api/markets", async (_req, res) => {
 app.get("/api/fixtures/:id/odds/history", async (req, res) => {
   try {
     const fixtureIdStr = req.params.id;
-    const fixtureId = BigInt(fixtureIdStr);
+    const fixtureId = parseFixtureId(fixtureIdStr);
+    if (fixtureId === null) {
+      return res.status(400).json({ error: "fixture id must be numeric" });
+    }
 
     // Fetch all odds histories for this fixture
     const histories = await prisma.oddsHistory.findMany({
@@ -340,7 +360,10 @@ app.get("/api/fixtures/:id/odds/history", async (req, res) => {
 // our own markets settled it. See settlement.service.getSettlementProofPreview.
 app.get("/api/fixtures/:id/proof-preview", async (req, res) => {
   try {
-    const fixtureId = BigInt(req.params.id);
+    const fixtureId = parseFixtureId(req.params.id);
+    if (fixtureId === null) {
+      return res.status(400).json({ error: "fixture id must be numeric" });
+    }
     const preview = await getSettlementProofPreview(fixtureId);
 
     if (!preview) {
@@ -354,17 +377,31 @@ app.get("/api/fixtures/:id/proof-preview", async (req, res) => {
   }
 });
 
-app.post("/api/fixtures/sync", async (_req, res) => {
-  const result = await syncFixtures();
-
-  if (!result.success) {
-    return res.status(502).json({
-      success: false,
-      error: result.reason ?? "Fixture sync failed",
-    });
+// Manual ops trigger only — no cron or frontend code calls this in-process
+// (crons import syncFixtures() directly). Left open it's a free way for
+// anyone to burn TxLINE API quota, so it's gated behind the same secret an
+// operator already has to configure the deploy with.
+app.post("/api/fixtures/sync", async (req, res) => {
+  const adminSecret = process.env.ADMIN_SYNC_SECRET;
+  if (adminSecret && req.headers["x-admin-secret"] !== adminSecret) {
+    return res.status(401).json({ success: false, error: "unauthorized" });
   }
 
-  return res.json({ success: true });
+  try {
+    const result = await syncFixtures();
+
+    if (!result.success) {
+      return res.status(502).json({
+        success: false,
+        error: result.reason ?? "Fixture sync failed",
+      });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    logger.error("api", "Error syncing fixtures", error);
+    return res.status(500).json({ success: false, error: "internal server error" });
+  }
 });
 
 const oddsWorkerController = new AbortController();
