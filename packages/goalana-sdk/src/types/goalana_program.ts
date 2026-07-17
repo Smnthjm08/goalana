@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/goalana_program.json`.
  */
 export type GoalanaProgram = {
-  "address": "6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J",
+  "address": "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu",
   "metadata": {
     "name": "goalanaProgram",
     "version": "0.1.0",
@@ -28,7 +28,32 @@ export type GoalanaProgram = {
       "accounts": [
         {
           "name": "market",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market.fixtureId",
+                "account": "market"
+              },
+              {
+                "kind": "account",
+                "path": "market.predicateHash",
+                "account": "market"
+              }
+            ]
+          }
         },
         {
           "name": "config",
@@ -258,6 +283,57 @@ export type GoalanaProgram = {
       "args": []
     },
     {
+      "name": "closePosition",
+      "discriminator": [
+        123,
+        134,
+        81,
+        0,
+        49,
+        68,
+        98,
+        98
+      ],
+      "accounts": [
+        {
+          "name": "position",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "position.market",
+                "account": "position"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "createMarket",
       "discriminator": [
         103,
@@ -325,7 +401,7 @@ export type GoalanaProgram = {
         },
         {
           "name": "systemProgram",
-
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -399,7 +475,7 @@ export type GoalanaProgram = {
         },
         {
           "name": "systemProgram",
-
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -419,7 +495,32 @@ export type GoalanaProgram = {
       "accounts": [
         {
           "name": "market",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market.fixtureId",
+                "account": "market"
+              },
+              {
+                "kind": "account",
+                "path": "market.predicateHash",
+                "account": "market"
+              }
+            ]
+          }
         },
         {
           "name": "config",
@@ -546,7 +647,7 @@ export type GoalanaProgram = {
         },
         {
           "name": "systemProgram",
-
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -608,7 +709,7 @@ export type GoalanaProgram = {
         },
         {
           "name": "txoracleProgram",
-
+          "address": "6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J"
         },
         {
           "name": "dailyScoresMerkleRoots"
@@ -943,6 +1044,11 @@ export type GoalanaProgram = {
       "code": 6035,
       "name": "insufficientVaultBalance",
       "msg": "Insufficient vault balance to fulfill payout or refund."
+    },
+    {
+      "code": 6036,
+      "name": "positionNotClaimed",
+      "msg": "Position must be claimed before it can be closed."
     }
   ],
   "types": [

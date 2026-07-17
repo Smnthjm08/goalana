@@ -24,11 +24,22 @@ function syncFile(sourcePath: string, destPath: string, isJson: boolean) {
   console.log(`Syncing ${path.basename(sourcePath)}...`);
   let content = fs.readFileSync(sourcePath, "utf-8");
 
-  // Replace any address field / hardcoded address with the correct Program ID
-  // For JSON: "address": "..."
-  // For TS helper: "address": "..."
-  const addressRegex = /"address"\s*:\s*"[^"]*"/g;
-  content = content.replace(addressRegex, `"address": "${TARGET_PROGRAM_ID}"`);
+  // Only the program's own top-level "address" field should be normalized to
+  // TARGET_PROGRAM_ID. Instruction accounts can carry their own fixed
+  // "address" (e.g. the System Program or the TxOracle program) — a blanket
+  // replace would silently corrupt those and break any call that doesn't
+  // manually override the account (e.g. initializeConfig()).
+  if (isJson) {
+    const parsed = JSON.parse(content);
+    parsed.address = TARGET_PROGRAM_ID;
+    content = JSON.stringify(parsed, null, 2) + "\n";
+  } else {
+    // TS type declaration: not valid JSON, but the top-level "address" field
+    // is always the first occurrence in the file, so a single (non-global)
+    // replace is safe without touching nested account addresses.
+    const addressRegex = /"address"\s*:\s*"[^"]*"/;
+    content = content.replace(addressRegex, `"address": "${TARGET_PROGRAM_ID}"`);
+  }
 
   // Ensure destination directory exists
   fs.mkdirSync(path.dirname(destPath), { recursive: true });

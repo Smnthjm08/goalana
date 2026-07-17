@@ -101,7 +101,7 @@ export async function createMarketForFixture(
       locksAt,
       settleAfter
     )
-    .accounts({
+    .accountsPartial({
       creator: provider.wallet.publicKey,
       systemProgram: SystemProgram.programId,
     })
