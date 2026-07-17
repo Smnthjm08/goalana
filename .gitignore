@@ -53,7 +53,9 @@ skills-lock.json
 
 phase.svg
 
-scripts
+# root-only: scratch notes. A bare "scripts" would also match
+# apps/api/src/scripts and packages/goalana-sdk/scripts.
+/scripts
 
 test-ledger
 
