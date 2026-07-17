@@ -89,6 +89,35 @@ function groupMarkets(
   })).filter((entry) => entry.markets.length > 0)
 }
 
+// Divergence worth flagging with a badge, in percentage points — small drift
+// between the pool and TxLINE is normal noise, not a signal.
+const IMPLIED_PROBABILITY_DIVERGENCE_THRESHOLD = 3
+
+function PoolVsReference({
+  poolYesPct,
+  referenceYesPct,
+}: {
+  poolYesPct: number
+  referenceYesPct: number
+}) {
+  const delta = poolYesPct - referenceYesPct
+  const diverges = Math.abs(delta) >= IMPLIED_PROBABILITY_DIVERGENCE_THRESHOLD
+
+  return (
+    <div className="flex items-center justify-between font-mono text-[10px] text-muted-foreground">
+      <span>
+        POOL IMPLIES {poolYesPct.toFixed(1)}% YES · TXLINE{" "}
+        {referenceYesPct.toFixed(1)}%
+      </span>
+      {diverges && (
+        <span className={delta > 0 ? "text-lime-400" : "text-rose-500"}>
+          {delta > 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)}pt
+        </span>
+      )}
+    </div>
+  )
+}
+
 function MarketCard({ market }: { market: any }) {
   const [selected, setSelected] = useState<"YES" | "NO" | null>(null)
   const [amount, setAmount] = useState("")
@@ -423,27 +452,35 @@ function MarketCard({ market }: { market: any }) {
         )}
 
         {(poolYes !== null || position) && (
-          <div className="flex items-center justify-between border-t border-border pt-3 font-mono text-[10px] text-muted-foreground">
-            <span>
-              POOL — YES {poolYes?.toFixed(3) ?? "…"} / NO{" "}
-              {poolNo?.toFixed(3) ?? "…"} SOL
-            </span>
-            {position &&
-              (position.yesAmount > 0n || position.noAmount > 0n) && (
-                <span className="text-primary">
-                  YOUR POSITION —{" "}
-                  {position.yesAmount > 0n
-                    ? `${Number(position.yesAmount) / LAMPORTS_PER_SOL} YES`
-                    : ""}
-                  {position.yesAmount > 0n && position.noAmount > 0n
-                    ? " / "
-                    : ""}
-                  {position.noAmount > 0n
-                    ? `${Number(position.noAmount) / LAMPORTS_PER_SOL} NO`
-                    : ""}
-                  {position.claimed ? " (CLAIMED)" : ""}
-                </span>
-              )}
+          <div className="flex flex-col gap-1.5 border-t border-border pt-3">
+            <div className="flex items-center justify-between font-mono text-[10px] text-muted-foreground">
+              <span>
+                POOL — YES {poolYes?.toFixed(3) ?? "…"} / NO{" "}
+                {poolNo?.toFixed(3) ?? "…"} SOL
+              </span>
+              {position &&
+                (position.yesAmount > 0n || position.noAmount > 0n) && (
+                  <span className="text-primary">
+                    YOUR POSITION —{" "}
+                    {position.yesAmount > 0n
+                      ? `${Number(position.yesAmount) / LAMPORTS_PER_SOL} YES`
+                      : ""}
+                    {position.yesAmount > 0n && position.noAmount > 0n
+                      ? " / "
+                      : ""}
+                    {position.noAmount > 0n
+                      ? `${Number(position.noAmount) / LAMPORTS_PER_SOL} NO`
+                      : ""}
+                    {position.claimed ? " (CLAIMED)" : ""}
+                  </span>
+                )}
+            </div>
+            {/* v2-todo item 20: the pool is Goalana's own price; TxLINE is only
+                a reference. Surfacing both — and how far they've drifted apart
+                — makes the pari-mutuel mechanism legible instead of implicit. */}
+            {!isUnpriced && poolTotal > 0 && (
+              <PoolVsReference poolYesPct={poolYesPct} referenceYesPct={yesPct} />
+            )}
           </div>
         )}
 

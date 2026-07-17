@@ -8,6 +8,7 @@ import { TooltipProvider } from "@workspace/ui/components/tooltip"
 import { SolanaProvider } from "@/components/providers/solana-provider"
 import { WalletUserProvider } from "@/components/providers/wallet-user-provider"
 import { Header } from "@/components/header"
+import { JudgingWindowBanner } from "@/components/judging-window-banner"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -43,6 +44,7 @@ export default function RootLayout({
               <WalletUserProvider>
                 <div className="relative flex min-h-svh flex-col">
                   <Header />
+                  <JudgingWindowBanner />
                   <main className="flex-1">{children}</main>
                 </div>
               </WalletUserProvider>

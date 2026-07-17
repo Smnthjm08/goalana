@@ -271,7 +271,7 @@ describe("goalana", () => {
       .lockMarket()
       .accounts({
         market: marketPda,
-      })
+      } as any)
       .instruction();
 
     expect(instruction.programId.equals(program.programId)).to.equal(true);
@@ -320,7 +320,7 @@ describe("goalana", () => {
       .cancelMarket()
       .accounts({
         market: marketPda,
-      })
+      } as any)
       .instruction();
 
     expect(instruction.programId.equals(program.programId)).to.equal(true);
@@ -444,7 +444,7 @@ describe("goalana", () => {
       const now = Math.floor(Date.now() / 1000);
       const marketPda = await createMarketWithLocksAt(baseFixtureId + 104, now + 3600);
 
-      await program.methods.lockMarket().accounts({ market: marketPda }).rpc();
+      await program.methods.lockMarket().accounts({ market: marketPda } as any).rpc();
 
       const market = await program.account.market.fetch(marketPda);
       expect(market.status).to.have.property("locked");
@@ -455,10 +455,10 @@ describe("goalana", () => {
       const now = Math.floor(Date.now() / 1000);
       const marketPda = await createMarketWithLocksAt(baseFixtureId + 105, now + 3600);
 
-      await program.methods.lockMarket().accounts({ market: marketPda }).rpc();
+      await program.methods.lockMarket().accounts({ market: marketPda } as any).rpc();
 
       try {
-        await program.methods.lockMarket().accounts({ market: marketPda }).rpc();
+        await program.methods.lockMarket().accounts({ market: marketPda } as any).rpc();
         expect.fail("Should have thrown MarketNotOpen");
       } catch (e: any) {
         expect(e.message).to.include("MarketNotOpen");
@@ -469,10 +469,10 @@ describe("goalana", () => {
       const now = Math.floor(Date.now() / 1000);
       const marketPda = await createMarketWithLocksAt(baseFixtureId + 106, now + 3600);
 
-      await program.methods.cancelMarket().accounts({ market: marketPda }).rpc();
+      await program.methods.cancelMarket().accounts({ market: marketPda } as any).rpc();
 
       try {
-        await program.methods.lockMarket().accounts({ market: marketPda }).rpc();
+        await program.methods.lockMarket().accounts({ market: marketPda } as any).rpc();
         expect.fail("Should have thrown MarketNotOpen");
       } catch (e: any) {
         expect(e.message).to.include("MarketNotOpen");
@@ -485,7 +485,7 @@ describe("goalana", () => {
 
       try {
         await program.methods.lockMarket()
-          .accounts({ market: marketPda, authority: unauthorizedWallet.publicKey })
+          .accounts({ market: marketPda, authority: unauthorizedWallet.publicKey } as any)
           .signers([unauthorizedWallet])
           .rpc();
         expect.fail("Should have thrown UnauthorizedMarketAuthority");
@@ -881,7 +881,7 @@ describe("goalana", () => {
       const { marketPda } = await createMarketForSettle(fixtureId, now + 2, now + 3, predicate);
       await advanceTime(3);
 
-      await program.methods.cancelMarket().accounts({ market: marketPda }).rpc();
+      await program.methods.cancelMarket().accounts({ market: marketPda } as any).rpc();
 
       const tsMs = (await getOnChainTime()) * 1000;
       await initializeDailyRoot(tsMs);
@@ -1271,7 +1271,7 @@ describe("goalana", () => {
         .rpc();
 
       // Cancel market
-      await program.methods.cancelMarket().accounts({ market: marketPda }).rpc();
+      await program.methods.cancelMarket().accounts({ market: marketPda } as any).rpc();
 
       // Claim refund
       const initialBalance = await provider.connection.getBalance(provider.wallet.publicKey);
@@ -1377,6 +1377,162 @@ describe("goalana", () => {
 
       const position = await program.account.position.fetch(user3PositionPda);
       expect(position.claimed).to.equal(true);
+    });
+
+    describe("close_position", () => {
+      it("succeeds to close a claimed position and returns rent to the user", async () => {
+        const now = await getOnChainTime();
+        const fixtureId = baseFixtureId + 306;
+        const { marketPda } = await createMarketForBet(fixtureId, now + 100, now + 200);
+
+        const vaultPda = getVaultPda(marketPda);
+        const positionPda = getPositionPda(marketPda, provider.wallet.publicKey);
+
+        await program.methods
+          .placeBet({ yes: {} }, new anchor.BN(1 * anchor.web3.LAMPORTS_PER_SOL))
+          .accounts({
+            market: marketPda,
+            vault: vaultPda,
+            position: positionPda,
+          } as any)
+          .rpc();
+
+        // Cancel + refund so the position is claimed and eligible for closing.
+        await program.methods.cancelMarket().accounts({ market: marketPda } as any).rpc();
+        await program.methods
+          .claimRefund()
+          .accounts({
+            market: marketPda,
+            vault: vaultPda,
+            position: positionPda,
+          } as any)
+          .rpc();
+
+        const positionRent = await provider.connection.getBalance(positionPda);
+        const initialBalance = await provider.connection.getBalance(provider.wallet.publicKey);
+
+        await program.methods
+          .closePosition()
+          .accounts({
+            position: positionPda,
+            user: provider.wallet.publicKey,
+          } as any)
+          .rpc();
+
+        const finalBalance = await provider.connection.getBalance(provider.wallet.publicKey);
+        const diff = finalBalance - initialBalance;
+        expect(diff).to.be.closeTo(positionRent, 0.01 * anchor.web3.LAMPORTS_PER_SOL);
+
+        const closedAccountInfo = await provider.connection.getAccountInfo(positionPda);
+        expect(closedAccountInfo).to.equal(null);
+      });
+
+      it("fails to close a position that has not been claimed", async () => {
+        const now = await getOnChainTime();
+        const fixtureId = baseFixtureId + 307;
+        const { marketPda } = await createMarketForBet(fixtureId, now + 100, now + 200);
+
+        const vaultPda = getVaultPda(marketPda);
+        const positionPda = getPositionPda(marketPda, provider.wallet.publicKey);
+
+        await program.methods
+          .placeBet({ yes: {} }, new anchor.BN(1 * anchor.web3.LAMPORTS_PER_SOL))
+          .accounts({
+            market: marketPda,
+            vault: vaultPda,
+            position: positionPda,
+          } as any)
+          .rpc();
+
+        try {
+          await program.methods
+            .closePosition()
+            .accounts({
+              position: positionPda,
+              user: provider.wallet.publicKey,
+            } as any)
+            .rpc();
+          expect.fail("Should have thrown PositionNotClaimed");
+        } catch (e: any) {
+          if (e.name === "AssertionError") throw e;
+          expect(e.message).to.include("PositionNotClaimed");
+        }
+
+        const positionAccountInfo = await provider.connection.getAccountInfo(positionPda);
+        expect(positionAccountInfo).to.not.equal(null);
+      });
+
+      it("fails when a different wallet attempts to close another user's position", async () => {
+        const now = await getOnChainTime();
+        const fixtureId = baseFixtureId + 308;
+        const { marketPda } = await createMarketForBet(fixtureId, now + 100, now + 200);
+
+        const vaultPda = getVaultPda(marketPda);
+
+        const owner = anchor.web3.Keypair.generate();
+        const airdropSig = await provider.connection.requestAirdrop(owner.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL);
+        const latestBlockhash = await provider.connection.getLatestBlockhash();
+        await provider.connection.confirmTransaction({
+          blockhash: latestBlockhash.blockhash,
+          lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+          signature: airdropSig,
+        });
+
+        const ownerPositionPda = getPositionPda(marketPda, owner.publicKey);
+        await program.methods
+          .placeBet({ yes: {} }, new anchor.BN(1 * anchor.web3.LAMPORTS_PER_SOL))
+          .accounts({
+            market: marketPda,
+            vault: vaultPda,
+            position: ownerPositionPda,
+            user: owner.publicKey,
+          } as any)
+          .signers([owner])
+          .rpc();
+
+        // Cancel + refund so the position is claimed (and would otherwise be closeable).
+        await program.methods.cancelMarket().accounts({ market: marketPda } as any).rpc();
+        await program.methods
+          .claimRefund()
+          .accounts({
+            market: marketPda,
+            vault: vaultPda,
+            position: ownerPositionPda,
+            user: owner.publicKey,
+          } as any)
+          .signers([owner])
+          .rpc();
+
+        // An unrelated wallet cannot close the owner's position by signing as itself:
+        // the position PDA is seeded from the signer's own key, so it can't even
+        // reference the owner's position account under its own signature.
+        const intruder = anchor.web3.Keypair.generate();
+        const intruderAirdropSig = await provider.connection.requestAirdrop(intruder.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL);
+        const intruderBlockhash = await provider.connection.getLatestBlockhash();
+        await provider.connection.confirmTransaction({
+          blockhash: intruderBlockhash.blockhash,
+          lastValidBlockHeight: intruderBlockhash.lastValidBlockHeight,
+          signature: intruderAirdropSig,
+        });
+
+        try {
+          await program.methods
+            .closePosition()
+            .accounts({
+              position: ownerPositionPda,
+              user: intruder.publicKey,
+            } as any)
+            .signers([intruder])
+            .rpc();
+          expect.fail("Should have thrown a seeds constraint error");
+        } catch (e: any) {
+          if (e.name === "AssertionError") throw e;
+          expect(e.message).to.include("ConstraintSeeds");
+        }
+
+        const ownerPositionAccountInfo = await provider.connection.getAccountInfo(ownerPositionPda);
+        expect(ownerPositionAccountInfo).to.not.equal(null);
+      });
     });
   });
 

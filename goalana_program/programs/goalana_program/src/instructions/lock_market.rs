@@ -6,6 +6,8 @@ use anchor_lang::prelude::*;
 pub struct LockMarket<'info> {
     #[account(
         mut,
+        seeds = [b"market", market.fixture_id.to_le_bytes().as_ref(), market.predicate_hash.as_ref()],
+        bump = market.bump,
         constraint = market.status == MarketStatus::Open
             @ GoalanaError::MarketNotOpen,
     )]

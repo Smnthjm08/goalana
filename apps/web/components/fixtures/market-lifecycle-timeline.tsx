@@ -140,15 +140,21 @@ export function MarketLifecycleTimeline({
       {open && (
         <div className="flex flex-col">
           {stages.map((stage, i) => (
-            <div key={stage.key} className="flex gap-3">
+            // Keying on status (not just stage.key) remounts this row only
+            // when a stage actually transitions — so the enter animation
+            // plays once, as the stage lands, not on every ~10s poll tick.
+            <div
+              key={`${stage.key}-${stage.status}`}
+              className="animate-in fade-in slide-in-from-left-1 flex gap-3 duration-500"
+            >
               {/* Rail */}
               <div className="flex flex-col items-center">
                 <span
-                  className={`mt-1 h-2 w-2 shrink-0 rounded-full ${statusDot(stage.status)}`}
+                  className={`mt-1 h-2 w-2 shrink-0 rounded-full transition-colors duration-500 ${statusDot(stage.status)}`}
                 />
                 {i < stages.length - 1 && (
                   <span
-                    className={`w-px flex-1 ${stage.status === "done" ? "bg-primary/40" : "bg-border"}`}
+                    className={`w-px flex-1 transition-colors duration-500 ${stage.status === "done" ? "bg-primary/40" : "bg-border"}`}
                   />
                 )}
               </div>
@@ -157,7 +163,7 @@ export function MarketLifecycleTimeline({
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 pb-3">
                 <div className="flex items-center justify-between gap-2">
                   <span
-                    className={`font-heading text-[11px] tracking-widest uppercase ${
+                    className={`font-heading text-[11px] tracking-widest uppercase transition-colors duration-500 ${
                       stage.status === "done"
                         ? "text-foreground"
                         : "text-muted-foreground"
@@ -166,7 +172,7 @@ export function MarketLifecycleTimeline({
                     {stage.label}
                   </span>
                   <span
-                    className={`font-mono text-[9px] tracking-widest uppercase ${
+                    className={`font-mono text-[9px] tracking-widest uppercase transition-colors duration-500 ${
                       stage.status === "done"
                         ? "text-primary"
                         : stage.status === "skipped"

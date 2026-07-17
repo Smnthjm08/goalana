@@ -9,7 +9,8 @@ import { logger } from "../utils/logger";
 
 const scoresService = new ScoresService();
 
-const RECONNECT_DELAY_MS = 5_000;
+const RECONNECT_BASE_DELAY_MS = 5_000;
+const RECONNECT_MAX_DELAY_MS = 60_000;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,6 +31,7 @@ export async function startScoresWorker(signal: AbortSignal): Promise<void> {
   logger.info("scores.worker", "Starting...");
 
   let lastEventId: string | undefined;
+  let reconnectDelayMs = RECONNECT_BASE_DELAY_MS;
 
   while (!signal.aborted) {
     try {
@@ -40,6 +42,10 @@ export async function startScoresWorker(signal: AbortSignal): Promise<void> {
 
       logger.success("scores.worker", "Connected to TxLINE scores stream");
       markStreamConnected("scores");
+      // A successful connection means any prior outage is over — reset so
+      // the next disconnect retries quickly again instead of inheriting a
+      // stale backoff delay from an unrelated earlier failure streak.
+      reconnectDelayMs = RECONNECT_BASE_DELAY_MS;
 
       for await (const frame of stream as AsyncIterable<SSEEvent>) {
         if (frame.id) {
@@ -86,7 +92,9 @@ export async function startScoresWorker(signal: AbortSignal): Promise<void> {
       break;
     }
 
-    await sleep(RECONNECT_DELAY_MS);
+    logger.info("scores.worker", `Reconnecting in ${reconnectDelayMs}ms...`);
+    await sleep(reconnectDelayMs);
+    reconnectDelayMs = Math.min(reconnectDelayMs * 2, RECONNECT_MAX_DELAY_MS);
   }
 
   logger.info("scores.worker", "Stopped.");

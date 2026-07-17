@@ -80,4 +80,8 @@ pub mod goalana_program {
     pub fn claim_refund(ctx: Context<ClaimRefund>) -> Result<()> {
         instructions::claim_refund::handle_claim_refund(ctx)
     }
+
+    pub fn close_position(ctx: Context<ClosePosition>) -> Result<()> {
+        instructions::close_position::handle_close_position(ctx)
+    }
 }

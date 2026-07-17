@@ -199,6 +199,15 @@ export function SettlementProofReceipt({
               </>
             )}
           </span>
+          {!isPreview && (
+            <span className="max-w-md font-mono text-[9px] leading-snug text-muted-foreground">
+              <span className="text-primary">Permissionless.</span>{" "}
+              <span className="text-foreground">settle_market</span> takes no
+              authority signer — anyone holding this same TxLINE proof could
+              have submitted it. Our keeper is a convenience, not an
+              authority.
+            </span>
+          )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <span className="font-mono text-[9px] tracking-widest text-muted-foreground uppercase">

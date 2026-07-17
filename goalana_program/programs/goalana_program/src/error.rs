@@ -109,4 +109,7 @@ pub enum GoalanaError {
 
     #[msg("Insufficient vault balance to fulfill payout or refund.")]
     InsufficientVaultBalance,
+
+    #[msg("Position must be claimed before it can be closed.")]
+    PositionNotClaimed,
 }

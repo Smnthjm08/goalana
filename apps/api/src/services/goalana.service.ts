@@ -127,6 +127,35 @@ function decodeMarketStatus(raw: Record<string, unknown>): OnChainMarketStatus {
 }
 
 /**
+ * Retries a read-only call with exponential backoff. Scoped deliberately to
+ * reads (see `fetchMarketAccount` below) — write/action calls in this file
+ * (lock/cancel/settle/bet/claim) are left alone: a failed write is already
+ * safe to just fail and let the caller's own retry-on-next-tick logic
+ * (lifecycle cron) handle it, whereas blindly retrying a `.rpc()` risks a
+ * double-submit if the first attempt actually landed.
+ */
+async function withReadRetry<T>(
+  fn: () => Promise<T>,
+  attempts = 3,
+  baseDelayMs = 500
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, baseDelayMs * 2 ** attempt));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+/**
  * Reads a Market account directly from chain — the source of truth for
  * lock/settlement automation. Postgres's `Market.status` is only a mirror
  * written at creation time; it is never updated by anything other than the
@@ -135,7 +164,7 @@ function decodeMarketStatus(raw: Record<string, unknown>): OnChainMarketStatus {
  * previous run, or drift from a manual on-chain action).
  */
 export async function fetchMarketAccount(marketPda: PublicKey): Promise<OnChainMarket> {
-  const account = await program.account.market.fetch(marketPda);
+  const account = await withReadRetry(() => program.account.market.fetch(marketPda));
 
   return {
     status: decodeMarketStatus(account.status as unknown as Record<string, unknown>),
