@@ -236,8 +236,11 @@ model Market {
   settleAfter         DateTime
   creationTx          String?
   sourceOddsMessageId String
-  initialYesPct       Float
-  initialNoPct        Float
+  // Nullable: unpriced parametric prop markets (v2-todo item 18) have no
+  // TxLINE reference odds to seed from — the pari-mutuel pool is the only
+  // price. Every other market type still populates these at creation.
+  initialYesPct       Float?
+  initialNoPct        Float?
   status              String   @default("OPEN")
 
   // ─── Lifecycle transition provenance (lock.service / settlement.service) ──

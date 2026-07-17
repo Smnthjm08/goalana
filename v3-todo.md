@@ -22,7 +22,7 @@ France v England market state. See §4's redeploy gate.
 ## 1. P0 — Submission blockers (lose-the-hackathon items)
 
 | Done | # | Item | Effort | Notes |
-|:---:|---|------|:---:|------|
+| :---: | --- | ------ | :---: | ------ |
 | ☐ | **P0-1** | **Record the demo video (≤5 min) TODAY — do not wait for the semifinal.** | 0.5d | Script in §5. Everything it needs already exists: live app, proof-preview tab, Proof Integrity tab with the 5 real Devnet txs (genuine accepted / forged reverted), lifecycle timeline, positions page. If the live settlement lands tomorrow, splice/re-record the settle beat — that's a bonus take, **not the plan**. One bad RPC night must not leave us with no video. |
 | ☐ | **P0-2** | **Deploy `apps/web` (Vercel) + put the real link in README + submission form.** | 0.25d | "Application Access: a working link" is a hard requirement. Point it at the live API VM; verify `/`, `/fixtures/:id`, `/positions`, wallet connect, and the Proof Integrity tab all work from the public URL, on mobile too (judges click on phones). |
 | ☐ | **P0-3** | **Commit + push everything; verify the public repo state.** | 0.25d | ~10 modified files are sitting uncommitted on `production` (odds ordering guard, market indexes migration, chart tooltip fix, activate.ts secret fix…). Judges clone the repo — pushed state must match the demo. Also: confirm the repo is public, the **default branch** shows the current README, and no secrets/`.env.activation.local` are tracked (`git log --diff-filter=A` spot-check). |
@@ -45,7 +45,7 @@ The one genuine end-to-end artifact still missing: a **real Devnet `settle_marke
 ## 3. P2 — Cheap wins before the deadline (only after P0/P1)
 
 | Done | # | Item | Effort | Why |
-|:---:|---|------|:---:|-----|
+| :---: | --- | ------ | :---: | ----- |
 | ☐ | **P2-1** | **RISKS.md** — content already exists in v2-todo.md's "Remaining risks" + "Known limitation": SSE reconnect has no backoff cap, no per-call RPC retry (cron self-heals), mock oracle scope, house cancel/lock powers (§4 A5), vault dust from floor division, position rent not reclaimable. Add the real CU numbers from the recorded proof-integrity txs. | 0.5h | Honest-scope trust points; Final Whistle / Quovra parity. A judge won't read v2-todo.md. |
 | ☐ | **P2-2** | **Headline "permissionless settlement" in README + UI.** `settle_market` takes **no authority signer** — anyone with the genuine TxLINE proof can settle any market (verified: `SettleMarket` accounts = market + oracle program + daily-roots PDA, nothing else). This is the track's literal words — _"a user or keeper bot triggers your contract"_ — and it's currently invisible: README frames settlement as "the backend does it". One README paragraph + a "anyone can settle this market — the keeper is a convenience, not an authority" line on the proof receipt. | 1h | Strongest remaining positioning win, zero code risk. Same for `claim_*`: permissionless, user-pulled. |
 | ☐ | **P2-3** | **"Judging-window" note in README + a banner rule in the app**: TxLINE free-tier access ends at the deadline, so during review the health indicator may show red and no new fixtures/odds flow; all proofs, evidence txs, and settled markets are **persisted** and fully inspectable. | 0.5h | Prevents a judge from reading a dead feed as a broken app — the single cheapest misjudgment insurance available. |
@@ -62,8 +62,8 @@ upside — every fix below is classified accordingly.
 ### A. Safe now (no deploy, or no code at all)
 
 | Done | # | Finding | Fix |
-|:---:|---|---------|-----|
-| ☐ | **A1** | **`close_bet.rs` is a dead stub** — 5 lines, empty `handle_close_bet()`, **not wired into `lib.rs`**. A judge reading the program hits an instruction that does literally nothing and wonders what else is scaffolding. | Delete the file + its `instructions.rs` export. Repo-only change, deployed program untouched. Verify `anchor build` still passes. |
+| :---: | --- | --------- | ----- |
+| ✅ | **A1** | **`close_bet.rs` is a dead stub** — 5 lines, empty `handle_close_bet()`, **not wired into `lib.rs`**. A judge reading the program hits an instruction that does literally nothing and wonders what else is scaffolding. | Delete the file + its `instructions.rs` export. Repo-only change, deployed program untouched. Verify `anchor build` still passes. Done 2026-07-18 — see progress log. |
 | ☐ | **A2** | **Permissionless settlement is real but unmarketed** (see P2-2). Also true of `claim_winnings`/`claim_refund` (user-signed pull, no house involvement) — the _only_ house-gated instructions are create/lock/cancel, and that's exactly the "house makes markets, cryptography settles them" story. | README/UI positioning only — this is P2-2. |
 | ☐ | **A3** | **House trust surface is honest but undocumented**: `cancel_market` works on Open **and Locked** markets with no time gate — the house can cancel a market seconds before settlement (turning a losing pool into refunds). `lock_market` likewise has no `now >= locks_at` check, so the house could freeze betting early. Neither can steal (funds only ever exit via user-signed claims), but a judge who reads the program will find this in 5 minutes. | **Disclose in RISKS.md now** (A5 content): "the house can cancel/lock, never redirect funds; cancel ⇒ everyone refunds at face value." Honesty beats silence; the on-chain fix is B1/B2. |
 
@@ -95,10 +95,15 @@ Record at 1080p+, readable font sizes, wallet with a clean tx history. **Upload 
 ## 6. Explicitly NOT doing (unchanged from v2, plus v3 additions)
 
 LMSR/AMM, permissionless creation, leaderboards/social/push/i18n/faucet — **plus (v3):**
-Agent API (item 13), Protocol Inspector (item 14), client-side proof re-verification (item 15),
+Agent API (item 13), client-side proof re-verification (item 15),
 ET/penalty markets (item 17), user-requested markets (item 9). All were real ideas; none are
 reachable by a judge who never sees them in a 5-minute video, and every hour they'd take is an
 hour off the three things judges _do_ touch.
+
+**Protocol Inspector (item 14) was pulled out of this list and shipped on 2026-07-18** — built
+on explicit instruction despite this section's original guidance, with all P0 items above still
+open. See v2-todo.md's 2026-07-18 progress log for what it covers and what wasn't verified
+(no headless-browser check of the client-side on-chain fetch).
 
 ## 7. Timeline
 
@@ -112,3 +117,6 @@ hour off the three things judges _do_ touch.
 ### Progress log
 
 _(append entries here as items land, v2-style)_
+
+- **2026-07-18 — Protocol Inspector (v2 item 14) shipped**, pulled out of this doc's §6 "not doing" list on explicit instruction, ahead of the still-open P0 items above. `/inspector` — read-only, no protocol/DB changes. Full writeup in v2-todo.md's 2026-07-18 progress log. Typecheck + lint clean; dev-server route verified (200, no SSR errors); client-side on-chain fetch not verified end-to-end in a real browser (no headless-browser tool in this sandbox, `npm install playwright` failed with no network).
+- **2026-07-18 — A1 done: dead `close_bet.rs` stub removed.** Deleted `goalana_program/programs/goalana_program/src/instructions/close_bet.rs` (5-line no-op `handle_close_bet()`) and its two export lines (`pub mod close_bet;`, `pub use close_bet::*;`) in `instructions.rs`. Confirmed before deleting that it was referenced nowhere else in the repo — not in `lib.rs`'s `#[program]` block (never wired to an instruction discriminator), not as a `CloseBet` accounts struct, not in the generated IDL, SDK types, or tests. `anchor build` re-ran clean afterward (`goalana_program` compiled, release + test profiles both finished with no errors); confirmed the freshly generated `target/idl/goalana_program.json` still has no `closeBet` entry. Repo-only change — the deployed program on Devnet is untouched, so this doesn't trip the §4 redeploy gate.

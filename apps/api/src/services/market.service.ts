@@ -2,7 +2,7 @@ import { prisma } from "@workspace/db";
 import { OddsService, type OddsPayload } from "@workspace/txline";
 import { type Predicate, TXLINE_STAT_KEYS } from "@workspace/goalana-sdk";
 import { createMarketForFixture, initializeGoalanaConfig } from "./goalana.service";
-import { SUPPORTED_MARKETS } from "./market-definitions";
+import { SUPPORTED_MARKETS, PARAMETRIC_PROP_MARKETS } from "./market-definitions";
 import { logger } from "../utils/logger";
 import { getActiveCompetitionId } from "../config/competition";
 
@@ -229,6 +229,66 @@ export function discoverMarketsForFixture(
   return discovered;
 }
 
+/**
+ * Creates the parametric prop markets (corners/cards) for a fixture,
+ * unconditionally — no TxLINE odds row is required or checked. Idempotent:
+ * `createMarketForFixture` no-ops on-chain if the PDA already exists, and
+ * the DB upsert is a no-op update, so re-running every cron tick is safe.
+ */
+export async function createParametricPropMarketsForFixture(
+  fixture: { fixtureId: bigint },
+  locksAt: Date,
+  settleAfter: Date
+) {
+  for (const prop of PARAMETRIC_PROP_MARKETS) {
+    const predicate: Predicate = {
+      statAKey: prop.statAKey,
+      statBKey: prop.statBKey,
+      op: { add: {} },
+      threshold: prop.threshold,
+      comparison: { greaterThan: {} },
+    };
+
+    try {
+      const result = await createMarketForFixture(fixture.fixtureId, predicate, locksAt, settleAfter);
+
+      if (!result.alreadyExists) {
+        logger.success(
+          "market.service",
+          `Created parametric prop market ${prop.type} for fixture ${fixture.fixtureId}: ${result.marketPda.toBase58()}`
+        );
+      }
+
+      if (result.marketPda) {
+        await prisma.market.upsert({
+          where: { marketPda: result.marketPda.toBase58() },
+          update: {},
+          create: {
+            fixtureId: fixture.fixtureId,
+            marketPda: result.marketPda.toBase58(),
+            predicateHash: Array.from(result.predicateHash || []).join(","),
+            marketType: prop.type,
+            question: prop.label,
+            locksAt,
+            settleAfter,
+            creationTx: result.txSignature,
+            sourceOddsMessageId: `unpriced-parametric-v1:${fixture.fixtureId}`,
+            initialYesPct: null,
+            initialNoPct: null,
+            status: "OPEN",
+          },
+        });
+      }
+    } catch (error) {
+      logger.error(
+        "market.service",
+        `Failed to create parametric prop market ${prop.type} for fixture ${fixture.fixtureId}`,
+        error
+      );
+    }
+  }
+}
+
 export async function processMarketsForUpcomingFixtures() {
   await initializeGoalanaConfig();
 
@@ -260,6 +320,13 @@ export async function processMarketsForUpcomingFixtures() {
 
   for (const fixture of fixtures) {
     logger.info("market.service", `Processing Fixture: ${fixture.fixtureId} ${fixture.participant1} vs ${fixture.participant2}`);
+
+    // Same lock/settle window as the odds-driven markets below, computed
+    // once so the unpriced parametric props (no odds row to derive from)
+    // share the exact same lifecycle timing.
+    const propLocksAt = new Date(Number(fixture.startTime));
+    const propSettleAfter = new Date(propLocksAt.getTime() + 15 * 60 * 1000);
+    await createParametricPropMarketsForFixture(fixture, propLocksAt, propSettleAfter);
 
     // 2. Fetch TxLINE odds
     const oddsRows = await oddsService.getOddsSnapshots(Number(fixture.fixtureId));

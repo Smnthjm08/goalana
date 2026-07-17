@@ -10,6 +10,7 @@ import { TxlineHealthIndicator } from "./txline-health-indicator"
 const NAV_LINKS = [
   { href: "/", label: "Markets" },
   { href: "/positions", label: "My Positions" },
+  { href: "/inspector", label: "Inspector" },
 ]
 
 export function Header() {

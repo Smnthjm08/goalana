@@ -1,3 +1,5 @@
+import { TXLINE_STAT_KEYS } from "@workspace/goalana-sdk";
+
 export const SUPPORTED_MARKETS = {
   FULL_TIME_OVER_1_5: {
     type: "FULL_TIME_OVER_1_5",
@@ -58,3 +60,29 @@ export const SUPPORTED_MARKETS = {
     },
   },
 } as const;
+
+/**
+ * Parametric prop markets — no TxLINE reference odds exist for corners/cards
+ * (only 1X2 / OVERUNDER / ASIANHANDICAP goals odds are priced), so unlike
+ * SUPPORTED_MARKETS above these are created unconditionally for every
+ * upcoming fixture, independent of any Odds row. The pari-mutuel pool is
+ * the only price ("unpriced" — initialYesPct/initialNoPct stay null).
+ * Same `add + greaterThan` predicate shape as the goals Over/Under markets,
+ * just on the already-validated corners (7/8) and cards (3/4) stat keys.
+ */
+export const PARAMETRIC_PROP_MARKETS = [
+  {
+    type: "TOTAL_CORNERS_OVER_9_5",
+    label: "Will total corners exceed 9.5?",
+    statAKey: TXLINE_STAT_KEYS.HOME_CORNERS,
+    statBKey: TXLINE_STAT_KEYS.AWAY_CORNERS,
+    threshold: 9,
+  },
+  {
+    type: "TOTAL_CARDS_OVER_3_5",
+    label: "Will total (yellow) cards exceed 3.5?",
+    statAKey: TXLINE_STAT_KEYS.HOME_YELLOW_CARDS,
+    statBKey: TXLINE_STAT_KEYS.AWAY_YELLOW_CARDS,
+    threshold: 3,
+  },
+] as const;

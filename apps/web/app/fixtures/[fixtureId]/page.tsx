@@ -53,6 +53,8 @@ const marketTypeLabels: Record<string, string> = {
   FULL_TIME_OVER_1_5: "TOTAL GOALS / FULL TIME",
   FULL_TIME_OVER_2_5: "TOTAL GOALS / FULL TIME",
   FULL_TIME_OVER_3_5: "TOTAL GOALS / FULL TIME",
+  TOTAL_CORNERS_OVER_9_5: "PARAMETRIC PROP / FULL TIME",
+  TOTAL_CARDS_OVER_3_5: "PARAMETRIC PROP / FULL TIME",
 }
 
 // Section grouping for the Markets tab — keeps the six supported markets
@@ -64,8 +66,10 @@ const MARKET_GROUPS: Record<string, string> = {
   FULL_TIME_OVER_1_5: "TOTAL GOALS",
   FULL_TIME_OVER_2_5: "TOTAL GOALS",
   FULL_TIME_OVER_3_5: "TOTAL GOALS",
+  TOTAL_CORNERS_OVER_9_5: "PARAMETRIC PROPS",
+  TOTAL_CARDS_OVER_3_5: "PARAMETRIC PROPS",
 }
-const MARKET_GROUP_ORDER = ["MATCH RESULT", "TOTAL GOALS", "OTHER"]
+const MARKET_GROUP_ORDER = ["MATCH RESULT", "TOTAL GOALS", "PARAMETRIC PROPS", "OTHER"]
 
 function groupMarkets(
   markets: any[]
@@ -111,12 +115,6 @@ function MarketCard({ market }: { market: any }) {
     market.marketPda
   )
 
-  // currentYesPct/currentNoPct are the live TxLINE reference probability
-  // (server-joined from the current Odds row); fall back to the opening
-  // snapshot captured at market creation if a live match isn't available yet.
-  const yesPct = Number(market.currentYesPct ?? market.initialYesPct)
-  const noPct = Number(market.currentNoPct ?? market.initialNoPct)
-
   // On-chain status is the source of truth once loaded; the DB's `status`
   // (mirrored at creation time, never updated by lock/settle) is only a
   // fallback while the on-chain read is in flight.
@@ -129,6 +127,20 @@ function MarketCard({ market }: { market: any }) {
   const poolNo = onChainMarket
     ? Number(onChainMarket.totalNo) / LAMPORTS_PER_SOL
     : null
+
+  // Parametric prop markets (v2-todo item 18) have no TxLINE reference
+  // odds — `initialYesPct` is null. The pool is the only price: show the
+  // live pari-mutuel split (50/50 with no stake yet) instead of a TxLINE
+  // percentage, and skip the delta-vs-opening-odds display entirely.
+  const isUnpriced = market.initialYesPct == null
+  const poolTotal = (poolYes ?? 0) + (poolNo ?? 0)
+  const poolYesPct = poolTotal > 0 ? ((poolYes ?? 0) / poolTotal) * 100 : 50
+
+  // currentYesPct/currentNoPct are the live TxLINE reference probability
+  // (server-joined from the current Odds row); fall back to the opening
+  // snapshot captured at market creation if a live match isn't available yet.
+  const yesPct = isUnpriced ? poolYesPct : Number(market.currentYesPct ?? market.initialYesPct)
+  const noPct = isUnpriced ? 100 - poolYesPct : Number(market.currentNoPct ?? market.initialNoPct)
 
   async function handlePlaceBet() {
     if (!connected || !publicKey) {
@@ -309,7 +321,9 @@ function MarketCard({ market }: { market: any }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-4 p-5">
         <span className="-mb-1 text-center font-mono text-[10px] tracking-widest text-muted-foreground">
-          TXLINE REFERENCE — NOT GOALANA&lsquo;S ON-CHAIN POOL PRICE
+          {isUnpriced
+            ? "UNPRICED — THE POOL SETS THE PRICE"
+            : "TXLINE REFERENCE — NOT GOALANA‘S ON-CHAIN POOL PRICE"}
         </span>
         <div className="grid grid-cols-2 gap-4">
           <Button
@@ -333,11 +347,13 @@ function MarketCard({ market }: { market: any }) {
               >
                 {yesPct.toFixed(2)}%
               </span>
-              <OddsDelta
-                current={yesPct}
-                initial={Number(market.initialYesPct)}
-                dimmed={selected === "YES"}
-              />
+              {!isUnpriced && (
+                <OddsDelta
+                  current={yesPct}
+                  initial={Number(market.initialYesPct)}
+                  dimmed={selected === "YES"}
+                />
+              )}
             </span>
           </Button>
           <Button
@@ -361,11 +377,13 @@ function MarketCard({ market }: { market: any }) {
               >
                 {noPct.toFixed(2)}%
               </span>
-              <OddsDelta
-                current={noPct}
-                initial={Number(market.initialNoPct)}
-                dimmed={selected === "NO"}
-              />
+              {!isUnpriced && (
+                <OddsDelta
+                  current={noPct}
+                  initial={Number(market.initialNoPct)}
+                  dimmed={selected === "NO"}
+                />
+              )}
             </span>
           </Button>
         </div>

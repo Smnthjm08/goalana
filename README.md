@@ -88,13 +88,65 @@ Two things this shows, neither of them asserted:
    CPI fails and `settle_market` reverts with it. A false outcome cannot be settled.
 2. **Settlement is stat-agnostic.** Goals, corners and cards all verify through the _identical_
    `add + greaterThan` predicate and the _identical_ instruction; only the stat keys differ.
-   Goalana is not a goals oracle. (Only goals back a tradeable market today — market creation is
-   gated on TxLINE reference odds, and TxLINE prices no corners/cards markets for this
-   competition.)
+   Goalana is not a goals oracle — and this is no longer just a claim: France v England carries two
+   real **unpriced parametric prop markets**, "Total corners > 9.5" and "Total cards > 3.5"
+   ([evidence](#parametric-prop-markets--unpriced-pari-mutuel)), created without any TxLINE
+   reference odds (TxLINE prices no corners/cards markets for this competition) — the pari-mutuel
+   pool is the only price, and creation for every future fixture is fully automated.
 
 Reproduce: `bun src/scripts/record-proof-integrity.ts <fixtureId> --execute` (from `apps/api`).
 
+### Parametric prop markets — unpriced pari-mutuel
+
+The track brief explicitly suggests parametric prop bets ("Team A Corners + Team B Corners >
+10"). TxLINE prices no corners/cards odds for this competition, so instead of a TxLINE-priced
+market, these two are **unpriced** — the pari-mutuel pool itself is the only price, labelled
+"Unpriced — the pool sets the price" in the UI. Real Devnet markets on France v England
+(fixture `18257865`):
+
+| Market | Predicate | Market PDA | `create_market` tx |
+|---|---|---|---|
+| Total corners > 9.5 | keys 7+8, `add > 9` | [`3S7Qfd5g…5XTDWQtcPU`](https://explorer.solana.com/address/3S7Qfd5goxGV2qWA6nJczd9UsRqPB93Cks5XTDWQtcPU?cluster=devnet) | [`5FqQqH7f…FLe1YZw`](https://explorer.solana.com/tx/5FqQqH7fGiocMwdoLg4d7Q43aZm4xQW9fksXo5GJncfpNjm73R6Q6GKrEGHdvoEa6icX1KLuJX3WS32ViFLe1YZw?cluster=devnet) |
+| Total cards > 3.5 | keys 3+4, `add > 3` | [`8nhWLYnw…Veg74iy6x4`](https://explorer.solana.com/address/8nhWLYnwHuhwpoA3ptAzJr1VLb7dQe9iVeWvg74iy6x4?cluster=devnet) | [`5PfBFxKN…kbspXbV`](https://explorer.solana.com/tx/5PfBFxKNrk3JVmXtD1dcMkET3G8EsTH3Tc8oLtagv5A5BaBkenA9MwB8rXKKiGXx7P9GUA3DGwqbP8k9QkbspXbV?cluster=devnet) |
+
+Both settle through the **identical** `settle_market` → `validate_stat` CPI path as every other
+market — no special-casing by stat key (see §1 above and `settle_market.rs`). Creation is
+automated: `market.service.ts::createParametricPropMarketsForFixture()` runs unconditionally
+(independent of any TxLINE odds row) for every fixture the market-discovery cron already
+processes, so every future match gets both prop markets with no manual step.
+
 **Honest status:** `create_market` / `place_bet` / `lock_market` / `cancel_market` / `claim_refund` are validated on **live Devnet** with real transactions (above). Merkle verification and tampered-proof rejection are validated on **live Devnet** against TxLINE's real oracle (the table above). Full `settle_market` + `claim_winnings` are exercised end-to-end on **localnet** (26/26) — note that the localnet suite runs against `txoracle_mock`, which returns a canned verdict and does **not** verify Merkle proofs, so it covers Goalana's own guards (stat-key binding, stale-snapshot, PDA derivation, state machine) but proves nothing about proof integrity; that is what the Devnet evidence above is for. Live-Devnet settlement is positioned to fire automatically when the France v England semifinal finishes (2026-07-18). We label what ran where rather than overclaim — see [`todo.md`](./todo.md) for the full validation log.
+
+---
+
+## Built to the track sheet
+
+TxODDS' own **Architectural Considerations** and **Ideas to Get Started** for this track, mapped
+directly to what's shipped — so the rubric check doesn't require reading the whole README.
+
+### Architectural considerations
+
+| Requirement | Goalana |
+|---|---|
+| No P2P transfers of the TxLINE credit token | ✅ All staking is **native devnet SOL** into Goalana's own Vault PDA. The TxLINE token is touched exactly once, for data-authorization (`subscribe` + activate script) — never by users. |
+| Permissionless results validation ("unlock funds natively on Solana on other coins than TxLINE") | ✅ SOL escrow in a neutral PDA; `settle_market` requires **no authority signer** — see [House trust surface](./RISKS.md#4-house-trust-surface); claims are user-pulled. |
+| Custom On-Chain Settlement Engine via CPI into `validate_stat` | ✅ `settle_market.rs` → `txline_cpi.rs`, plus Goalana's own check gates (stat-key binding, stale-snapshot, PDA derivation) and the [forged-proof revert evidence](#proof-integrity--a-forged-proof-cannot-settle-a-market). |
+
+### Ideas to get started
+
+| Idea | Status | Evidence |
+|---|---|---|
+| Full-Tournament Auto-Market | ✅ Markets auto-create from fixtures + odds crons, auto-lock at kickoff, auto-settle via CPI — zero manual steps for any fixture the free-tier feed exposes. | `market.cron.ts` → `processMarketsForUpcomingFixtures()` |
+| Verifiable Resolution UI | ✅ **Our headline.** Settlement proof receipt, proof-preview tab, Proof Integrity tab with real accepted/reverted Devnet txs. | [Proof integrity](#proof-integrity--a-forged-proof-cannot-settle-a-market) |
+| Prediction Market Viewer (volumes, liquidity, shifting odds, implied probabilities) | 🟡 Partial — odds movement chart + directional arrows, `/positions`, `/api/markets`, live health indicator. Pool-implied-probability-vs-TxLINE-reference display and a full liquidity dashboard are tracked as open work. | `apps/web/components/fixtures/odds-movement-chart.tsx`, `/positions` |
+| Decentralized Prediction Markets (escrow, keeper triggers CPI, funds route to winners) | ✅ Pari-mutuel escrow + permissionless settle + pull claims. AMM/order-book/USDC variants are an explicit non-goal — deterministic pari-mutuel fits "deterministic resolution" scoring better, and native SOL avoids token-custody surface. | [On-Chain Evidence](#on-chain-evidence--verify-it-yourself-devnet) |
+| Parametric Sports Insurance & Prop Bets ("Team A Corners + Team B Corners > 10") | ✅ Two real, tradeable, unpriced pari-mutuel markets on France v England, settling through the identical CPI as every other market. | [Parametric prop markets](#parametric-prop-markets--unpriced-pari-mutuel) |
+
+**Explicitly not pursuing:** AMM / order-book / USDC escrow (reasoned above), a 104-match grid
+page (the free-tier bundle only exposes the current World Cup fixtures — it would demo as an
+empty wall), first-scorer markets (no validated player-level stat key), ET/penalty markets (real
+proofs return `period=100`, not the docs' `0–5`, so period semantics are unverified against
+`settle_market` — not worth risking the settlement path on an unverified assumption).
 
 ---
 
@@ -176,6 +228,7 @@ The real, audited documentation lives in [`docs/`](./docs) (reflects a code audi
 - [`docs/MARKET_LIFECYCLE.md`](docs/MARKET_LIFECYCLE.md) — the 9-step lifecycle, per-step status
 - [`docs/API.md`](docs/API.md) — backend endpoints
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — manual VM deployment for `apps/api`
+- [`RISKS.md`](./RISKS.md) — honest trust surface, tampered-proof evidence, compute-cost stats, known limitations
 - [`todo.md`](./todo.md) — dated validation log with tx evidence
 
 ### Validation mode
