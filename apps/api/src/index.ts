@@ -63,7 +63,7 @@ app.set("json replacer", (_key: string, value: unknown) => {
 
 app.use(express.json());
 
-const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+const frontendUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 app.use(cors({ origin: frontendUrl }));
 
 app.get("/", async (req, res) => {
@@ -266,6 +266,61 @@ app.get("/api/markets", async (_req, res) => {
     return res.status(200).json({ data: markets });
   } catch (error) {
     logger.error("api", "Error fetching markets", error);
+    return res.status(500).json({ error: "internal server error" });
+  }
+});
+
+// Single market by its on-chain PDA — the market details/share page's only
+// off-chain read. Attaches the same live TxLINE reference probability as
+// GET /api/fixtures/:id (computed from the fixture's current Odds row), so
+// the page shows the same numbers whether it got here via the fixture or
+// directly via a shared /market/:marketPda link.
+app.get("/api/markets/:marketPda", async (req, res) => {
+  try {
+    const { marketPda } = req.params;
+
+    const market = await prisma.market.findUnique({
+      where: { marketPda },
+      include: {
+        fixture: {
+          include: {
+            odds: {
+              orderBy: { ts: "desc" },
+            },
+          },
+        },
+      },
+    });
+
+    if (!market) {
+      return res.status(404).json({ error: "Market not found" });
+    }
+
+    const { odds, ...fixtureRest } = market.fixture;
+
+    const marketDef = (SUPPORTED_MARKETS as Record<string, { txline: { superOddsType: string; marketParameters: string; marketPeriod: string } }>)[market.marketType];
+
+    const liveOdds = marketDef
+      ? odds.find(
+          (o) =>
+            o.superOddsType === marketDef.txline.superOddsType &&
+            o.marketParameters === marketDef.txline.marketParameters &&
+            o.marketPeriod === marketDef.txline.marketPeriod
+        )
+      : undefined;
+
+    const reference = computeCurrentReferenceProbability(market.marketType, liveOdds);
+
+    return res.status(200).json({
+      data: {
+        ...market,
+        currentYesPct: reference?.yesPct ?? market.initialYesPct,
+        currentNoPct: reference?.noPct ?? market.initialNoPct,
+        fixture: fixtureRest,
+      },
+    });
+  } catch (error) {
+    logger.error("api", `Error fetching market ${req.params.marketPda}`, error);
     return res.status(500).json({ error: "internal server error" });
   }
 });

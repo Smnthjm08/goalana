@@ -1,3 +1,4 @@
+import type { Metadata, Viewport } from "next"
 import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google"
 
 import "@workspace/ui/globals.css"
@@ -9,6 +10,38 @@ import { SolanaProvider } from "@/components/providers/solana-provider"
 import { WalletUserProvider } from "@/components/providers/wallet-user-provider"
 import { Header } from "@/components/header"
 import { JudgingWindowBanner } from "@/components/judging-window-banner"
+import { getSiteUrl } from "@/lib/site"
+
+const SITE_DESCRIPTION =
+  "On-chain pari-mutuel prediction markets for live football, settled by verifiable TxLINE oracle proofs."
+
+export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: "Goalana — On-Chain Football Markets",
+    template: "%s · Goalana",
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "Goalana",
+    title: "Goalana — On-Chain Football Markets",
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Goalana — On-Chain Football Markets",
+    description: SITE_DESCRIPTION,
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
+}
+
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],

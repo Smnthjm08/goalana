@@ -16,7 +16,7 @@ import {
 import { formatSol, formatTs, useInspectorData } from "@/hooks/use-inspector-data"
 import { FullAddressRow } from "@/components/inspector/full-address-row"
 import { AddressLink } from "@/components/inspector/address-link"
-import { StatusBadge } from "@/components/inspector/status-badge"
+import { MarketStatusBadge } from "@/components/market-status-badge"
 import { MarketDetailRow } from "@/components/inspector/market-detail-row"
 
 export default function InspectorPage() {
@@ -234,7 +234,7 @@ export default function InspectorPage() {
                                 {market.predicateLabel}
                               </TableCell>
                               <TableCell>
-                                <StatusBadge status={market.status} />
+                                <MarketStatusBadge status={market.status} />
                               </TableCell>
                               <TableCell className="text-right font-mono tabular-nums">
                                 {formatSol(market.totalYes)}
