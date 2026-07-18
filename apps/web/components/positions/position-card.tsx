@@ -1,11 +1,13 @@
 import Link from "next/link"
 import { LAMPORTS_PER_SOL } from "@solana/web3.js"
 import { explorerAddressUrl } from "@/lib/solana-explorer"
+import { getSiteUrl } from "@/lib/site"
 import type { PositionStatus, WalletPosition } from "@/hooks/use-wallet-positions"
 import { TeamBadge } from "@/components/team-badge"
 import { StatusBadge } from "@/components/positions/status-badge"
 import { TxLink } from "@/components/positions/tx-link"
 import { Metric } from "@/components/positions/metric"
+import { ShareActions } from "@/components/share/share-actions"
 
 export function formatSol(lamports: bigint): string {
   return (Number(lamports) / LAMPORTS_PER_SOL).toFixed(3)
@@ -46,6 +48,12 @@ export function PositionCard({ position }: { position: WalletPosition }) {
 
   const fixtureHref = meta ? `/fixtures/${meta.fixture.fixtureId}` : null
 
+  const poolTotal = market ? Number(market.totalYes + market.totalNo) : 0
+  const poolYesPct = market && poolTotal > 0 ? (Number(market.totalYes) / poolTotal) * 100 : null
+  const shareQuery = new URLSearchParams({ m: position.marketPda })
+  if (poolYesPct !== null) shareQuery.set("odds", poolYesPct.toFixed(1))
+  const shareUrl = `${getSiteUrl()}/share/bet/${position.positionPda}?${shareQuery.toString()}`
+
   return (
     <div className="flex flex-col gap-4 rounded-sm border border-border bg-card p-4 transition-colors hover:border-primary/40 md:p-5">
       {/* Fixture + status */}
@@ -81,7 +89,15 @@ export function PositionCard({ position }: { position: WalletPosition }) {
             </>
           )}
         </div>
-        <StatusBadge status={status} />
+        <div className="flex shrink-0 items-center gap-2">
+          <ShareActions
+            url={shareUrl}
+            title="Goalana bet slip"
+            text={meta ? `${outcomeLabel} on ${meta.question}` : "A Goalana bet slip"}
+            compact
+          />
+          <StatusBadge status={status} />
+        </div>
       </div>
 
       {/* Market */}

@@ -8,9 +8,18 @@ const STATUS_STYLES: Record<OnChainMarketStatus, string> = {
   Cancelled: "border-destructive/20 bg-destructive/5 text-destructive",
 }
 
-export function StatusBadge({ status }: { status: OnChainMarketStatus }) {
+export function MarketStatusBadge({
+  status,
+  className = "",
+}: {
+  status: OnChainMarketStatus
+  className?: string
+}) {
   return (
-    <Badge variant="outline" className={`text-[9px] ${STATUS_STYLES[status]}`}>
+    <Badge
+      variant="outline"
+      className={`text-[9px] ${STATUS_STYLES[status]} ${className}`}
+    >
       {status}
     </Badge>
   )

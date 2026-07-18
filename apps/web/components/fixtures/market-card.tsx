@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { toast } from "sonner"
 import { PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js"
 import { BN } from "@coral-xyz/anchor"
@@ -8,11 +9,13 @@ import { useWalletModal } from "@solana/wallet-adapter-react-ui"
 import { getVaultPda, getPositionPda } from "@workspace/goalana-sdk/pdas"
 import { explorerTxUrl, explorerAddressUrl } from "@/lib/solana-explorer"
 import { marketTypeLabels } from "@/lib/market-groups"
+import { getSiteUrl } from "@/lib/site"
 import { Card, CardHeader, CardContent } from "@workspace/ui/components/card"
 import { Button } from "@workspace/ui/components/button"
-import { Badge } from "@workspace/ui/components/badge"
 import { Input } from "@workspace/ui/components/input"
 import { Spinner } from "@workspace/ui/components/spinner"
+import { MarketStatusBadge } from "@/components/market-status-badge"
+import { ShareActions } from "@/components/share/share-actions"
 import {
   SettlementProofReceipt,
   type SettlementProof,
@@ -236,9 +239,20 @@ export function MarketCard({ market }: { market: any }) {
   return (
     <Card className="flex flex-col rounded-sm transition-colors hover:border-primary/50">
       <CardHeader className="border-b border-border bg-card p-5">
-        <span className="font-sans text-lg font-bold text-foreground">
-          {market.question}
-        </span>
+        <div className="flex items-start justify-between gap-3">
+          <Link
+            href={`/market/${market.marketPda}`}
+            className="font-sans text-lg font-bold text-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
+          >
+            {market.question}
+          </Link>
+          <ShareActions
+            url={`${getSiteUrl()}/market/${market.marketPda}`}
+            title={market.question}
+            compact
+            className="shrink-0"
+          />
+        </div>
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="font-mono text-[10px] text-muted-foreground uppercase">
             {marketTypeLabels[market.marketType] ||
@@ -246,12 +260,11 @@ export function MarketCard({ market }: { market: any }) {
           </span>
           <div className="flex items-center gap-3">
             <MarketLockStatus locksAt={market.locksAt} status={status} />
-            <Badge
-              variant="outline"
-              className="border-primary/20 bg-primary/5 text-[10px] text-primary"
-            >
-              {marketLoading ? <Spinner className="size-2.5" /> : "●"} {status}
-            </Badge>
+            <MarketStatusBadge
+              status={status}
+              className="gap-1 text-[10px]"
+            />
+            {marketLoading && <Spinner className="size-2.5" />}
           </div>
         </div>
       </CardHeader>

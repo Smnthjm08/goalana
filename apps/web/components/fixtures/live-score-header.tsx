@@ -40,18 +40,18 @@ export function LiveScoreHeader({
       kickoffMs !== null && now !== null ? kickoffMs - now : null
 
     return (
-      <div className="flex flex-col items-center justify-center px-4">
-        <span className="mb-2 font-mono text-sm tracking-widest text-muted-foreground md:text-base">
+      <div className="flex flex-col items-center justify-center px-1 sm:px-4">
+        <span className="mb-1 font-mono text-[10px] tracking-widest text-muted-foreground sm:mb-2 sm:text-sm md:text-base">
           VS
         </span>
-        <span className="font-heading text-4xl font-bold text-foreground md:text-5xl">
+        <span className="font-heading text-lg font-bold text-foreground sm:text-4xl md:text-5xl">
           UPCOMING
         </span>
-        <span className="mt-2 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
+        <span className="mt-2 text-center font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
           {kickoffLabel}
         </span>
         {untilKickoff !== null && (
-          <span className="mt-1 font-mono text-[10px] tracking-widest text-primary uppercase tabular-nums">
+          <span className="mt-1 text-center font-mono text-[10px] tracking-widest text-primary uppercase tabular-nums">
             {untilKickoff <= 0
               ? "Starting soon"
               : `Starts in ${formatDuration(untilKickoff)}`}
@@ -65,9 +65,9 @@ export function LiveScoreHeader({
   const away = liveScore!.awayScore ?? 0
 
   return (
-    <div className="flex flex-col items-center justify-center px-4">
+    <div className="flex flex-col items-center justify-center px-1 sm:px-4">
       {isLive && (
-        <span className="mb-2 flex items-center gap-1.5 font-mono text-[10px] tracking-widest text-primary uppercase">
+        <span className="mb-1 flex items-center gap-1.5 font-mono text-[10px] tracking-widest text-primary uppercase sm:mb-2">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
@@ -76,11 +76,11 @@ export function LiveScoreHeader({
         </span>
       )}
       {!isLive && (
-        <span className="mb-2 font-mono text-sm tracking-widest text-muted-foreground md:text-base">
+        <span className="mb-1 font-mono text-[10px] tracking-widest text-muted-foreground sm:mb-2 sm:text-sm md:text-base">
           {liveScore!.isFinal ? "FULL TIME" : "VS"}
         </span>
       )}
-      <span className="font-heading text-4xl font-bold text-foreground tabular-nums md:text-5xl">
+      <span className="font-heading text-2xl font-bold text-foreground tabular-nums sm:text-4xl md:text-5xl">
         {home} - {away}
       </span>
       {liveScore!.minuteLabel && (
