@@ -1,0 +1,1 @@
+export const WORLD_CUP_COMPETITION_ID = 72;

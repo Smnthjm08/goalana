@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { Flame } from "lucide-react"
 import { toast } from "sonner"
 import { PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js"
 import { BN } from "@coral-xyz/anchor"
@@ -254,10 +255,19 @@ export function MarketCard({ market }: { market: any }) {
           />
         </div>
         <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="font-mono text-[10px] text-muted-foreground uppercase">
-            {marketTypeLabels[market.marketType] ||
-              market.marketType.replace(/_/g, " ")}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] text-muted-foreground uppercase">
+              {marketTypeLabels[market.marketType] ||
+                market.marketType.replace(/_/g, " ")}
+            </span>
+            {/* A market is "hot" if it has active liquidity OR if the odds have shifted significantly (> 5%) from opening */}
+            {(poolTotal > 0 || (!isUnpriced && Math.abs(yesPct - Number(market.initialYesPct)) >= 5)) && (
+              <div className="flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-bold text-orange-500">
+                <Flame className="size-3" />
+                HOT
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             <MarketLockStatus locksAt={market.locksAt} status={status} />
             <MarketStatusBadge

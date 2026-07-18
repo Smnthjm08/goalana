@@ -4,7 +4,7 @@ import { type Predicate, TXLINE_STAT_KEYS } from "@workspace/goalana-sdk";
 import { createMarketForFixture, initializeGoalanaConfig } from "./goalana.service";
 import { SUPPORTED_MARKETS, PARAMETRIC_PROP_MARKETS } from "./market-definitions";
 import { logger } from "../utils/logger";
-import { getActiveCompetitionId } from "../config/competition";
+import { WORLD_CUP_COMPETITION_ID } from "../constants";
 
 const oddsService = new OddsService();
 
@@ -292,7 +292,7 @@ export async function createParametricPropMarketsForFixture(
 export async function processMarketsForUpcomingFixtures() {
   await initializeGoalanaConfig();
 
-  const competitionId = await getActiveCompetitionId();
+  const competitionId = WORLD_CUP_COMPETITION_ID;
   const now = Date.now();
   const until = now + 24 * 60 * 60 * 1000;
 

@@ -2,24 +2,13 @@
 import { txlineClient } from "../client";
 import type { TxLineFixture, FixtureValidation, FixtureBatchValidation } from "../types/index";
 
-const WORLD_CUP_COMPETITION_ID = 72;
+import { WORLD_CUP_COMPETITION_ID } from "../constants";
 
 export class FixtureService {
     // 1. Get the latest snapshot of fixtures, optionally starting at or within 30 days after a given epoch day
-    async getFixtureSnapshot(startEpochDay?: number, CompetitionId?: number): Promise<TxLineFixture[]> {
+    async getFixtureSnapshot(startEpochDay?: number): Promise<TxLineFixture[]> {
         const query = new URLSearchParams();
-        query.append("competitionId", (CompetitionId || WORLD_CUP_COMPETITION_ID).toString());
-        if (startEpochDay != null) query.append("startEpochDay", startEpochDay.toString());
-        const { data } = await txlineClient.get<TxLineFixture[]>(`/fixtures/snapshot?${query.toString()}`);
-        return data;
-    }
-
-    // 1b. Get the latest snapshot across every competition the current subscription
-    // bundle grants, by omitting the competitionId filter entirely. This is the only
-    // legitimate discovery signal TxLINE exposes — there is no "list competitions"
-    // endpoint, and probing arbitrary IDs 403s ("Competition N is not in your bundle").
-    async getAllFixtureSnapshots(startEpochDay?: number): Promise<TxLineFixture[]> {
-        const query = new URLSearchParams();
+        query.append("competitionId", WORLD_CUP_COMPETITION_ID.toString());
         if (startEpochDay != null) query.append("startEpochDay", startEpochDay.toString());
         const { data } = await txlineClient.get<TxLineFixture[]>(`/fixtures/snapshot?${query.toString()}`);
         return data;

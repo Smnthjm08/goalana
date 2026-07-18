@@ -44,7 +44,7 @@ export function CustomWalletButton() {
         onClick={() => setVisible(true)}
         className="h-9 rounded-sm border border-primary bg-background px-4 font-heading text-xs font-bold tracking-widest text-primary uppercase transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_15px_rgba(192,248,48,0.4)]"
       >
-        Connect Terminal
+        Connect <span className="hidden sm:inline">Terminal</span>
       </Button>
     )
   }

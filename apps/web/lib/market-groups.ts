@@ -23,6 +23,13 @@ const MARKET_GROUPS: Record<string, string> = {
 }
 const MARKET_GROUP_ORDER = ["MATCH RESULT", "TOTAL GOALS", "PARAMETRIC PROPS", "OTHER"]
 
+const STATUS_RANK: Record<string, number> = {
+  Open: 0,
+  Locked: 1,
+  Settled: 2,
+  Cancelled: 3,
+}
+
 export function groupMarkets(
   markets: any[]
 ): Array<{ group: string; markets: any[] }> {
@@ -35,8 +42,19 @@ export function groupMarkets(
     byGroup.set(group, bucket)
   }
 
-  return MARKET_GROUP_ORDER.map((group) => ({
-    group,
-    markets: byGroup.get(group) ?? [],
-  })).filter((entry) => entry.markets.length > 0)
+  return MARKET_GROUP_ORDER.map((group) => {
+    const groupMarkets = byGroup.get(group) ?? []
+    
+    // Sort markets within the group so Open ones appear first
+    groupMarkets.sort((a, b) => {
+      const rankA = STATUS_RANK[a.status] ?? 4
+      const rankB = STATUS_RANK[b.status] ?? 4
+      return rankA - rankB
+    })
+
+    return {
+      group,
+      markets: groupMarkets,
+    }
+  }).filter((entry) => entry.markets.length > 0)
 }

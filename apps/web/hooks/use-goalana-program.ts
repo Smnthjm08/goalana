@@ -1,7 +1,7 @@
 "use client"
 
-import { useMemo } from "react"
-import { PublicKey } from "@solana/web3.js"
+import { useMemo, useRef } from "react"
+import { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js"
 import { useConnection, useWallet } from "@solana/wallet-adapter-react"
 import { AnchorProvider, type Wallet } from "@coral-xyz/anchor"
 import { getGoalanaProgram } from "@workspace/goalana-sdk/client"
@@ -24,22 +24,23 @@ const READ_ONLY_WALLET: Wallet = {
 export function useGoalanaProgram() {
   const { connection } = useConnection()
   const wallet = useWallet()
+  
+  // Use a ref to hold the latest wallet functions so we don't need to put them
+  // in the provider's dependency array, which would cause infinite loops in polling hooks.
+  const walletRef = useRef(wallet)
+  walletRef.current = wallet
 
   const connected = Boolean(
     wallet.publicKey && wallet.signTransaction && wallet.signAllTransactions
   )
+  const publicKeyBase58 = wallet.publicKey?.toBase58()
 
   const provider = useMemo(() => {
-    if (
-      connected &&
-      wallet.publicKey &&
-      wallet.signTransaction &&
-      wallet.signAllTransactions
-    ) {
+    if (connected && publicKeyBase58) {
       const signerWallet: Wallet = {
-        publicKey: wallet.publicKey,
-        signTransaction: wallet.signTransaction,
-        signAllTransactions: wallet.signAllTransactions,
+        publicKey: new PublicKey(publicKeyBase58),
+        signTransaction: <T extends Transaction | VersionedTransaction>(tx: T) => walletRef.current.signTransaction!(tx),
+        signAllTransactions: <T extends Transaction | VersionedTransaction>(txs: T[]) => walletRef.current.signAllTransactions!(txs),
       } as unknown as Wallet
 
       return new AnchorProvider(connection, signerWallet, {
@@ -50,14 +51,7 @@ export function useGoalanaProgram() {
     return new AnchorProvider(connection, READ_ONLY_WALLET, {
       commitment: "confirmed",
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    connection,
-    connected,
-    wallet.publicKey,
-    wallet.signTransaction,
-    wallet.signAllTransactions,
-  ])
+  }, [connection, connected, publicKeyBase58])
 
   const program = useMemo(() => getGoalanaProgram(provider), [provider])
 

@@ -1,11 +1,12 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { CustomWalletButton } from "./wallet-button"
-
 import { ModeToggle } from "./mode-toggle"
 import { TxlineHealthIndicator } from "./txline-health-indicator"
+import { Menu, X } from "lucide-react"
 
 const NAV_LINKS = [
   { href: "/", label: "Markets" },
@@ -15,6 +16,24 @@ const NAV_LINKS = [
 
 export function Header() {
   const pathname = usePathname()
+  const [isOpen, setIsOpen] = useState(false)
+
+  // Disable scroll when mobile menu is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [isOpen])
+
+  // Close mobile menu when navigating
+  useEffect(() => {
+    setIsOpen(false)
+  }, [pathname])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
@@ -35,7 +54,8 @@ export function Header() {
             </span>
           </Link>
 
-          <nav className="flex items-center gap-4 md:gap-5">
+          {/* Desktop Navigation Links */}
+          <nav className="hidden items-center gap-4 md:flex md:gap-5">
             {NAV_LINKS.map((link) => {
               const active =
                 link.href === "/"
@@ -59,13 +79,77 @@ export function Header() {
           </nav>
         </div>
 
-        {/* Right: Feed status / Actions / Wallet */}
+        {/* Right Actions */}
         <div className="flex items-center gap-3">
-          <TxlineHealthIndicator />
-          <ModeToggle />
+          {/* Desktop Only Actions */}
+          <div className="hidden items-center gap-3 md:flex">
+            <TxlineHealthIndicator />
+            <ModeToggle />
+          </div>
+
+          {/* Wallet Button - Always visible on all screen sizes */}
           <CustomWalletButton />
+
+          {/* Mobile Menu Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className="flex h-9 w-9 items-center justify-center rounded-sm border border-border bg-card transition-colors hover:border-primary/50 md:hidden"
+            aria-label={isOpen ? "Close Menu" : "Open Menu"}
+          >
+            {isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Drawer/Menu Overlay */}
+      {isOpen && (
+        <div className="fixed inset-x-0 top-16 bottom-0 z-40 flex flex-col border-b border-border bg-background/95 p-0 backdrop-blur-md md:hidden animate-in fade-in slide-in-from-top-4 duration-200">
+          <div className="flex-1 overflow-y-auto">
+            <nav className="flex flex-col">
+              {NAV_LINKS.map((link) => {
+                const active =
+                  link.href === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(link.href)
+
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex items-center justify-between border-b border-border/40 px-6 py-5 font-mono text-xs tracking-widest uppercase transition-colors ${
+                      active
+                        ? "bg-primary/5 text-primary"
+                        : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                    }`}
+                  >
+                    <span>{link.label}</span>
+                    {active && (
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                    )}
+                  </Link>
+                )
+              })}
+            </nav>
+          </div>
+
+          {/* Drawer Footer Actions */}
+          <div className="border-t border-border/40 bg-muted/10 p-6 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
+                Live Feed
+              </span>
+              <TxlineHealthIndicator />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
+                Theme
+              </span>
+              <ModeToggle />
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   )
 }

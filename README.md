@@ -194,7 +194,7 @@ bun run typecheck        # 6/6 packages clean
 turbo run dev            # apps/web on :3000, apps/api on :8081
 ```
 
-Backend needs a Postgres URL and TxLINE credentials — see [`.env.example`](./.env.example) and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). World Cup is competition `72`; the `COMPETITION_ID` validation-mode fallback is explained in the [Validation mode](#validation-mode) note below.
+Backend needs a Postgres URL and TxLINE credentials — see [`.env.example`](./.env.example) and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). World Cup is competition `72`.
 
 ### On-chain program
 
@@ -231,9 +231,6 @@ The real, audited documentation lives in [`docs/`](./docs) (reflects a code audi
 - [`RISKS.md`](./RISKS.md) — honest trust surface, tampered-proof evidence, compute-cost stats, known limitations
 - [`todo.md`](./todo.md) — dated validation log with tx evidence
 
-### Validation mode
-
-World Cup (TxLINE competition `72`) **is the product** — not a multi-competition pivot. `apps/api/src/config/competition.ts`'s `getActiveCompetitionId()` keeps World Cup active as long as it has an upcoming fixture, and only falls back to the soonest-upcoming alternative in the free-tier bundle (e.g. Friendlies `430`) as Devnet-validation continuity if World Cup stalls inside the judging window. Reset with `COMPETITION_ID=72` or unset it.
 
 ---
 

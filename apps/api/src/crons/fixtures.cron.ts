@@ -4,7 +4,7 @@ import cron from "node-cron";
 import { syncOdds } from "./odds.cron";
 import { backfillFixtureScores } from "../workers/scores.backfill";
 import { logger } from "../utils/logger";
-import { getActiveCompetitionId } from "../config/competition";
+import { WORLD_CUP_COMPETITION_ID } from "../constants";
 
 let isSnapshotSyncRunning = false;
 let isUpdateSyncRunning = false;
@@ -29,8 +29,8 @@ export async function syncFixtures(): Promise<SyncResult> {
 
     try {
         const fixtureService = new FixtureService();
-        const competitionId = await getActiveCompetitionId();
-        const fixtures = await fixtureService.getFixtureSnapshot(undefined, competitionId);
+        const competitionId = WORLD_CUP_COMPETITION_ID;
+        const fixtures = await fixtureService.getFixtureSnapshot(undefined);
 
         if (!fixtures || fixtures.length === 0) {
             logger.warn("fixture.cron", "No fixtures returned from TxLINE.");
@@ -122,7 +122,7 @@ export async function syncFixtureUpdates() {
 
     try {
         const fixtureService = new FixtureService();
-        const competitionId = await getActiveCompetitionId();
+        const competitionId = WORLD_CUP_COMPETITION_ID;
 
         const now = new Date();
         const epochDay = Math.floor(now.getTime() / (1000 * 60 * 60 * 24));
