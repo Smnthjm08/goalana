@@ -112,6 +112,63 @@ function describeSubstitution(data: Record<string, unknown> | undefined): string
  *     `discarded: true` (e.g. a VAR-overturned goal) instead of either
  *     silently vanishing or staying shown as a normal goal.
  */
+export interface CornerTally {
+  home: number;
+  away: number;
+}
+
+/**
+ * Live corner count per team, counted directly from raw `corner` rows —
+ * deliberately kept out of `getMatchTimeline` (corners are excluded from
+ * `MEANINGFUL_ACTIONS` as play-by-play noise) but still worth surfacing as a
+ * running tally since Goalana prices corner-count markets (see
+ * `TXLINE_STAT_KEYS.HOME_CORNERS`/`AWAY_CORNERS`). Those TxOracle stat proofs
+ * are settlement-only (gated on `finalSeq`), so mid-match this raw-row count
+ * is the only live source.
+ */
+export async function getCornerTally(fixtureId: bigint): Promise<CornerTally> {
+  const fixture = await prisma.fixture.findUnique({
+    where: { fixtureId },
+    select: { participant1IsHome: true },
+  });
+
+  if (!fixture) return { home: 0, away: 0 };
+
+  const rows = await prisma.matchEvent.findMany({
+    where: { fixtureId, action: { in: ["corner", "action_discarded"] } },
+    orderBy: { seq: "asc" },
+  });
+
+  const discardedIds = new Set<number>();
+  const latestById = new Map<number, (typeof rows)[number]>();
+
+  for (const row of rows) {
+    const payload = row.payload as Record<string, unknown>;
+    const wireId = payload.Id;
+    if (typeof wireId !== "number") continue;
+
+    if (row.action === "action_discarded") {
+      discardedIds.add(wireId);
+      continue;
+    }
+
+    // rows are ordered by seq asc, so the last write per Id wins.
+    latestById.set(wireId, row);
+  }
+
+  const tally: CornerTally = { home: 0, away: 0 };
+
+  for (const [wireId, row] of latestById) {
+    if (discardedIds.has(wireId)) continue;
+    const payload = row.payload as Record<string, unknown>;
+    const team = teamFromParticipant(payload.Participant, fixture.participant1IsHome);
+    if (team === "HOME") tally.home += 1;
+    else if (team === "AWAY") tally.away += 1;
+  }
+
+  return tally;
+}
+
 export async function getMatchTimeline(fixtureId: bigint): Promise<NormalizedMatchEvent[]> {
   const fixture = await prisma.fixture.findUnique({
     where: { fixtureId },

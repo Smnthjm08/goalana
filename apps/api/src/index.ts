@@ -14,7 +14,7 @@ import { computeCurrentReferenceProbability } from "./services/market.service";
 import { getSettlementProofPreview } from "./services/settlement.service";
 import { getHealthSnapshot } from "./services/stream-health.service";
 import { SUPPORTED_MARKETS } from "./services/market-definitions";
-import { getMatchTimeline, formatMinute } from "./services/match-timeline.service";
+import { getMatchTimeline, getCornerTally, formatMinute } from "./services/match-timeline.service";
 import { upsertUserForWallet } from "./services/user.service";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -203,6 +203,7 @@ app.get("/api/fixtures/:id", async (req, res) => {
     };
 
     const events = await getMatchTimeline(fixtureId);
+    const corners = await getCornerTally(fixtureId);
 
     // Attach each market's *current* TxLINE reference probability (from the
     // already-fetched `odds` current-state rows) alongside the frozen
@@ -230,7 +231,7 @@ app.get("/api/fixtures/:id", async (req, res) => {
     });
 
     return res.status(200).json({
-      data: { ...fixture, markets: marketsWithLiveReference, liveScore, events },
+      data: { ...fixture, markets: marketsWithLiveReference, liveScore, events, corners },
     });
   } catch (error) {
     logger.error("api", `Error fetching fixture ${req.params.id}`, error);

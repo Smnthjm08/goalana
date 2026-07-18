@@ -17,6 +17,7 @@ import {
 import { OddsMovementChart } from "@/components/fixtures/odds-movement-chart"
 import { LiveScoreHeader } from "@/components/fixtures/live-score-header"
 import { MatchEventTimeline } from "@/components/fixtures/match-event-timeline"
+import { CornerTally } from "@/components/fixtures/corner-tally"
 import { LifecycleStatusStrip } from "@/components/fixtures/lifecycle-status-strip"
 import { SettlementProofPanel } from "@/components/fixtures/settlement-proof-panel"
 import {
@@ -25,6 +26,7 @@ import {
 } from "@/components/fixtures/proof-integrity-panel"
 import { MatchTimeStatus } from "@/components/fixtures/match-time-status"
 import { MarketCard } from "@/components/fixtures/market-card"
+import { TeamMatchBadges } from "@/components/fixtures/team-match-badges"
 import { TeamBadge } from "@/components/team-badge"
 import { ShareActions } from "@/components/share/share-actions"
 
@@ -34,6 +36,7 @@ import { ShareActions } from "@/components/share/share-actions"
 const FIXTURE_POLL_INTERVAL_MS = 8_000
 
 export function FixtureDetailView({ fixtureId }: { fixtureId: string }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [fixture, setFixture] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [refreshError, setRefreshError] = useState<string | null>(null)
@@ -120,6 +123,12 @@ export function FixtureDetailView({ fixtureId }: { fixtureId: string }) {
   const date = new Date(tsNum > 1e11 ? tsNum : tsNum * 1000)
 
   const marketGroups = groupMarkets(fixture.markets ?? [])
+  const events = fixture.events ?? []
+  const participant1Team: "HOME" | "AWAY" = fixture.participant1IsHome
+    ? "HOME"
+    : "AWAY"
+  const participant2Team: "HOME" | "AWAY" =
+    participant1Team === "HOME" ? "AWAY" : "HOME"
 
   // Recorded once per fixture by scripts/record-proof-integrity.ts; absent on
   // fixtures where it was never run, so the tab is conditional.
@@ -156,6 +165,11 @@ export function FixtureDetailView({ fixtureId }: { fixtureId: string }) {
                 name={fixture.participant1}
                 className="gap-1.5 font-sans text-lg leading-tight font-black text-foreground sm:gap-2 sm:text-2xl md:gap-3 md:text-5xl lg:text-6xl"
               />
+              <TeamMatchBadges
+                events={events}
+                team={participant1Team}
+                align="start"
+              />
             </div>
 
             <LiveScoreHeader
@@ -173,6 +187,11 @@ export function FixtureDetailView({ fixtureId }: { fixtureId: string }) {
               <TeamBadge
                 name={fixture.participant2}
                 className="gap-1.5 text-right font-sans text-lg leading-tight font-black text-foreground sm:gap-2 sm:text-2xl md:gap-3 md:text-5xl lg:text-6xl"
+              />
+              <TeamMatchBadges
+                events={events}
+                team={participant2Team}
+                align="end"
               />
             </div>
           </div>
@@ -292,6 +311,12 @@ export function FixtureDetailView({ fixtureId }: { fixtureId: string }) {
             value="MATCH_EVENTS"
             className="mt-8 border-none p-0 outline-none"
           >
+            <CornerTally
+              corners={fixture.corners}
+              participant1={fixture.participant1}
+              participant2={fixture.participant2}
+              participant1IsHome={fixture.participant1IsHome}
+            />
             <MatchEventTimeline
               events={fixture.events ?? []}
               participant1={fixture.participant1}
