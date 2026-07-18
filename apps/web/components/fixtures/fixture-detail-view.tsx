@@ -206,32 +206,32 @@ export function FixtureDetailView({ fixtureId }: { fixtureId: string }) {
           >
             <TabsTrigger
               value="MARKETS"
-              className="shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
+              className="flex-none shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
               Markets
             </TabsTrigger>
             <TabsTrigger
               value="ODDS_MOVEMENT"
-              className="shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
+              className="flex-none shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
               Odds & Movement
             </TabsTrigger>
             <TabsTrigger
               value="MATCH_EVENTS"
-              className="shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
+              className="flex-none shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
               Match Events
             </TabsTrigger>
             <TabsTrigger
               value="SETTLEMENT_PROOF"
-              className="shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
+              className="flex-none shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
               Settlement Proof
             </TabsTrigger>
             {proofIntegrity && (
               <TabsTrigger
                 value="PROOF_INTEGRITY"
-                className="shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
+                className="flex-none shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
               >
                 Proof Integrity
               </TabsTrigger>
