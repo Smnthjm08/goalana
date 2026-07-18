@@ -88,6 +88,16 @@ export function computeCurrentReferenceProbability(
     case "FULL_TIME_OVER_2_5":
     case "FULL_TIME_OVER_3_5":
       return extractProbability(row, "over", "under");
+    case "HALF_TIME_HOME_WIN":
+      return extract1X2Probability(row, "part1");
+    case "HALF_TIME_DRAW":
+      return extract1X2Probability(row, "draw");
+    case "HALF_TIME_AWAY_WIN":
+      return extract1X2Probability(row, "part2");
+    case "HALF_TIME_OVER_0_5":
+    case "HALF_TIME_OVER_1_5":
+    case "HALF_TIME_OVER_2_5":
+      return extractProbability(row, "over", "under");
     default:
       return null;
   }
@@ -100,11 +110,24 @@ function generateQuestion(template: string, participant1: string, participant2: 
 }
 
 // Same safe predicate shape for every supported Over line: total goals (HOME_GOALS + AWAY_GOALS)
-// compared against an integer threshold. Only the TxLINE line/threshold pair changes.
+// compared against an integer threshold. Only the TxLINE line/threshold/period differs —
+// half-time entries carry `supportedForCreation: false` (see market-definitions.ts) so they're
+// discovered/priced but never actually created on-chain.
 const OVER_UNDER_MARKETS = [
   SUPPORTED_MARKETS.FULL_TIME_OVER_1_5,
   SUPPORTED_MARKETS.FULL_TIME_OVER_2_5,
   SUPPORTED_MARKETS.FULL_TIME_OVER_3_5,
+  SUPPORTED_MARKETS.HALF_TIME_OVER_0_5,
+  SUPPORTED_MARKETS.HALF_TIME_OVER_1_5,
+  SUPPORTED_MARKETS.HALF_TIME_OVER_2_5,
+] as const;
+
+// Same grouping for 1X2 markets — full-time and half-time share the identical
+// three-outcome predicate shape, only the txline period and `supportedForCreation`
+// differ per group (see market-definitions.ts).
+const ONE_X_TWO_GROUPS = [
+  { home: SUPPORTED_MARKETS.FULL_TIME_HOME_WIN, draw: SUPPORTED_MARKETS.FULL_TIME_DRAW, away: SUPPORTED_MARKETS.FULL_TIME_AWAY_WIN },
+  { home: SUPPORTED_MARKETS.HALF_TIME_HOME_WIN, draw: SUPPORTED_MARKETS.HALF_TIME_DRAW, away: SUPPORTED_MARKETS.HALF_TIME_AWAY_WIN },
 ] as const;
 
 export function discoverMarketsForFixture(
@@ -162,67 +185,73 @@ export function discoverMarketsForFixture(
             threshold: marketDef.threshold,
             comparison: { greaterThan: {} },
           },
-          supportedForCreation: true,
+          supportedForCreation: marketDef.supportedForCreation,
+          unsupportedReason: marketDef.supportedForCreation ? undefined : marketDef.unsupportedReason,
         });
       }
     }
 
-    // 1X2 FULL TIME (Home Win, Draw, Away Win)
-    if (
-      row.SuperOddsType === SUPPORTED_MARKETS.FULL_TIME_HOME_WIN.txline.superOddsType &&
-      params === SUPPORTED_MARKETS.FULL_TIME_HOME_WIN.txline.marketParameters &&
-      period === SUPPORTED_MARKETS.FULL_TIME_HOME_WIN.txline.marketPeriod
-    ) {
-      // Home Win
-      discovered.push({
-        fixtureId: fixture.fixtureId,
-        type: "FULL_TIME_HOME_WIN",
-        question: generateQuestion(SUPPORTED_MARKETS.FULL_TIME_HOME_WIN.label, fixture.participant1, fixture.participant2),
-        referenceProbability: extract1X2Probability(row, "part1"),
-        source: baseSource,
-        predicate: {
-          statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
-          statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
-          op: { subtract: {} },
-          threshold: 0,
-          comparison: { greaterThan: {} },
-        },
-        supportedForCreation: true,
-      });
+    // 1X2 (Home Win, Draw, Away Win) — full-time and half-time share this shape.
+    for (const group of ONE_X_TWO_GROUPS) {
+      if (
+        row.SuperOddsType === group.home.txline.superOddsType &&
+        params === group.home.txline.marketParameters &&
+        period === group.home.txline.marketPeriod
+      ) {
+        // Home Win
+        discovered.push({
+          fixtureId: fixture.fixtureId,
+          type: group.home.type,
+          question: generateQuestion(group.home.label, fixture.participant1, fixture.participant2),
+          referenceProbability: extract1X2Probability(row, "part1"),
+          source: baseSource,
+          predicate: {
+            statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
+            statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
+            op: { subtract: {} },
+            threshold: 0,
+            comparison: { greaterThan: {} },
+          },
+          supportedForCreation: group.home.supportedForCreation,
+          unsupportedReason: group.home.supportedForCreation ? undefined : group.home.unsupportedReason,
+        });
 
-      // Draw
-      discovered.push({
-        fixtureId: fixture.fixtureId,
-        type: "FULL_TIME_DRAW",
-        question: generateQuestion(SUPPORTED_MARKETS.FULL_TIME_DRAW.label, fixture.participant1, fixture.participant2),
-        referenceProbability: extract1X2Probability(row, "draw"),
-        source: baseSource,
-        predicate: {
-          statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
-          statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
-          op: { subtract: {} },
-          threshold: 0,
-          comparison: { equalTo: {} },
-        },
-        supportedForCreation: true,
-      });
+        // Draw
+        discovered.push({
+          fixtureId: fixture.fixtureId,
+          type: group.draw.type,
+          question: generateQuestion(group.draw.label, fixture.participant1, fixture.participant2),
+          referenceProbability: extract1X2Probability(row, "draw"),
+          source: baseSource,
+          predicate: {
+            statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
+            statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
+            op: { subtract: {} },
+            threshold: 0,
+            comparison: { equalTo: {} },
+          },
+          supportedForCreation: group.draw.supportedForCreation,
+          unsupportedReason: group.draw.supportedForCreation ? undefined : group.draw.unsupportedReason,
+        });
 
-      // Away Win
-      discovered.push({
-        fixtureId: fixture.fixtureId,
-        type: "FULL_TIME_AWAY_WIN",
-        question: generateQuestion(SUPPORTED_MARKETS.FULL_TIME_AWAY_WIN.label, fixture.participant1, fixture.participant2),
-        referenceProbability: extract1X2Probability(row, "part2"),
-        source: baseSource,
-        predicate: {
-          statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
-          statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
-          op: { subtract: {} },
-          threshold: 0,
-          comparison: { lessThan: {} },
-        },
-        supportedForCreation: true,
-      });
+        // Away Win
+        discovered.push({
+          fixtureId: fixture.fixtureId,
+          type: group.away.type,
+          question: generateQuestion(group.away.label, fixture.participant1, fixture.participant2),
+          referenceProbability: extract1X2Probability(row, "part2"),
+          source: baseSource,
+          predicate: {
+            statAKey: TXLINE_STAT_KEYS.HOME_GOALS,
+            statBKey: TXLINE_STAT_KEYS.AWAY_GOALS,
+            op: { subtract: {} },
+            threshold: 0,
+            comparison: { lessThan: {} },
+          },
+          supportedForCreation: group.away.supportedForCreation,
+          unsupportedReason: group.away.supportedForCreation ? undefined : group.away.unsupportedReason,
+        });
+      }
     }
   }
 

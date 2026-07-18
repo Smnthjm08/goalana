@@ -40,3 +40,11 @@ echo "📊 PM2 status..."
 pm2 status
 
 echo "✅ Goalana production deployment complete!"
+
+# cd apps/api
+
+# dry run — just prints on-chain/db status, changes nothing
+# bun run src/scripts/sync-france-england-markets.ts
+
+# writes — but this will be a safe no-op right now
+# bun run src/scripts/sync-france-england-markets.ts --execute  

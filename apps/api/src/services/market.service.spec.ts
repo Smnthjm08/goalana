@@ -125,7 +125,7 @@ describe("Market Discovery Service", () => {
     expect(market.referenceProbability?.noPct).toBe(40);
   });
 
-  it("should ignore unsupported markets", () => {
+  it("discovers half-time 1X2 markets but marks them unsupported for creation", () => {
     const oddsRows: OddsPayload[] = [
       {
         FixtureId: 18237038,
@@ -135,7 +135,7 @@ describe("Market Discovery Service", () => {
         BookmakerId: 1,
         SuperOddsType: "1X2_PARTICIPANT_RESULT",
         MarketParameters: undefined,
-        MarketPeriod: "half=1", // First half not supported yet
+        MarketPeriod: "half=1", // half-time settlement proof isn't verified yet — see market-definitions.ts
         InRunning: false,
         GameState: undefined,
         PriceNames: ["part1", "draw", "part2"],
@@ -146,9 +146,13 @@ describe("Market Discovery Service", () => {
 
     const discovered = discoverMarketsForFixture(fixture, oddsRows);
 
-    // Nothing should be returned for unsupported markets in Phase 1
-    // (In our current implementation, we just don't push them to `discovered`)
-    expect(discovered.length).toBe(0);
+    // Priced/discovered (real TxLINE odds exist), but never eligible for on-chain creation.
+    expect(discovered.length).toBe(3);
+    expect(discovered.map((m) => m.type).sort()).toEqual(["HALF_TIME_AWAY_WIN", "HALF_TIME_DRAW", "HALF_TIME_HOME_WIN"]);
+    for (const market of discovered) {
+      expect(market.supportedForCreation).toBe(false);
+      expect(market.unsupportedReason).toBeTruthy();
+    }
   });
 
   it("should reject InRunning odds for market creation even when the market type is otherwise supported", () => {
