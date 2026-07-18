@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 echo "🚀 Deploying Goalana production..."
 
 echo "🌿 Switching to production branch..."
+git fetch origin
 git checkout production
-
-echo "⬇️ Pulling latest production code..."
 git pull --ff-only origin production
 
 echo "📦 Installing dependencies..."
@@ -18,11 +17,24 @@ bun run db:deploy
 echo "⚙️ Generating Prisma Client..."
 bun run db:generate
 
+echo "🏗️ Building workspace..."
+bun run build
+
 echo "♻️ Reloading Goalana API..."
 pm2 reload goalana-api --update-env
 
-echo "🩹 Reconciling in-progress fixtures (catches any match events missed during the restart)..."
+echo "⏳ Waiting for API to start..."
+sleep 5
+
+echo "🩹 Reconciling in-progress fixtures..."
 (cd apps/api && bun run src/scripts/reconcile-scores.ts)
+
+echo "🔎 Verifying Nginx config..."
+sudo nginx -t
+sudo systemctl reload nginx
+
+echo "🏥 Health check..."
+curl --fail https://goalana-api.smnthjm08.dev/health
 
 echo "💾 Saving PM2 process list..."
 pm2 save

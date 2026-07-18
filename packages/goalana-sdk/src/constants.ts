@@ -4,7 +4,7 @@ import { PublicKey } from "@solana/web3.js";
  * On-chain address of the deployed Goalana program on Devnet.
  */
 export const GOALANA_PROGRAM_ID = new PublicKey(
-  "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu"
+  "ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42"
 );
 
 /**

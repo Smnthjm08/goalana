@@ -26,7 +26,6 @@ dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
 const requiredEnv = [
   "DATABASE_URL",
-  "TXLINE_ENV",
   "TXLINE_API_ORIGIN",
   "SOLANA_RPC_URL",
   "TXLINE_JWT",

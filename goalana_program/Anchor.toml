@@ -7,7 +7,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-goalana_program = "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu"
+goalana_program = "ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42"
+
+[programs.devnet]
+goalana_program = "ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42"
 
 [test.validator]
 url = "http://127.0.0.1:8899"

@@ -5,12 +5,12 @@
 
 Built for the **TxODDS × Superteam** _Prediction Markets & Settlement_ track.
 
-[![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF?logo=solana)](https://explorer.solana.com/address/AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu?cluster=devnet)
+[![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF?logo=solana)](https://explorer.solana.com/address/ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42?cluster=devnet)
 [![TxLINE](https://img.shields.io/badge/Powered_by-TxLINE-00ff88)](https://txline.txodds.com)
 [![Anchor](https://img.shields.io/badge/Anchor-0.31-blue)](https://www.anchor-lang.com/)
 [![Tests](https://img.shields.io/badge/on--chain_tests-26%2F26-brightgreen)](#testing--evidence)
 
-**🎬 Demo:** _[add Loom/YouTube link]_ · **🔗 Live app:** _[add Vercel link]_ · **⛓ Program:** [`AgxqK6…7pRQu`](https://explorer.solana.com/address/AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu?cluster=devnet)
+**🎬 Demo:** _[add Loom/YouTube link]_ · **🔗 Live app:** _[add Vercel link]_ · **⛓ Program:** [`AgxqK6…7pRQu`](https://explorer.solana.com/address/ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42?cluster=devnet)
 
 ---
 
@@ -58,7 +58,7 @@ Real transactions on Solana Devnet. Append `?cluster=devnet` is already included
 
 | What | Address / Signature |
 |---|---|
-| **Goalana program** | [`AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu`](https://explorer.solana.com/address/AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu?cluster=devnet) |
+| **Goalana program** | [`ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42`](https://explorer.solana.com/address/ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42?cluster=devnet) |
 | **TxLINE oracle** (CPI target) | [`6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J`](https://explorer.solana.com/address/6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J?cluster=devnet) |
 | `create_market` — France v England, FULL_TIME_HOME_WIN (fixture `18257865`) | [tx `g5ErxKVH…tZRq1n`](https://explorer.solana.com/tx/g5ErxKVHGdGCwwqapzfj3SB9AR9kZ5p3FW8sxESiLRek938iYayGPio8NLTpLY5gotDRbQaaZvJCAhxF3tZRq1n?cluster=devnet) |
 | Market PDA (same market) | [`GRzRon4Pf3SQUjQL61LPCxE5fmpRX1qmz1E1vZpmTwfz`](https://explorer.solana.com/address/GRzRon4Pf3SQUjQL61LPCxE5fmpRX1qmz1E1vZpmTwfz?cluster=devnet) |

@@ -13,6 +13,9 @@ import {
 } from "@workspace/goalana-sdk";
 import bs58 from "bs58";
 import { logger } from "../utils/logger";
+import * as dotenv from 'dotenv';
+
+dotenv.config({path: "../../../../.env"})
 
 // Ensure SOLANA_RPC_URL and WALLET_PRIVATE_KEY are set
 export const connection = new Connection(process.env.SOLANA_RPC_URL!);

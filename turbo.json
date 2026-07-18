@@ -14,9 +14,6 @@
         "DATABASE_URL",
         "SOLANA_RPC_URL",
         "WALLET_PRIVATE_KEY",
-        "HELIUS_RPC_KEY",
-        "HELIUS_RPC_URL",
-        "TXLINE_ENV",
         "TXLINE_API_ORIGIN",
         "TXLINE_JWT",
         "TXLINE_API_TOKEN"

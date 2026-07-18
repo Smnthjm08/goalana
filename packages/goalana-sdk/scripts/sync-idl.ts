@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const TARGET_PROGRAM_ID = "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu";
+const TARGET_PROGRAM_ID = "ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42";
 
 // Find workspace root relative to this script: packages/goalana-sdk/scripts/sync-idl.ts -> go up 3 directories
 const __filename = fileURLToPath(import.meta.url);

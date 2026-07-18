@@ -9,7 +9,7 @@ use anchor_lang::prelude::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu");
+declare_id!("ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42");
 
 #[program]
 pub mod goalana_program {

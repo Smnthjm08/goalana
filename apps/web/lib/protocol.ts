@@ -4,7 +4,7 @@
 // "On-Chain Evidence" table.
 
 /** Goalana prediction-market program (Anchor), Solana Devnet. */
-export const GOALANA_PROGRAM_ID = "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu"
+export const GOALANA_PROGRAM_ID = "ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42"
 
 /**
  * TxLINE (TxODDS) oracle program that `settle_market` CPIs into. Settlement

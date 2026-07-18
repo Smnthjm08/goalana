@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/goalana_program.json`.
  */
 export type GoalanaProgram = {
-  "address": "AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu",
+  "address": "ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42",
   "metadata": {
     "name": "goalanaProgram",
     "version": "0.1.0",

@@ -47,6 +47,7 @@ next-env.d.ts
 
 
 devnet-wallet.json
+goalana-prod-authority.json
 
 .agents/
 
@@ -64,6 +65,7 @@ test-ledger
 
 
 .env.production
+.env.devnet
 
 .superstack
 
