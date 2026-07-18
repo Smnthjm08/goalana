@@ -1,6 +1,6 @@
 # Goalana — Project Checklist
 
-Last updated: 2026-07-17. Typecheck (6/6) clean.
+Last updated: 2026-07-18. Typecheck (6/6) clean.
 
 **Status note:** `docs/IMPLEMENTATION_PLAN.md` and `docs/MARKET_LIFECYCLE.md` describe several items below (lock automation, settlement, claims) as "missing." That's stale — they're implemented in the current working tree. This file reflects actual current state, verified by running the code, not by reading older docs.
 
@@ -88,9 +88,17 @@ Placed a real bet: `place_bet` (0.05 SOL, YES) on the HOME_WIN market — tx `5K
 
 ## Next milestone (recommended order)
 
-1. Validate `claim_winnings` live on Devnet (not just localnet) — needs a real bet on the winning side of a market that actually settles. The 5 France v England markets created this pass are positioned for exactly this once the real match happens (2026-07-18) and, assuming a lifecycle-cron-running instance is still up then, lock/settle should fire automatically — revisit after that date.
-2. Build the on-demand market creation endpoint (`POST /api/fixtures/:id/markets`) — this pass again needed a one-off script to force-create ahead of the 24h cron window.
-3. `docs/IMPLEMENTATION_PLAN.md` / `docs/MARKET_LIFECYCLE.md` stale-status refresh pass.
-4. Point `activate.ts` / `initialize-config.ts` at the Helius RPC too if they're ever going to be run again (currently hardcoded to the public endpoint, but both are dead/manual scripts, not urgent).
+1. Validate `claim_winnings` live on Devnet (not just localnet) — needs a real bet on the winning side of a market that actually settles. The 5 France v England markets created this pass are positioned for exactly this once the real match happens (2026-07-18) and, assuming a lifecycle-cron-running instance is still up then, lock/settle should fire automatically — revisit after that date. **Still open as of 2026-07-18 evening** — kickoff is 21:00 UTC today, match hasn't happened yet.
+2. Build the on-demand market creation endpoint (`POST /api/fixtures/:id/markets`) — this pass again needed a one-off script to force-create ahead of the 24h cron window. **Still open** — re-checked `apps/api/src/index.ts`, no such route exists yet.
+3. `docs/IMPLEMENTATION_PLAN.md` / `docs/MARKET_LIFECYCLE.md` stale-status refresh pass. **Still open.**
+4. Point `activate.ts` / `initialize-config.ts` at the Helius RPC too if they're ever going to be run again (currently hardcoded to the public endpoint, but both are dead/manual scripts, not urgent). **Still open, still not urgent.**
+
+## 2026-07-18 — three more commits, reviewed here
+
+Full detail lives in v2-todo.md's and v3-todo.md's 2026-07-18 progress-log entries; summary for this file's audit trail:
+
+- **`869f520`** reverted the multi-competition Devnet hedge added the previous pass (`apps/api/src/config/competition.ts`, its diagnostic scripts, README's "Validation mode" section) — back to a single `WORLD_CUP_COMPETITION_ID` constant. This also trimmed `todo.md` itself (the "Multi-competition Devnet validation infrastructure" section this file used to carry has been removed by that commit, since it documented infra that no longer exists).
+- **`64e6664`, `54b88ab`** added shareable betting/market/fixture links with OpenGraph previews, a new `GET /api/markets/:marketPda` endpoint, and dedicated market/position detail pages. Genuinely new, working, typechecked functionality — not something either todo doc had queued, and adjacent to a feature v2-todo.md's competitor teardown had flagged as a non-goal (share-on-X). Not itself a correctness concern, just flagged for awareness.
+- **Repo-state audit while reviewing these commits:** working tree is clean and `main` (GitHub's confirmed default branch) is fully pushed to `origin/main` — no uncommitted work sitting around. **However, `gh repo view` reports the repository visibility as `PRIVATE`** — a judge cannot clone or browse a private repo. This is now the most urgent open item across all three todo docs (see v3-todo.md P0-3) and isn't captured anywhere above since it's new information, not a code gap.
 
 

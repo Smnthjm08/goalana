@@ -32,6 +32,11 @@ const requiredEnv = [
   "TXLINE_JWT",
   "TXLINE_API_TOKEN",
   "WALLET_PRIVATE_KEY",
+  // CORS origin (below) silently falls back to localhost:3000 if unset —
+  // in a deployed environment that means every browser request from the
+  // real frontend gets blocked with no server-side signal at all. Fail at
+  // boot instead of failing silently in a judge's browser console.
+  "NEXT_PUBLIC_SITE_URL",
 ] as const;
 
 for (const key of requiredEnv) {
@@ -63,7 +68,10 @@ app.set("json replacer", (_key: string, value: unknown) => {
 
 app.use(express.json());
 
-const frontendUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+// Guaranteed set by the requiredEnv check above — no silent fallback here,
+// since a wrong/missing origin fails as an unexplained CORS block in the
+// browser, not a server-side error anyone would see.
+const frontendUrl = process.env.NEXT_PUBLIC_SITE_URL as string;
 app.use(cors({ origin: frontendUrl }));
 
 app.get("/", async (req, res) => {

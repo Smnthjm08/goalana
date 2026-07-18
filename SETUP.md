@@ -38,6 +38,34 @@ transactions afterward.
 - A devnet-funded keypair to pay for the deploy (rent + program buffer, a few SOL)
 - `bun install` already run at repo root
 
+## Step 0.5 — Choose the new production authority wallet
+
+There is no `rotate_authority` instruction. Whichever keypair signs Step 8's
+`initialize_config` becomes `config.authority` / `market_authority` /
+`settlement_authority` **permanently**, for the life of this program address —
+that same key must then also be the one that signs every `create_market`,
+`lock_market`, `cancel_market` call the API makes going forward, or those
+instructions reject with a signer/authority mismatch. Decide this before
+Step 1, not after Step 8.
+
+If you want a real production authority distinct from the hackathon dev wallet
+(`B9cWHC7dS6P1gG98FbXzyYhSMLL8J5dvHfMza39gNPar`, the one baked into the current
+`.env.production`):
+
+```bash
+solana-keygen new -o ./goalana-prod-authority.json --no-bip39-passphrase
+solana-keygen pubkey ./goalana-prod-authority.json
+solana airdrop 2 $(solana-keygen pubkey ./goalana-prod-authority.json) --url devnet
+```
+
+This writes the keypair into the repo root as `goalana-prod-authority.json` —
+already added to `.gitignore` so it can't be committed by accident, same
+treatment as the existing `devnet-wallet.json`. Back it up somewhere durable
+outside the repo too (password manager / secrets vault) — losing it means
+losing the ability to lock/cancel/settle every market ever created under this
+program address. You'll paste its secret key into `WALLET_PRIVATE_KEY` in
+Step 7.
+
 ## Step 1 — Generate the new program keypair
 
 ```bash
@@ -186,3 +214,102 @@ present in `target/deploy/`. The ID stays
 `AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu`, existing PDAs/config/markets
 are untouched, and nothing downstream needs updating. Only do the full
 new-address flow above if you specifically need a clean slate.
+
+---
+
+## Going live: starting the API in production, not locally
+
+The goal here is that from the moment the new program address is live, every
+fixture/odds/market/bet the crons touch gets written to the **production**
+DB/API, not a local dev process — so there's no "local test data" to reconcile
+or throw away later.
+
+### Step 11 — Sync the `production` branch before deploying
+
+`deploy.sh` deploys whatever is on the `production` branch
+(`git checkout production && git pull --ff-only origin production`), **not**
+`main`. As of this writing `production` is a clean fast-forward candidate —
+7 commits behind `main`, 0 commits of its own ahead — so this is a safe,
+conflict-free fast-forward, not a merge:
+
+```bash
+git checkout production
+git merge main --ff-only
+git push origin production
+git checkout main
+```
+
+Skipping this step means the VM redeploys 7-commits-stale code (missing the
+CORS required-env fix, the share/market/position pages, the reverted
+multi-competition config, etc.) while you believe you're shipping current
+`main`. Re-check `git rev-list --left-right --count main...production`
+before every future deploy — if it's ever not `N 0`, `production` has drifted
+and you have real commits to reconcile, not a fast-forward.
+
+### Step 12 — Point `.env.production` at the new program's world
+
+Nothing in `.env.production` names the program ID directly (see Step 7), but
+since Step 0.5/8 above mean a **new authority wallet** and a **fresh on-chain
+config**, update on the VM:
+
+- `WALLET_PRIVATE_KEY` — the Step 0.5 production authority's secret key (not
+  the old hackathon dev wallet's)
+- `SOLANA_RPC_URL` / `NEXT_PUBLIC_SOLANA_RPC_URL` — keep pointed at the
+  dedicated devnet RPC provider (never the public `api.devnet.solana.com` —
+  `settle_market` alone is a 400k-CU tx that the public endpoint won't
+  reliably confirm)
+- `API_ONLY` **must stay `"false"`** on the VM (`index.ts:485`) — that's the
+  flag that turns on the lifecycle cron, market-creation cron, and the
+  odds/score SSE workers. `"true"` (what `apps/api/package.json`'s `dev:api`
+  script forces) makes the process a read-only API with no ingestion at all.
+
+### Step 13 — First boot on a fresh program: nothing to migrate in the DB
+
+Confirming the earlier point directly: there is no DB step that "moves" the
+deployment to the new address. The DB has no `programId` column — it only
+stores `marketPda` values that are meaningless once the program address
+changes. The correct sequence is:
+
+1. VM boots with `API_ONLY=false` against the new program + new authority.
+2. The existing market-creation cron (`market.service.ts`, runs every 10 min
+   over upcoming fixtures) calls `create_market` against the **new** program
+   ID automatically and writes fresh `Market` rows with the new PDAs — no
+   manual DB writes needed.
+3. Old `Market` rows from the previous program address are now orphaned
+   (their PDAs point at an account under the old, now-superseded program).
+   Leave them — deleting isn't required for correctness — or clean them up
+   with a one-off script once you've confirmed the new markets are flowing,
+   your call.
+
+### Step 14 — First deploy (VM has no `goalana-api` pm2 process yet)
+
+If this VM has never run the app before, `deploy.sh`'s `pm2 reload
+goalana-api` will fail (nothing to reload). Bootstrap once using
+`docs/DEPLOYMENT.md`'s flow, then `deploy.sh` works for every deploy after:
+
+```bash
+ssh <vm>
+git clone <repo-url> goalana && cd goalana
+git checkout production   # already synced to main in Step 11
+bun install
+# .env.production already has real values (WALLET_PRIVATE_KEY, DATABASE_URL,
+# TXLINE_* etc.) — copy it to the VM securely (scp, not committed to git) as .env
+cd packages/db && bun run migrate:deploy && cd ../..
+bun add -g pm2
+pm2 start "bun run start" --name "goalana-api" --cwd "./apps/api"
+pm2 save
+pm2 startup
+```
+
+From here on, every subsequent deploy is just running `./deploy.sh` (Steps
+11–12 already folded into it once `production` tracks `main` and
+`.env.production` is current on the VM).
+
+### Step 15 — Don't run a second ingesting process locally
+
+`todo.md` already documents the failure mode: **3 concurrent `apps/api`
+processes double-processing the same lifecycle cron ticks.** Once the VM is
+live with `API_ONLY=false`, run locally only with `API_ONLY=true` (i.e.
+`bun run dev:api`, never plain `bun run dev`) — that gives you a local
+read-only API against the same DB for testing, without a second process
+racing the VM's cron for lock/settle/create-market calls.
