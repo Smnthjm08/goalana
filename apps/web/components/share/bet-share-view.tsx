@@ -31,15 +31,8 @@ export function BetShareView({ shareId }: { shareId: string }) {
   // page still fully re-derives everything live from chain without them.
   const oddsAtShare = searchParams.get("odds")
 
-  const {
-    account,
-    betTx,
-    betTs,
-    claimTx,
-    loading,
-    notFound,
-    error,
-  } = usePositionByPda(shareId)
+  const { account, betTx, betTs, claimTx, loading, notFound, error } =
+    usePositionByPda(shareId)
 
   const { market: onChainMarket } = useMarketAccount(account?.marketPda)
   const { market: meta } = useMarketMeta(account?.marketPda)
@@ -65,7 +58,10 @@ export function BetShareView({ shareId }: { shareId: string }) {
           <p className="max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground">
             This position doesn&apos;t exist on-chain, or the link is wrong.
           </p>
-          <Button asChild className="mt-1 font-heading tracking-widest uppercase">
+          <Button
+            asChild
+            className="mt-1 font-heading tracking-widest uppercase"
+          >
             <Link href="/">Browse Markets</Link>
           </Button>
         </div>
@@ -82,9 +78,15 @@ export function BetShareView({ shareId }: { shareId: string }) {
 
   const staked = account.yesAmount + account.noAmount
   const bothSides = account.yesAmount > 0n && account.noAmount > 0n
-  const sideLabel = bothSides ? "YES + NO" : account.yesAmount > 0n ? "YES" : "NO"
+  const sideLabel = bothSides
+    ? "YES + NO"
+    : account.yesAmount > 0n
+      ? "YES"
+      : "NO"
 
-  const poolTotal = onChainMarket ? Number(onChainMarket.totalYes + onChainMarket.totalNo) : 0
+  const poolTotal = onChainMarket
+    ? Number(onChainMarket.totalYes + onChainMarket.totalNo)
+    : 0
   const livePoolYesPct =
     onChainMarket && poolTotal > 0
       ? (Number(onChainMarket.totalYes) / poolTotal) * 100
@@ -105,7 +107,9 @@ export function BetShareView({ shareId }: { shareId: string }) {
           <ShareActions
             url={shareUrl}
             title="Goalana bet slip"
-            text={meta ? `${sideLabel} on ${meta.question}` : "A Goalana bet slip"}
+            text={
+              meta ? `${sideLabel} on ${meta.question}` : "A Goalana bet slip"
+            }
           />
         </div>
 
@@ -122,7 +126,9 @@ export function BetShareView({ shareId }: { shareId: string }) {
                       name={meta.fixture.participant1}
                       className="font-sans text-sm font-bold text-foreground"
                     />
-                    <span className="font-mono text-[10px] text-muted-foreground">v</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">
+                      v
+                    </span>
                     <TeamBadge
                       name={meta.fixture.participant2}
                       className="font-sans text-sm font-bold text-foreground"
@@ -140,7 +146,8 @@ export function BetShareView({ shareId }: { shareId: string }) {
 
           <div className="flex flex-col gap-1">
             <span className="font-sans text-base leading-snug font-bold text-foreground">
-              {meta?.question ?? "Market metadata unavailable — read from chain only"}
+              {meta?.question ??
+                "Market metadata unavailable — read from chain only"}
             </span>
           </div>
 
@@ -149,13 +156,15 @@ export function BetShareView({ shareId }: { shareId: string }) {
               <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
                 Prediction
               </span>
-              <span className="font-heading text-base text-foreground">{sideLabel}</span>
+              <span className="font-heading text-base text-foreground">
+                {sideLabel}
+              </span>
             </div>
             <div className="flex flex-col gap-1">
               <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
                 Stake
               </span>
-              <span className="font-heading text-base tabular-nums text-foreground">
+              <span className="font-heading text-base text-foreground tabular-nums">
                 {formatSol(staked)} SOL
               </span>
             </div>
@@ -163,7 +172,7 @@ export function BetShareView({ shareId }: { shareId: string }) {
               <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
                 {isRefund ? "Refundable" : "Payout"}
               </span>
-              <span className="font-heading text-base tabular-nums text-foreground">
+              <span className="font-heading text-base text-foreground tabular-nums">
                 {payout !== null
                   ? `${formatSol(payout)} SOL`
                   : status === "Claimed"
@@ -175,7 +184,7 @@ export function BetShareView({ shareId }: { shareId: string }) {
               <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
                 Odds when shared
               </span>
-              <span className="font-heading text-base tabular-nums text-foreground">
+              <span className="font-heading text-base text-foreground tabular-nums">
                 {oddsAtShare
                   ? `${Number(oddsAtShare).toFixed(1)}% YES`
                   : livePoolYesPct !== null
@@ -201,7 +210,9 @@ export function BetShareView({ shareId }: { shareId: string }) {
                 Placed
               </span>
               <span className="font-mono text-sm text-foreground">
-                {betTs ? `${formatDate(betTs * 1000)} · ${formatTimeWithZone(betTs * 1000)}` : "—"}
+                {betTs
+                  ? `${formatDate(betTs * 1000)} · ${formatTimeWithZone(betTs * 1000)}`
+                  : "—"}
               </span>
             </div>
           </div>
@@ -218,7 +229,9 @@ export function BetShareView({ shareId }: { shareId: string }) {
                   Bet tx ↗
                 </a>
               ) : (
-                <span className="font-mono text-[10px] text-muted-foreground/60">Bet tx —</span>
+                <span className="font-mono text-[10px] text-muted-foreground/60">
+                  Bet tx —
+                </span>
               )}
               {claimTx && (
                 <a

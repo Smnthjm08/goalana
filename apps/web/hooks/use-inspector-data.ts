@@ -11,7 +11,10 @@ import {
 import axiosInstance from "@/lib/axios-instance"
 import { formatDate, formatTimeWithZone } from "@/lib/time"
 import { useGoalanaProgram } from "@/hooks/use-goalana-program"
-import { decodeStatus, type OnChainMarketStatus } from "@/hooks/use-market-account"
+import {
+  decodeStatus,
+  type OnChainMarketStatus,
+} from "@/hooks/use-market-account"
 
 // This page never signs or sends a transaction — it is a read-only view over
 // the same PDAs and account fetches the rest of the app already uses
@@ -108,7 +111,9 @@ function decodeOrigin(raw: Record<string, unknown>): string {
   return key.charAt(0).toUpperCase() + key.slice(1)
 }
 
-export function formatSol(lamports: bigint | number | null | undefined): string {
+export function formatSol(
+  lamports: bigint | number | null | undefined
+): string {
   if (lamports === null || lamports === undefined) return "…"
   return (Number(lamports) / LAMPORTS_PER_SOL).toFixed(4)
 }

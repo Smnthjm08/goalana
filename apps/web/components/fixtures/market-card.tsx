@@ -79,8 +79,12 @@ export function MarketCard({ market }: { market: any }) {
   // currentYesPct/currentNoPct are the live TxLINE reference probability
   // (server-joined from the current Odds row); fall back to the opening
   // snapshot captured at market creation if a live match isn't available yet.
-  const yesPct = isUnpriced ? poolYesPct : Number(market.currentYesPct ?? market.initialYesPct)
-  const noPct = isUnpriced ? 100 - poolYesPct : Number(market.currentNoPct ?? market.initialNoPct)
+  const yesPct = isUnpriced
+    ? poolYesPct
+    : Number(market.currentYesPct ?? market.initialYesPct)
+  const noPct = isUnpriced
+    ? 100 - poolYesPct
+    : Number(market.currentNoPct ?? market.initialNoPct)
 
   async function handlePlaceBet() {
     if (!connected || !publicKey) {
@@ -261,7 +265,9 @@ export function MarketCard({ market }: { market: any }) {
                 market.marketType.replace(/_/g, " ")}
             </span>
             {/* A market is "hot" if it has active liquidity OR if the odds have shifted significantly (> 5%) from opening */}
-            {(poolTotal > 0 || (!isUnpriced && Math.abs(yesPct - Number(market.initialYesPct)) >= 5)) && (
+            {(poolTotal > 0 ||
+              (!isUnpriced &&
+                Math.abs(yesPct - Number(market.initialYesPct)) >= 5)) && (
               <div className="flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-bold text-orange-500">
                 <Flame className="size-3" />
                 HOT
@@ -270,10 +276,7 @@ export function MarketCard({ market }: { market: any }) {
           </div>
           <div className="flex items-center gap-3">
             <MarketLockStatus locksAt={market.locksAt} status={status} />
-            <MarketStatusBadge
-              status={status}
-              className="gap-1 text-[10px]"
-            />
+            <MarketStatusBadge status={status} className="gap-1 text-[10px]" />
             {marketLoading && <Spinner className="size-2.5" />}
           </div>
         </div>
@@ -409,7 +412,10 @@ export function MarketCard({ market }: { market: any }) {
                 a reference. Surfacing both — and how far they've drifted apart
                 — makes the pari-mutuel mechanism legible instead of implicit. */}
             {!isUnpriced && poolTotal > 0 && (
-              <PoolVsReference poolYesPct={poolYesPct} referenceYesPct={yesPct} />
+              <PoolVsReference
+                poolYesPct={poolYesPct}
+                referenceYesPct={yesPct}
+              />
             )}
           </div>
         )}

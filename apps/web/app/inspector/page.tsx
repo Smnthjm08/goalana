@@ -13,7 +13,11 @@ import {
   TableHead,
   TableCell,
 } from "@workspace/ui/components/table"
-import { formatSol, formatTs, useInspectorData } from "@/hooks/use-inspector-data"
+import {
+  formatSol,
+  formatTs,
+  useInspectorData,
+} from "@/hooks/use-inspector-data"
 import { FullAddressRow } from "@/components/inspector/full-address-row"
 import { AddressLink } from "@/components/inspector/address-link"
 import { MarketStatusBadge } from "@/components/market-status-badge"
@@ -55,10 +59,10 @@ export default function InspectorPage() {
           </h1>
           <p className="max-w-2xl font-mono text-[11px] leading-relaxed text-muted-foreground">
             Every account Goalana touches, read live from the same PDAs and
-            program calls the rest of the app uses — nothing here writes to
-            the chain. Config, program IDs, TxLINE&apos;s daily scores root,
-            and every Market account with its predicate, pools, vault and
-            lifecycle transactions.
+            program calls the rest of the app uses — nothing here writes to the
+            chain. Config, program IDs, TxLINE&apos;s daily scores root, and
+            every Market account with its predicate, pools, vault and lifecycle
+            transactions.
           </p>
           {refreshError && (
             <span className="font-mono text-[10px] tracking-widest text-destructive uppercase">
@@ -173,10 +177,10 @@ export default function InspectorPage() {
                   )}
                   <span className="font-mono text-[9px] leading-relaxed text-muted-foreground">
                     Owned and laid out by TxLINE&apos;s oracle program —
-                    Goalana&apos;s settlement CPIs into it as an opaque
-                    account and never deserializes it, so &quot;freshness&quot;
-                    here is existence: this PDA appears once TxLINE anchors
-                    today&apos;s Merkle root.
+                    Goalana&apos;s settlement CPIs into it as an opaque account
+                    and never deserializes it, so &quot;freshness&quot; here is
+                    existence: this PDA appears once TxLINE anchors today&apos;s
+                    Merkle root.
                   </span>
                 </CardContent>
               </Card>

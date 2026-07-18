@@ -1,6 +1,10 @@
 import Link from "next/link"
 import { TableCell, TableRow } from "@workspace/ui/components/table"
-import { formatSol, formatTs, type InspectorMarket } from "@/hooks/use-inspector-data"
+import {
+  formatSol,
+  formatTs,
+  type InspectorMarket,
+} from "@/hooks/use-inspector-data"
 import { FullAddressRow } from "@/components/inspector/full-address-row"
 import { AddressLink } from "@/components/inspector/address-link"
 import { TxLink } from "@/components/inspector/tx-link"
@@ -78,10 +82,7 @@ export function MarketDetailRow({ market }: { market: InspectorMarket }) {
             <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
               <TxLink label="Create" signature={market.meta?.creationTx} />
               <TxLink label="Lock" signature={market.meta?.lockTx} />
-              <TxLink
-                label="Settle"
-                signature={market.meta?.settlementTx}
-              />
+              <TxLink label="Settle" signature={market.meta?.settlementTx} />
             </div>
           </div>
         </div>

@@ -1,6 +1,12 @@
 import { explorerTxUrl } from "@/lib/solana-explorer"
 
-export function TxLink({ label, signature }: { label: string; signature: string }) {
+export function TxLink({
+  label,
+  signature,
+}: {
+  label: string
+  signature: string
+}) {
   return (
     <a
       href={explorerTxUrl(signature)}

@@ -1,5 +1,9 @@
 import { explorerAddressUrl } from "@/lib/solana-explorer"
-import { GOALANA_PROGRAM_ID, TRUST_STATEMENT, LIFECYCLE_STEPS } from "@/lib/protocol"
+import {
+  GOALANA_PROGRAM_ID,
+  TRUST_STATEMENT,
+  LIFECYCLE_STEPS,
+} from "@/lib/protocol"
 
 export function Hero() {
   return (

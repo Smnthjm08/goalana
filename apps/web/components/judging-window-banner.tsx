@@ -52,8 +52,8 @@ export function JudgingWindowBanner() {
         <span className="tracking-widest uppercase">Live feed offline —</span>{" "}
         TxLINE&apos;s free-tier access ends at the submission deadline, so the
         odds/scores stream may be quiet during judging. This is not a broken
-        app: every proof, evidence transaction, and settled market shown here
-        is persisted and fully inspectable.
+        app: every proof, evidence transaction, and settled market shown here is
+        persisted and fully inspectable.
       </p>
     </div>
   )

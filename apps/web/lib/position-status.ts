@@ -25,7 +25,8 @@ export interface MarketMeta {
  * (cancelled, or settled with an empty winning pool) — in both cases the
  * money is sitting in the vault waiting for the user to pull it.
  */
-export type PositionStatus = "Open" | "Locked" | "Settled" | "Claimable" | "Claimed"
+export type PositionStatus =
+  "Open" | "Locked" | "Settled" | "Claimable" | "Claimed"
 
 /**
  * Derives a position's actionable status/payout from on-chain Market state —

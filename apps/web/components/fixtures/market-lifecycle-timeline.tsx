@@ -145,7 +145,7 @@ export function MarketLifecycleTimeline({
             // plays once, as the stage lands, not on every ~10s poll tick.
             <div
               key={`${stage.key}-${stage.status}`}
-              className="animate-in fade-in slide-in-from-left-1 flex gap-3 duration-500"
+              className="flex animate-in gap-3 duration-500 fade-in slide-in-from-left-1"
             >
               {/* Rail */}
               <div className="flex flex-col items-center">

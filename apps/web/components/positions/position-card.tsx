@@ -2,7 +2,10 @@ import Link from "next/link"
 import { LAMPORTS_PER_SOL } from "@solana/web3.js"
 import { explorerAddressUrl } from "@/lib/solana-explorer"
 import { getSiteUrl } from "@/lib/site"
-import type { PositionStatus, WalletPosition } from "@/hooks/use-wallet-positions"
+import type {
+  PositionStatus,
+  WalletPosition,
+} from "@/hooks/use-wallet-positions"
 import { TeamBadge } from "@/components/team-badge"
 import { StatusBadge } from "@/components/positions/status-badge"
 import { TxLink } from "@/components/positions/tx-link"
@@ -49,7 +52,8 @@ export function PositionCard({ position }: { position: WalletPosition }) {
   const fixtureHref = meta ? `/fixtures/${meta.fixture.fixtureId}` : null
 
   const poolTotal = market ? Number(market.totalYes + market.totalNo) : 0
-  const poolYesPct = market && poolTotal > 0 ? (Number(market.totalYes) / poolTotal) * 100 : null
+  const poolYesPct =
+    market && poolTotal > 0 ? (Number(market.totalYes) / poolTotal) * 100 : null
   const shareQuery = new URLSearchParams({ m: position.marketPda })
   if (poolYesPct !== null) shareQuery.set("odds", poolYesPct.toFixed(1))
   const shareUrl = `${getSiteUrl()}/share/bet/${position.positionPda}?${shareQuery.toString()}`
@@ -93,7 +97,11 @@ export function PositionCard({ position }: { position: WalletPosition }) {
           <ShareActions
             url={shareUrl}
             title="Goalana bet slip"
-            text={meta ? `${outcomeLabel} on ${meta.question}` : "A Goalana bet slip"}
+            text={
+              meta
+                ? `${outcomeLabel} on ${meta.question}`
+                : "A Goalana bet slip"
+            }
             compact
           />
           <StatusBadge status={status} />

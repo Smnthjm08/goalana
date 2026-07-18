@@ -294,7 +294,7 @@ export async function processMarketsForUpcomingFixtures() {
 
   const competitionId = WORLD_CUP_COMPETITION_ID;
   const now = Date.now();
-  const until = now + 24 * 60 * 60 * 1000;
+  const until = now + 48 * 60 * 60 * 1000;
 
   // 1. Find upcoming fixtures (next 24 hours)
   const fixtures = await prisma.fixture.findMany({

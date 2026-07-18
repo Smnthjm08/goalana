@@ -15,7 +15,10 @@ import { marketTypeLabels } from "@/lib/market-groups"
 import { formatDuration } from "@/lib/time"
 import { getSiteUrl } from "@/lib/site"
 import { useMarketMeta } from "@/hooks/use-market-meta"
-import { useMarketAccount, type OnChainMarketStatus } from "@/hooks/use-market-account"
+import {
+  useMarketAccount,
+  type OnChainMarketStatus,
+} from "@/hooks/use-market-account"
 import { useNow } from "@/hooks/use-now"
 
 // The DB mirrors on-chain status as an uppercase string ("OPEN", "LOCKED", …)
@@ -27,7 +30,12 @@ function normalizeStatus(raw: string): OnChainMarketStatus {
 }
 
 export function MarketDetailView({ marketId }: { marketId: string }) {
-  const { market: meta, loading: metaLoading, notFound, error } = useMarketMeta(marketId)
+  const {
+    market: meta,
+    loading: metaLoading,
+    notFound,
+    error,
+  } = useMarketMeta(marketId)
   const { market: onChainMarket } = useMarketAccount(marketId)
   const now = useNow(1_000)
 
@@ -54,10 +62,13 @@ export function MarketDetailView({ marketId }: { marketId: string }) {
             Market not found
           </span>
           <p className="max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground">
-            This market isn&apos;t in Goalana&apos;s tracked set, or the link
-            is wrong.
+            This market isn&apos;t in Goalana&apos;s tracked set, or the link is
+            wrong.
           </p>
-          <Button asChild className="mt-1 font-heading tracking-widest uppercase">
+          <Button
+            asChild
+            className="mt-1 font-heading tracking-widest uppercase"
+          >
             <Link href="/">Browse Markets</Link>
           </Button>
         </div>
@@ -68,7 +79,8 @@ export function MarketDetailView({ marketId }: { marketId: string }) {
   const status = onChainMarket?.status ?? normalizeStatus(meta.status)
   const shareUrl = `${getSiteUrl()}/market/${meta.marketPda}`
   const settleAfterMs = onChainMarket ? onChainMarket.settleAfter * 1000 : null
-  const untilSettle = settleAfterMs !== null && now !== null ? settleAfterMs - now : null
+  const untilSettle =
+    settleAfterMs !== null && now !== null ? settleAfterMs - now : null
 
   return (
     <div className="flex w-full flex-col p-4 md:p-8 lg:p-12">
@@ -77,7 +89,8 @@ export function MarketDetailView({ marketId }: { marketId: string }) {
         <div className="flex flex-col gap-4 border-b border-border pb-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="font-mono text-xs tracking-widest text-muted-foreground uppercase">
-              {marketTypeLabels[meta.marketType] || meta.marketType.replace(/_/g, " ")}
+              {marketTypeLabels[meta.marketType] ||
+                meta.marketType.replace(/_/g, " ")}
             </span>
             <ShareActions
               url={shareUrl}
@@ -105,7 +118,9 @@ export function MarketDetailView({ marketId }: { marketId: string }) {
                 name={meta.fixture.participant1}
                 className="font-sans text-sm font-bold text-foreground"
               />
-              <span className="font-mono text-[10px] text-muted-foreground">v</span>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                v
+              </span>
               <TeamBadge
                 name={meta.fixture.participant2}
                 className="font-sans text-sm font-bold text-foreground"
@@ -117,13 +132,15 @@ export function MarketDetailView({ marketId }: { marketId: string }) {
 
             <div className="flex flex-col items-end gap-1">
               <MarketLockStatus locksAt={meta.locksAt} status={status} />
-              {untilSettle !== null && status !== "Settled" && status !== "Cancelled" && (
-                <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase tabular-nums">
-                  {untilSettle > 0
-                    ? `Settles after ${formatDuration(untilSettle)}`
-                    : "Eligible for settlement"}
-                </span>
-              )}
+              {untilSettle !== null &&
+                status !== "Settled" &&
+                status !== "Cancelled" && (
+                  <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase tabular-nums">
+                    {untilSettle > 0
+                      ? `Settles after ${formatDuration(untilSettle)}`
+                      : "Eligible for settlement"}
+                  </span>
+                )}
             </div>
           </div>
         </div>

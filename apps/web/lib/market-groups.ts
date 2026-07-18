@@ -21,7 +21,12 @@ const MARKET_GROUPS: Record<string, string> = {
   TOTAL_CORNERS_OVER_9_5: "PARAMETRIC PROPS",
   TOTAL_CARDS_OVER_3_5: "PARAMETRIC PROPS",
 }
-const MARKET_GROUP_ORDER = ["MATCH RESULT", "TOTAL GOALS", "PARAMETRIC PROPS", "OTHER"]
+const MARKET_GROUP_ORDER = [
+  "MATCH RESULT",
+  "TOTAL GOALS",
+  "PARAMETRIC PROPS",
+  "OTHER",
+]
 
 const STATUS_RANK: Record<string, number> = {
   Open: 0,
@@ -44,7 +49,7 @@ export function groupMarkets(
 
   return MARKET_GROUP_ORDER.map((group) => {
     const groupMarkets = byGroup.get(group) ?? []
-    
+
     // Sort markets within the group so Open ones appear first
     groupMarkets.sort((a, b) => {
       const rankA = STATUS_RANK[a.status] ?? 4

@@ -38,9 +38,7 @@ export function MarketActivityPanel({
           Loading on-chain activity…
         </span>
       ) : error ? (
-        <span className="font-mono text-[10px] text-destructive">
-          {error}
-        </span>
+        <span className="font-mono text-[10px] text-destructive">{error}</span>
       ) : staked.length === 0 ? (
         <span className="font-mono text-[10px] text-muted-foreground">
           No bets placed yet — be the first.
@@ -71,13 +69,11 @@ export function MarketActivityPanel({
                   {shortAddr(entry.user)}
                 </a>
                 <span
-                  className={
-                    side === "NO" ? "text-rose-500" : "text-lime-500"
-                  }
+                  className={side === "NO" ? "text-rose-500" : "text-lime-500"}
                 >
                   {side}
                 </span>
-                <span className="tabular-nums text-foreground">
+                <span className="text-foreground tabular-nums">
                   {amount.toFixed(3)} SOL
                 </span>
                 <span className="text-muted-foreground">

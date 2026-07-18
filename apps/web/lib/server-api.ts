@@ -3,7 +3,9 @@
 // hit the Next server's own router — doesn't apply. Hit the API directly by
 // its real origin instead, same env var next.config.ts already uses for that
 // rewrite's destination.
-const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081").replace(/\/$/, "")
+const API_ORIGIN = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081"
+).replace(/\/$/, "")
 
 /**
  * Best-effort server-side fetch against the Goalana API, for building page

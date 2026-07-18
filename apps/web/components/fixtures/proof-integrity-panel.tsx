@@ -214,8 +214,9 @@ export function ProofIntegrityPanel({
           Goalana never decides an outcome.{" "}
           <span className="text-foreground">settle_market</span> delegates to
           TxLINE&apos;s oracle by CPI into{" "}
-          <span className="text-foreground">validate_stat</span>, which re-hashes
-          the Merkle path against a root anchored on-chain. Every row below is a{" "}
+          <span className="text-foreground">validate_stat</span>, which
+          re-hashes the Merkle path against a root anchored on-chain. Every row
+          below is a{" "}
           <span className="text-foreground">real Devnet transaction</span>{" "}
           calling that exact instruction with the exact arguments settlement
           uses — click any signature and read the logs yourself.
@@ -245,8 +246,8 @@ export function ProofIntegrityPanel({
               The same proof as above, with a single lie introduced. The oracle
               recomputes the root, finds it doesn&apos;t match the anchored one,
               and reverts — so the CPI fails and{" "}
-              <span className="text-foreground">settle_market</span> reverts with
-              it. These transactions are on the ledger as failures.
+              <span className="text-foreground">settle_market</span> reverts
+              with it. These transactions are on the ledger as failures.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -267,8 +268,9 @@ export function ProofIntegrityPanel({
             <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
               Goals, corners and cards — verified on-chain through the identical{" "}
               <span className="text-foreground">add + greaterThan</span>{" "}
-              predicate and the identical instruction. Only the stat keys change.
-              Goalana is not a goals oracle; it settles whatever TxLINE proves.
+              predicate and the identical instruction. Only the stat keys
+              change. Goalana is not a goals oracle; it settles whatever TxLINE
+              proves.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -277,10 +279,10 @@ export function ProofIntegrityPanel({
             ))}
           </div>
           <p className="font-mono text-[9px] leading-relaxed text-muted-foreground">
-            Only goals back a tradeable market today: market creation is gated on
-            TxLINE reference odds, and TxLINE prices no corners or cards markets
-            for this competition. The settlement path itself is indifferent to
-            which stat it proves.
+            Only goals back a tradeable market today: market creation is gated
+            on TxLINE reference odds, and TxLINE prices no corners or cards
+            markets for this competition. The settlement path itself is
+            indifferent to which stat it proves.
           </p>
         </div>
       )}

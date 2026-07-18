@@ -104,7 +104,7 @@ export function Header() {
 
       {/* Mobile Drawer/Menu Overlay */}
       {isOpen && (
-        <div className="fixed inset-x-0 top-16 bottom-0 z-40 flex flex-col border-b border-border bg-background/95 p-0 backdrop-blur-md md:hidden animate-in fade-in slide-in-from-top-4 duration-200">
+        <div className="fixed inset-x-0 top-16 bottom-0 z-40 flex animate-in flex-col border-b border-border bg-background/95 p-0 backdrop-blur-md duration-200 fade-in slide-in-from-top-4 md:hidden">
           <div className="flex-1 overflow-y-auto">
             <nav className="flex flex-col">
               {NAV_LINKS.map((link) => {
@@ -134,7 +134,7 @@ export function Header() {
           </div>
 
           {/* Drawer Footer Actions */}
-          <div className="border-t border-border/40 bg-muted/10 p-6 flex flex-col gap-4">
+          <div className="flex flex-col gap-4 border-t border-border/40 bg-muted/10 p-6">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
                 Live Feed

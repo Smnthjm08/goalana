@@ -24,7 +24,7 @@ const READ_ONLY_WALLET: Wallet = {
 export function useGoalanaProgram() {
   const { connection } = useConnection()
   const wallet = useWallet()
-  
+
   // Use a ref to hold the latest wallet functions so we don't need to put them
   // in the provider's dependency array, which would cause infinite loops in polling hooks.
   const walletRef = useRef(wallet)
@@ -39,8 +39,12 @@ export function useGoalanaProgram() {
     if (connected && publicKeyBase58) {
       const signerWallet: Wallet = {
         publicKey: new PublicKey(publicKeyBase58),
-        signTransaction: <T extends Transaction | VersionedTransaction>(tx: T) => walletRef.current.signTransaction!(tx),
-        signAllTransactions: <T extends Transaction | VersionedTransaction>(txs: T[]) => walletRef.current.signAllTransactions!(txs),
+        signTransaction: <T extends Transaction | VersionedTransaction>(
+          tx: T
+        ) => walletRef.current.signTransaction!(tx),
+        signAllTransactions: <T extends Transaction | VersionedTransaction>(
+          txs: T[]
+        ) => walletRef.current.signAllTransactions!(txs),
       } as unknown as Wallet
 
       return new AnchorProvider(connection, signerWallet, {
