@@ -9,7 +9,8 @@ import { TxlineHealthIndicator } from "./txline-health-indicator"
 import { Menu, X } from "lucide-react"
 
 const NAV_LINKS = [
-  { href: "/", label: "Markets" },
+  { href: "/", label: "Home" },
+  { href: "/fixtures", label: "Fixtures" },
   { href: "/positions", label: "My Positions" },
   { href: "/inspector", label: "Inspector" },
 ]
@@ -60,16 +61,18 @@ export function Header() {
               const active =
                 link.href === "/"
                   ? pathname === "/"
-                  : pathname.startsWith(link.href)
+                  : link.href === "/fixtures"
+                    ? pathname.startsWith("/fixtures") || pathname.startsWith("/market")
+                    : pathname.startsWith(link.href)
 
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`font-mono text-[10px] tracking-widest whitespace-nowrap uppercase transition-colors md:text-[11px] ${
+                  className={`relative font-mono text-[10px] tracking-widest whitespace-nowrap uppercase transition-colors md:text-[11px] py-1 ${
                     active
-                      ? "text-primary"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-border"
                   }`}
                 >
                   {link.label}
@@ -111,7 +114,9 @@ export function Header() {
                 const active =
                   link.href === "/"
                     ? pathname === "/"
-                    : pathname.startsWith(link.href)
+                    : link.href === "/fixtures"
+                      ? pathname.startsWith("/fixtures") || pathname.startsWith("/market")
+                      : pathname.startsWith(link.href)
 
                 return (
                   <Link

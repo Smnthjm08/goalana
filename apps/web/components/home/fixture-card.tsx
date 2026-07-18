@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Target } from "lucide-react"
 import {
   Card,
   CardHeader,
@@ -35,7 +36,7 @@ export function FixtureCard({ fixture }: { fixture: any }) {
     <Link href={`/fixtures/${fixture.fixtureId}`}>
       <Card className="group relative flex h-full cursor-pointer flex-col transition-colors hover:border-primary">
         {/* Header: competition + what happens next */}
-        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 border-b border-border p-3 pb-3">
+        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 border-b border-border px-3 py-2">
           <span className="font-mono text-[10px] text-muted-foreground uppercase">
             {fixture.competition}
           </span>
@@ -47,7 +48,7 @@ export function FixtureCard({ fixture }: { fixture: any }) {
         </CardHeader>
 
         {/* Body: Teams (+ real score only when the match has one) */}
-        <CardContent className="flex flex-col gap-3 p-4 pt-4">
+        <CardContent className="flex flex-col gap-2 px-3 py-3">
           <div className="flex items-center justify-between gap-3">
             <TeamBadge
               name={fixture.participant1}
@@ -76,13 +77,16 @@ export function FixtureCard({ fixture }: { fixture: any }) {
           </div>
         </CardContent>
 
-        {/* Footer: fixture id + market count */}
-        <CardFooter className="mt-auto flex flex-row items-center justify-between border-t border-border bg-muted/50 p-3 pt-3">
-          <span className="font-mono text-[10px] text-muted-foreground">
-            ID: {fixture.fixtureId}
+        {/* Footer: market count */}
+        <CardFooter className="mt-auto flex flex-row items-center justify-between border-t border-border bg-muted/50 px-3 py-2">
+          <span className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
+            <Target className="size-2.5 shrink-0" />
+            {fixture._count?.markets > 0
+              ? `${fixture._count.markets} market${fixture._count.markets === 1 ? "" : "s"}`
+              : "No markets yet"}
           </span>
-          <span className="font-mono text-[10px] text-primary">
-            {fixture._count?.markets || 0} MARKETS
+          <span className="font-mono text-[10px] text-primary/60 transition-colors group-hover:text-primary">
+            View →
           </span>
         </CardFooter>
       </Card>

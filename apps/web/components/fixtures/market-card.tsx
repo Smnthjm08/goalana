@@ -188,7 +188,7 @@ export function MarketCard({ market }: { market: any }) {
   const payoutPreview =
     canClaimWinnings && onChainMarket
       ? (winningStake * (onChainMarket.totalYes + onChainMarket.totalNo)) /
-        (outcome ? onChainMarket.totalYes : onChainMarket.totalNo)
+      (outcome ? onChainMarket.totalYes : onChainMarket.totalNo)
       : null
 
   async function handleClaim(kind: "winnings" | "refund") {
@@ -268,11 +268,11 @@ export function MarketCard({ market }: { market: any }) {
             {(poolTotal > 0 ||
               (!isUnpriced &&
                 Math.abs(yesPct - Number(market.initialYesPct)) >= 5)) && (
-              <div className="flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-bold text-orange-500">
-                <Flame className="size-3" />
-                HOT
-              </div>
-            )}
+                <div className="flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-bold text-orange-500">
+                  <Flame className="size-3" />
+                  HOT
+                </div>
+              )}
           </div>
           <div className="flex items-center gap-3">
             <MarketLockStatus locksAt={market.locksAt} status={status} />
@@ -292,20 +292,24 @@ export function MarketCard({ market }: { market: any }) {
             variant="outline"
             disabled={!isOpen}
             onClick={() => setSelected(selected === "YES" ? null : "YES")}
-            className={`h-auto flex-row items-center justify-between rounded-sm p-4 transition-colors ${
-              selected === "YES"
-                ? "border-lime-400 bg-lime-400 text-black hover:border-lime-500 hover:bg-lime-500 hover:text-black"
-                : "group/yes border-border bg-card text-muted-foreground hover:border-lime-400 hover:text-lime-400"
-            }`}
+            className={`h-auto flex-row items-center justify-between rounded-sm p-4 transition-colors ${selected === "YES"
+              ? "border-lime-400 bg-lime-400 dark:bg-lime-400 text-black! hover:border-lime-500 hover:bg-lime-500 hover:dark:bg-lime-500 hover:text-black!"
+              : "group/yes border-lime-500/20 bg-lime-500/5 hover:border-lime-500/50 hover:bg-lime-500/10"
+              }`}
           >
-            <span
-              className={`font-mono text-xs ${selected === "YES" ? "text-black/70" : "text-muted-foreground group-hover/yes:text-lime-400"} transition-colors`}
-            >
-              YES
-            </span>
+            <div className="flex flex-col items-start gap-1">
+              <span
+                className={`font-mono text-xs ${selected === "YES" ? "text-black/80" : "text-lime-500/70 group-hover/yes:text-lime-500"} transition-colors`}
+              >
+                YES
+              </span>
+              <span className={`font-mono text-[10px] ${selected === "YES" ? "text-black/60" : "text-lime-500/50 group-hover/yes:text-lime-500/70"} transition-colors`}>
+                {poolYes?.toFixed(2) ?? "0.00"} SOL
+              </span>
+            </div>
             <span className="flex flex-col items-end gap-0.5">
               <span
-                className={`font-heading text-xl ${selected === "YES" ? "text-black" : "text-foreground group-hover/yes:text-lime-400"} transition-colors`}
+                className={`font-heading text-xl ${selected === "YES" ? "text-black!" : "text-lime-500/90 group-hover/yes:text-lime-400"} transition-colors`}
               >
                 {yesPct.toFixed(2)}%
               </span>
@@ -322,20 +326,24 @@ export function MarketCard({ market }: { market: any }) {
             variant="outline"
             disabled={!isOpen}
             onClick={() => setSelected(selected === "NO" ? null : "NO")}
-            className={`h-auto flex-row items-center justify-between rounded-sm p-4 transition-colors ${
-              selected === "NO"
-                ? "border-rose-600 bg-rose-600 text-white hover:border-rose-700 hover:bg-rose-700 hover:text-white"
-                : "group/no border-border bg-card text-muted-foreground hover:border-rose-600 hover:text-rose-600"
-            }`}
+            className={`h-auto flex-row items-center justify-between rounded-sm p-4 transition-colors ${selected === "NO"
+              ? "border-red-600 bg-red-600 dark:bg-red-600 text-white! hover:border-red-700 hover:bg-red-700 hover:dark:bg-red-700 hover:text-white!"
+              : "group/no border-red-500/20 bg-red-500/5 hover:border-red-500/50 hover:bg-red-500/10"
+              }`}
           >
-            <span
-              className={`font-mono text-xs ${selected === "NO" ? "text-white/70" : "text-muted-foreground group-hover/no:text-rose-600"} transition-colors`}
-            >
-              NO
-            </span>
+            <div className="flex flex-col items-start gap-1">
+              <span
+                className={`font-mono text-xs ${selected === "NO" ? "text-white/80" : "text-red-500/70 group-hover/no:text-red-500"} transition-colors`}
+              >
+                NO
+              </span>
+              <span className={`font-mono text-[10px] ${selected === "NO" ? "text-white/60" : "text-red-500/50 group-hover/no:text-red-500/70"} transition-colors`}>
+                {poolNo?.toFixed(2) ?? "0.00"} SOL
+              </span>
+            </div>
             <span className="flex flex-col items-end gap-0.5">
               <span
-                className={`font-heading text-xl ${selected === "NO" ? "text-white" : "text-foreground group-hover/no:text-rose-600"} transition-colors`}
+                className={`font-heading text-xl ${selected === "NO" ? "text-white!" : "text-red-500/90 group-hover/no:text-red-400"} transition-colors`}
               >
                 {noPct.toFixed(2)}%
               </span>

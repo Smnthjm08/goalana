@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { BarChart2, CheckCircle2, ListChecks, ShieldCheck, TrendingUp } from "lucide-react"
 import axiosInstance from "@/lib/axios-instance"
 import { groupMarkets } from "@/lib/market-groups"
 import { getSiteUrl } from "@/lib/site"
@@ -202,37 +203,42 @@ export function FixtureDetailView({ fixtureId }: { fixtureId: string }) {
         <Tabs defaultValue="MARKETS" className="w-full">
           <TabsList
             variant="line"
-            className="h-auto w-full flex-nowrap justify-start gap-4 overflow-x-auto rounded-none border-b border-border p-0 sm:gap-6 md:gap-8"
+            className="h-auto w-full flex-wrap justify-start gap-x-6 gap-y-0 rounded-none border-b border-border p-0 md:gap-x-8"
           >
             <TabsTrigger
               value="MARKETS"
-              className="flex-none shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
+              className="flex-none shrink-0 bg-transparent px-0 pb-2 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
+              <ListChecks className="mr-1.5 size-3.5" />
               Markets
             </TabsTrigger>
             <TabsTrigger
               value="ODDS_MOVEMENT"
-              className="flex-none shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
+              className="flex-none shrink-0 bg-transparent px-0 pb-2 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
+              <TrendingUp className="mr-1.5 size-3.5" />
               Odds & Movement
             </TabsTrigger>
             <TabsTrigger
               value="MATCH_EVENTS"
-              className="flex-none shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
+              className="flex-none shrink-0 bg-transparent px-0 pb-2 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
+              <BarChart2 className="mr-1.5 size-3.5" />
               Match Events
             </TabsTrigger>
             <TabsTrigger
               value="SETTLEMENT_PROOF"
-              className="flex-none shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
+              className="flex-none shrink-0 bg-transparent px-0 pb-2 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
+              <CheckCircle2 className="mr-1.5 size-3.5" />
               Settlement Proof
             </TabsTrigger>
             {proofIntegrity && (
               <TabsTrigger
                 value="PROOF_INTEGRITY"
-                className="flex-none shrink-0 bg-transparent px-0 pt-0 pb-4 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
+                className="flex-none shrink-0 bg-transparent px-0 pb-2 font-heading text-sm tracking-widest text-muted-foreground uppercase after:bg-primary hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary"
               >
+                <ShieldCheck className="mr-1.5 size-3.5" />
                 Proof Integrity
               </TabsTrigger>
             )}

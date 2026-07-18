@@ -83,7 +83,7 @@ export default function PositionsPage() {
             asChild
             className="mt-1 font-heading tracking-widest uppercase"
           >
-            <Link href="/">Browse Markets</Link>
+            <Link href="/fixtures">Browse Fixtures</Link>
           </Button>
         </div>
       </PageShell>
