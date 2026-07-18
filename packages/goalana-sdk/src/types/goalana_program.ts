@@ -334,6 +334,147 @@ export type GoalanaProgram = {
       "args": []
     },
     {
+      "name": "createChallengeMarket",
+      "discriminator": [
+        111,
+        148,
+        183,
+        222,
+        210,
+        148,
+        244,
+        255
+      ],
+      "accounts": [
+        {
+          "name": "market",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "fixtureId"
+              },
+              {
+                "kind": "arg",
+                "path": "predicateHash"
+              }
+            ]
+          }
+        },
+        {
+          "name": "challengePool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "docs": [
+            "Global Goalana protocol configuration."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "fixtureId",
+          "type": "i64"
+        },
+        {
+          "name": "predicate",
+          "type": {
+            "defined": {
+              "name": "predicate"
+            }
+          }
+        },
+        {
+          "name": "predicateHash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "locksAt",
+          "type": "i64"
+        },
+        {
+          "name": "settleAfter",
+          "type": "i64"
+        },
+        {
+          "name": "fixedStake",
+          "type": "u64"
+        },
+        {
+          "name": "slotsPerSide",
+          "type": "u16"
+        },
+        {
+          "name": "proposedBy",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "createMarket",
       "discriminator": [
         103,
@@ -666,6 +807,148 @@ export type GoalanaProgram = {
       ]
     },
     {
+      "name": "placeChallengeBet",
+      "discriminator": [
+        229,
+        236,
+        70,
+        234,
+        215,
+        47,
+        179,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "market",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market.fixtureId",
+                "account": "market"
+              },
+              {
+                "kind": "account",
+                "path": "market.predicateHash",
+                "account": "market"
+              }
+            ]
+          },
+          "relations": [
+            "challengePool"
+          ]
+        },
+        {
+          "name": "challengePool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              }
+            ]
+          }
+        },
+        {
+          "name": "position",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "side",
+          "type": {
+            "defined": {
+              "name": "betSide"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "settleMarket",
       "discriminator": [
         193,
@@ -770,6 +1053,19 @@ export type GoalanaProgram = {
     }
   ],
   "accounts": [
+    {
+      "name": "challengePool",
+      "discriminator": [
+        141,
+        155,
+        150,
+        172,
+        47,
+        129,
+        41,
+        87
+      ]
+    },
     {
       "name": "market",
       "discriminator": [
@@ -1049,6 +1345,21 @@ export type GoalanaProgram = {
       "code": 6036,
       "name": "positionNotClaimed",
       "msg": "Position must be claimed before it can be closed."
+    },
+    {
+      "code": 6037,
+      "name": "invalidChallengeConfig",
+      "msg": "Challenge pool configuration is invalid (stake and slots must be non-zero)."
+    },
+    {
+      "code": 6038,
+      "name": "invalidChallengePool",
+      "msg": "Challenge pool does not belong to the expected market."
+    },
+    {
+      "code": 6039,
+      "name": "challengePoolSideFull",
+      "msg": "This side of the challenge pool is full."
     }
   ],
   "types": [
@@ -1076,6 +1387,71 @@ export type GoalanaProgram = {
           },
           {
             "name": "subtract"
+          }
+        ]
+      }
+    },
+    {
+      "name": "challengePool",
+      "docs": [
+        "On-chain, immutable terms for a user-proposed fixed-stake N-vs-N",
+        "\"challenge pool\" (final-features.md #1).",
+        "",
+        "A ChallengePool is a companion account to a normal Market: the Market holds",
+        "the settlement predicate + pari-mutuel escrow exactly as any other market,",
+        "while this account commits the pool's *economic* terms — the fixed per-entry",
+        "stake and the per-side entrant cap — into consensus so they are publicly",
+        "verifiable on Explorer and enforced on-chain by `place_challenge_bet`.",
+        "",
+        "It is deliberately additive: it does not change the Market layout, and the",
+        "generic `place_bet`/`settle_market`/`claim_*` instructions are untouched.",
+        "",
+        "PDA:",
+        "",
+        "seeds = [",
+        "b\"challenge\",",
+        "market.key(),",
+        "]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "docs": [
+              "The Market whose bets this pool constrains."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "proposedBy",
+            "docs": [
+              "Wallet that proposed the pool. Informational provenance only — it is NOT",
+              "an authority and grants no privileges (the house signs creation)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "fixedStake",
+            "docs": [
+              "Every entrant must stake exactly this many lamports on either side."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "slotsPerSide",
+            "docs": [
+              "Maximum entrants per side. The total stake allowed on a single side is",
+              "`fixed_stake * slots_per_side`."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump."
+            ],
+            "type": "u8"
           }
         ]
       }

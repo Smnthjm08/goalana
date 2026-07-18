@@ -112,4 +112,13 @@ pub enum GoalanaError {
 
     #[msg("Position must be claimed before it can be closed.")]
     PositionNotClaimed,
+
+    #[msg("Challenge pool configuration is invalid (stake and slots must be non-zero).")]
+    InvalidChallengeConfig,
+
+    #[msg("Challenge pool does not belong to the expected market.")]
+    InvalidChallengePool,
+
+    #[msg("This side of the challenge pool is full.")]
+    ChallengePoolSideFull,
 }

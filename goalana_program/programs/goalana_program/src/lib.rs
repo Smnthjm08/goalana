@@ -73,6 +73,38 @@ pub mod goalana_program {
         instructions::place_bet::handle_place_bet(ctx, side, amount)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub fn create_challenge_market(
+        ctx: Context<CreateChallengeMarket>,
+        fixture_id: i64,
+        predicate: Predicate,
+        predicate_hash: [u8; 32],
+        locks_at: i64,
+        settle_after: i64,
+        fixed_stake: u64,
+        slots_per_side: u16,
+        proposed_by: Pubkey,
+    ) -> Result<()> {
+        instructions::create_challenge_market::handle_create_challenge_market(
+            ctx,
+            fixture_id,
+            predicate,
+            predicate_hash,
+            locks_at,
+            settle_after,
+            fixed_stake,
+            slots_per_side,
+            proposed_by,
+        )
+    }
+
+    pub fn place_challenge_bet(
+        ctx: Context<PlaceChallengeBet>,
+        side: BetSide,
+    ) -> Result<()> {
+        instructions::place_challenge_bet::handle_place_challenge_bet(ctx, side)
+    }
+
     pub fn claim_winnings(ctx: Context<ClaimWinnings>) -> Result<()> {
         instructions::claim_winnings::handle_claim_winnings(ctx)
     }
