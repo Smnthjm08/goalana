@@ -17,9 +17,6 @@ bun run db:deploy
 echo "⚙️ Generating Prisma Client..."
 bun run db:generate
 
-echo "🏗️ Building workspace..."
-bun run build
-
 echo "♻️ Reloading Goalana API..."
 pm2 reload goalana-api --update-env
 
