@@ -14,6 +14,7 @@
         "DATABASE_URL",
         "SOLANA_RPC_URL",
         "WALLET_PRIVATE_KEY",
+        "DATABASE_URL_UNPOOLED",
         "TXLINE_API_ORIGIN",
         "TXLINE_JWT",
         "TXLINE_API_TOKEN"

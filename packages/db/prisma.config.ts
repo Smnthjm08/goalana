@@ -11,6 +11,14 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Migrations need a direct (unpooled) connection — Prisma Migrate's
+    // pg_advisory_lock doesn't reliably survive Neon's pooled/PgBouncer-style
+    // endpoint, causing "Timed out trying to acquire a postgres advisory
+    // lock" on `migrate deploy`/`migrate reset`. This only affects Prisma CLI
+    // commands (migrate, generate, studio) — the running app's own
+    // PrismaClient (packages/db/src/client.ts) reads DATABASE_URL directly
+    // and never touches this file, so the app keeps using the pooled
+    // connection exactly as before.
+    url: process.env["DATABASE_URL_UNPOOLED"] || process.env["DATABASE_URL"],
   },
 });
