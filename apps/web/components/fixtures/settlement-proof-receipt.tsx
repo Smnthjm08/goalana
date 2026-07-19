@@ -1,12 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   TXLINE_PERIOD_LABELS,
   TXLINE_STAT_LABELS,
 } from "@workspace/goalana-sdk"
 import { explorerTxUrl, explorerAddressUrl } from "@/lib/solana-explorer"
 import { TXLINE_ORACLE_PROGRAM_ID } from "@/lib/protocol"
+import {
+  verifySettlementProof,
+  type ProofVerificationResult,
+} from "@/lib/merkle-verify"
 
 // ─── Types (mirror buildSettlementProofRecord in settlement.service.ts) ──────
 interface ProofNode {
@@ -165,6 +169,32 @@ export function SettlementProofReceipt({
   mode?: "settled" | "preview"
 }) {
   const [open, setOpen] = useState(mode === "preview")
+  const [verification, setVerification] = useState<
+    ProofVerificationResult | "checking" | "error" | null
+  >(null)
+
+  // Recomputes the leaf → eventStatRoot → eventsSubTreeRoot hash chain
+  // entirely in the browser from the stat values + sibling hashes already
+  // rendered below — no backend call, no trust in Goalana's server. See
+  // lib/merkle-verify.ts for how the hash scheme itself was derived.
+  useEffect(() => {
+    let cancelled = false
+    setVerification("checking")
+    verifySettlementProof(proof)
+      .then((result) => {
+        if (cancelled) return
+        setVerification(result)
+        if (!result.allVerified) {
+          console.info("Settlement proof re-verification (partial):", result)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setVerification("error")
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [proof])
 
   const outcomeLabel =
     proof.outcome === true ? "YES" : proof.outcome === false ? "NO" : "—"
@@ -224,6 +254,31 @@ export function SettlementProofReceipt({
             {outcomeLabel}
           </span>
         </div>
+      </div>
+
+      {/* Independent client-side re-verification — recomputed live in this
+          browser tab from the leaf + sibling hashes rendered below, no
+          backend call. This is the "don't trust us" check: it either
+          reproduces TxLINE's stated roots bit-for-bit or it doesn't. */}
+      <div className="flex items-center gap-2 border-t border-primary/20 pt-3 font-mono text-[10px] tracking-widest uppercase">
+        {verification === "checking" || verification === null ? (
+          <span className="animate-pulse text-muted-foreground">
+            Recomputing proof in your browser…
+          </span>
+        ) : verification === "error" ? (
+          <span className="text-muted-foreground">
+            Browser verification unavailable
+          </span>
+        ) : verification.allVerified ? (
+          <span className="text-lime-400">
+            ✓ Independently reproduced in your browser — matches
+            TxLINE&apos;s stated roots
+          </span>
+        ) : (
+          <span className="text-muted-foreground">
+            ○ Partial browser re-verification — see console for per-stat detail
+          </span>
+        )}
       </div>
 
       {/* What was proven */}

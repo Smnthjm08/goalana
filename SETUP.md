@@ -14,14 +14,14 @@ There's no single `PROGRAM_ID` env var — the ID is hardcoded in 6 places
 because Anchor's IDL/type codegen and the SDK constants are independent
 sources of truth:
 
-| # | File | What it is |
-| --- | ------ | ------------ |
-| 1 | `goalana_program/programs/goalana_program/src/lib.rs:12` | `declare_id!` — compiled into the on-chain binary |
-| 2 | `goalana_program/Anchor.toml` | `[programs.localnet]` entry Anchor CLI uses for deploy/test |
-| 3 | `packages/goalana-sdk/scripts/sync-idl.ts:5` | `TARGET_PROGRAM_ID` — stamped into the IDL/types on sync |
-| 4 | `packages/goalana-sdk/src/idl/goalana_program.json` + `src/types/goalana_program.ts` | generated — **don't hand-edit**, produced by `sync-idl.ts` |
-| 5 | `packages/goalana-sdk/src/constants.ts:7` | `GOALANA_PROGRAM_ID` — used by `apps/api` via the SDK |
-| 6 | `apps/web/lib/protocol.ts:7` | `GOALANA_PROGRAM_ID` — web's own copy (doesn't import the SDK) |
+| #   | File                                                                                 | What it is                                                     |
+| --- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| 1   | `goalana_program/programs/goalana_program/src/lib.rs:12`                             | `declare_id!` — compiled into the on-chain binary              |
+| 2   | `goalana_program/Anchor.toml`                                                        | `[programs.localnet]` entry Anchor CLI uses for deploy/test    |
+| 3   | `packages/goalana-sdk/scripts/sync-idl.ts:5`                                         | `TARGET_PROGRAM_ID` — stamped into the IDL/types on sync       |
+| 4   | `packages/goalana-sdk/src/idl/goalana_program.json` + `src/types/goalana_program.ts` | generated —**don't hand-edit**, produced by `sync-idl.ts`      |
+| 5   | `packages/goalana-sdk/src/constants.ts:7`                                            | `GOALANA_PROGRAM_ID` — used by `apps/api` via the SDK          |
+| 6   | `apps/web/lib/protocol.ts:7`                                                         | `GOALANA_PROGRAM_ID` — web's own copy (doesn't import the SDK) |
 
 `config.authority` / `market_authority` / `settlement_authority` are **not**
 env vars either — they get set on-chain, once, to whichever wallet signs
@@ -113,7 +113,7 @@ solana-keygen new -o target/deploy/goalana_program-keypair.json --force --no-bip
 solana-keygen pubkey target/deploy/goalana_program-keypair.json
 ```
 
-Copy the printed pubkey — call it `<NEW_PROGRAM_ID>`. This keypair *is* the
+Copy the printed pubkey — call it `<NEW_PROGRAM_ID>`. This keypair _is_ the
 program's upgrade authority mechanism (Anchor deploys upgradeable programs);
 back it up somewhere durable, it's gitignored (`goalana_program/target` isn't
 tracked) and losing it means losing upgrade authority.
@@ -324,16 +324,14 @@ if using the VM flow in `docs/DEPLOYMENT.md`) and redeploy/restart
 
 - `solana program show <NEW_PROGRAM_ID> --url devnet` — confirm deployed slot
 - Hit the app, place a test bet on devnet, confirm the tx shows the new
-  program ID on <https://explorer.solana.com/?cluster=devnet>
-- Check `/inspector` (if reintroduced) or logs for `Config initialized in
-  tx:` from Step 8
+  program ID on [https://explorer.solana.com/?cluster=devnet](https://explorer.solana.com/?cluster=devnet)
+- Check `/inspector` (if reintroduced) or logs for `Config initialized in tx:` from Step 8
 
 ---
 
 ### If you actually just want to upgrade the existing program (same address)
 
-Skip Steps 1–2 and 6, 8 entirely — just `anchor build && anchor deploy
---provider.cluster devnet` with the *existing* `goalana_program-keypair.json`
+Skip Steps 1–2 and 6, 8 entirely — just `anchor build && anchor deploy --provider.cluster devnet` with the _existing_ `goalana_program-keypair.json`
 present in `target/deploy/`. The ID stays
 `AgxqK6wRkFKyabyArNiJF8dpoJ6TNLLxPnV5rg27pRQu`, existing PDAs/config/markets
 are untouched, and nothing downstream needs updating. Only do the full
@@ -409,8 +407,7 @@ changes. The correct sequence is:
 
 ### Step 14 — First deploy (VM has no `goalana-api` pm2 process yet)
 
-If this VM has never run the app before, `deploy.sh`'s `pm2 reload
-goalana-api` will fail (nothing to reload). Bootstrap once using
+If this VM has never run the app before, `deploy.sh`'s `pm2 reload goalana-api` will fail (nothing to reload). Bootstrap once using
 `docs/DEPLOYMENT.md`'s flow, then `deploy.sh` works for every deploy after:
 
 ```bash
