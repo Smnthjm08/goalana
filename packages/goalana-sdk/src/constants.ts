@@ -25,6 +25,7 @@ export const SEEDS = {
   MARKET: "market",
   VAULT: "vault",
   POSITION: "position",
+  CHALLENGE: "challenge",
 } as const;
 
 /** PDA seed used by TxLINE's oracle program for its daily scores roots account. */

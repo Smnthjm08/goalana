@@ -10,6 +10,8 @@ import { SolanaProvider } from "@/components/providers/solana-provider"
 import { WalletUserProvider } from "@/components/providers/wallet-user-provider"
 import { Header } from "@/components/header"
 import { JudgingWindowBanner } from "@/components/judging-window-banner"
+import { BetSlipProvider } from "@/components/bet-slip/bet-slip-context"
+import { BetSlipDrawer } from "@/components/bet-slip/bet-slip-drawer"
 import { getSiteUrl } from "@/lib/site"
 
 const SITE_DESCRIPTION =
@@ -75,11 +77,14 @@ export default function RootLayout({
           <TooltipProvider>
             <SolanaProvider>
               <WalletUserProvider>
-                <div className="relative flex min-h-svh flex-col">
-                  <Header />
-                  <JudgingWindowBanner />
-                  <main className="flex-1">{children}</main>
-                </div>
+                <BetSlipProvider>
+                  <div className="relative flex min-h-svh flex-col">
+                    <Header />
+                    <JudgingWindowBanner />
+                    <main className="flex-1">{children}</main>
+                  </div>
+                  <BetSlipDrawer />
+                </BetSlipProvider>
               </WalletUserProvider>
             </SolanaProvider>
           </TooltipProvider>

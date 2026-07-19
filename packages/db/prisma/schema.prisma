@@ -78,6 +78,7 @@ model Fixture {
   oddsHistories OddsHistory[]
   updates       FixtureUpdate[]
   markets       Market[]
+  marketRequests MarketRequest[]
 
   @@map("fixtures")
 }
@@ -243,6 +244,19 @@ model Market {
   initialNoPct        Float?
   status              String   @default("OPEN")
 
+  // ─── Challenge Pool metadata (market-request.service.ts) ─────────────────
+  // Set only for user-proposed fixed-stake N-vs-N "challenge pools"; null for
+  // every house/cron-created market. When present the UI locks the bet amount
+  // to `fixedStakeLamports` and shows per-side slot fill (pool / stake) against
+  // `slotsPerSide`. The on-chain escrow is unchanged pari-mutuel — equal stakes
+  // on balanced sides make each winner double up; the cap is app-layer
+  // coordination, never fund-safety (an over-fill is just a bigger balanced pool).
+  fixedStakeLamports  BigInt?
+  slotsPerSide        Int?
+  // Wallet that proposed the pool — distinct from the on-chain house signer that
+  // actually created it (create_market is authority-gated on-chain).
+  proposedByWallet    String?
+
   // ─── Lifecycle transition provenance (lock.service / settlement.service) ──
   // Each protocol state change records its on-chain tx + wall-clock time so the
   // UI can render a verifiable Create → Lock → Settle timeline (Explorer link +
@@ -280,4 +294,46 @@ model Market {
   @@index([fixtureId])
   @@index([status])
   @@map("markets")
+}
+
+// ─── MarketRequest (challenge-pool proposals) ─────────────────────────────────
+// A user-proposed fixed-stake N-vs-N "challenge pool". Anyone can submit a
+// request; the house reviews and, on approval, signs the SAME authority-gated
+// create_market instruction the cron already uses (create_market.rs enforces
+// creator == config.market_authority — so this is community-designed markets
+// with a house rubber-stamp, not permissionless on-chain creation). The
+// predicate fields mirror the on-chain Predicate; fixedStake/slotsPerSide are
+// app-layer coordination copied onto the resulting Market row on approval.
+model MarketRequest {
+  id              String @id @default(cuid())
+  fixtureId       BigInt
+  requesterWallet String
+
+  question   String
+  // Validated TxLINE stat pair this pool settles on (goals 1/2, cards 3/4,
+  // corners 7/8 — see packages/goalana-sdk/src/txline-stats.ts).
+  statAKey   Int
+  statBKey   Int
+  // Mirror of the on-chain Predicate operator/comparison.
+  op         String @default("add") // add | subtract
+  comparison String @default("greaterThan") // greaterThan | lessThan
+  threshold  Int
+
+  // Fixed-stake N-vs-N config (e.g. 1v1 = slotsPerSide 1, 4v4 = slotsPerSide 4).
+  fixedStakeLamports BigInt
+  slotsPerSide       Int
+
+  status     String  @default("PENDING") // PENDING | APPROVED | REJECTED
+  // Set once approved and the market is created on-chain.
+  marketPda  String?
+  reviewNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fixture Fixture @relation(fields: [fixtureId], references: [fixtureId])
+
+  @@index([fixtureId])
+  @@index([status])
+  @@map("market_requests")
 }

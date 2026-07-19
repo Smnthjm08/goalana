@@ -1536,4 +1536,200 @@ describe("goalana", () => {
     });
   });
 
+  describe("challenge pools", () => {
+    const getChallengePda = (marketPda: anchor.web3.PublicKey): anchor.web3.PublicKey => {
+      const [pda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("challenge"), marketPda.toBuffer()],
+        program.programId
+      );
+      return pda;
+    };
+    const getVaultPda = (marketPda: anchor.web3.PublicKey): anchor.web3.PublicKey => {
+      const [pda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), marketPda.toBuffer()],
+        program.programId
+      );
+      return pda;
+    };
+    const getPositionPda = (marketPda: anchor.web3.PublicKey, userPubkey: anchor.web3.PublicKey): anchor.web3.PublicKey => {
+      const [pda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("position"), marketPda.toBuffer(), userPubkey.toBuffer()],
+        program.programId
+      );
+      return pda;
+    };
+
+    const createChallengeMarket = async (
+      fixtureId: number,
+      locksAtTime: number,
+      settleAfterTime: number,
+      fixedStake: anchor.BN,
+      slotsPerSide: number,
+      proposedBy: anchor.web3.PublicKey
+    ) => {
+      const predicate: PredicateInput = {
+        statAKey: 7, statBKey: 8, op: { add: {} }, threshold: 9, comparison: { greaterThan: {} }
+      };
+      const predicateBytes = serializePredicate(predicate);
+      const predicateHash = crypto.createHash("sha256").update(predicateBytes).digest();
+      const fixtureIdBytes = Buffer.alloc(8);
+      fixtureIdBytes.writeBigInt64LE(BigInt(fixtureId));
+      const [marketPda] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("market"), fixtureIdBytes, predicateHash],
+        program.programId,
+      );
+
+      await program.methods
+        .createChallengeMarket(
+          new anchor.BN(fixtureId),
+          predicate,
+          [...predicateHash],
+          new anchor.BN(locksAtTime),
+          new anchor.BN(settleAfterTime),
+          fixedStake,
+          slotsPerSide,
+          proposedBy
+        )
+        .rpc();
+
+      return { marketPda };
+    };
+
+    it("creates a challenge market and commits the pool terms on-chain", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 401;
+      const fixedStake = new anchor.BN(0.1 * anchor.web3.LAMPORTS_PER_SOL);
+      const proposer = anchor.web3.Keypair.generate().publicKey;
+
+      const { marketPda } = await createChallengeMarket(
+        fixtureId, now + 100, now + 200, fixedStake, 4, proposer
+      );
+
+      const pool = await program.account.challengePool.fetch(getChallengePda(marketPda));
+      expect(pool.market.toBase58()).to.equal(marketPda.toBase58());
+      expect(pool.proposedBy.toBase58()).to.equal(proposer.toBase58());
+      expect(pool.fixedStake.toString()).to.equal(fixedStake.toString());
+      expect(pool.slotsPerSide).to.equal(4);
+    });
+
+    it("rejects a challenge market with a zero stake", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 402;
+      try {
+        await createChallengeMarket(
+          fixtureId, now + 100, now + 200, new anchor.BN(0), 1, provider.wallet.publicKey
+        );
+        expect.fail("Should have thrown InvalidChallengeConfig");
+      } catch (e: any) {
+        if (e.name === "AssertionError") throw e;
+        expect(e.message).to.include("InvalidChallengeConfig");
+      }
+    });
+
+    it("place_challenge_bet stakes exactly the fixed amount", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 403;
+      const fixedStake = new anchor.BN(0.2 * anchor.web3.LAMPORTS_PER_SOL);
+      const { marketPda } = await createChallengeMarket(
+        fixtureId, now + 100, now + 200, fixedStake, 4, provider.wallet.publicKey
+      );
+
+      const vaultPda = getVaultPda(marketPda);
+      const positionPda = getPositionPda(marketPda, provider.wallet.publicKey);
+
+      await program.methods
+        .placeChallengeBet({ yes: {} })
+        .accounts({
+          market: marketPda,
+          challengePool: getChallengePda(marketPda),
+          vault: vaultPda,
+          position: positionPda,
+        } as any)
+        .rpc();
+
+      const market = await program.account.market.fetch(marketPda);
+      const position = await program.account.position.fetch(positionPda);
+      // The stake came from the pool, not any caller-supplied amount.
+      expect(market.totalYes.toString()).to.equal(fixedStake.toString());
+      expect(position.yesAmount.toString()).to.equal(fixedStake.toString());
+    });
+
+    it("enforces the per-side cap on-chain (1v1 side fills after one entry)", async () => {
+      const now = await getOnChainTime();
+      const fixtureId = baseFixtureId + 404;
+      const fixedStake = new anchor.BN(0.1 * anchor.web3.LAMPORTS_PER_SOL);
+      // slotsPerSide = 1 ⇒ max_per_side = fixedStake ⇒ a second YES entry overflows the side.
+      const { marketPda } = await createChallengeMarket(
+        fixtureId, now + 100, now + 200, fixedStake, 1, provider.wallet.publicKey
+      );
+
+      const vaultPda = getVaultPda(marketPda);
+
+      // First YES entry from the provider wallet fills the single YES slot.
+      await program.methods
+        .placeChallengeBet({ yes: {} })
+        .accounts({
+          market: marketPda,
+          challengePool: getChallengePda(marketPda),
+          vault: vaultPda,
+          position: getPositionPda(marketPda, provider.wallet.publicKey),
+        } as any)
+        .rpc();
+
+      // A second YES entry from a different user must revert — the side is full.
+      const user2 = anchor.web3.Keypair.generate();
+      const airdropSig = await provider.connection.requestAirdrop(user2.publicKey, 5 * anchor.web3.LAMPORTS_PER_SOL);
+      const latestBlockhash = await provider.connection.getLatestBlockhash();
+      await provider.connection.confirmTransaction({
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+        signature: airdropSig,
+      });
+
+      try {
+        await program.methods
+          .placeChallengeBet({ yes: {} })
+          .accounts({
+            market: marketPda,
+            challengePool: getChallengePda(marketPda),
+            vault: vaultPda,
+            position: getPositionPda(marketPda, user2.publicKey),
+            user: user2.publicKey,
+          } as any)
+          .signers([user2])
+          .rpc();
+        expect.fail("Should have thrown ChallengePoolSideFull");
+      } catch (e: any) {
+        if (e.name === "AssertionError") throw e;
+        expect(e.message).to.include("ChallengePoolSideFull");
+      }
+
+      // The opposing side is still open — a NO entry succeeds.
+      const user3 = anchor.web3.Keypair.generate();
+      const airdropSig3 = await provider.connection.requestAirdrop(user3.publicKey, 5 * anchor.web3.LAMPORTS_PER_SOL);
+      const lb3 = await provider.connection.getLatestBlockhash();
+      await provider.connection.confirmTransaction({
+        blockhash: lb3.blockhash,
+        lastValidBlockHeight: lb3.lastValidBlockHeight,
+        signature: airdropSig3,
+      });
+
+      await program.methods
+        .placeChallengeBet({ no: {} })
+        .accounts({
+          market: marketPda,
+          challengePool: getChallengePda(marketPda),
+          vault: vaultPda,
+          position: getPositionPda(marketPda, user3.publicKey),
+          user: user3.publicKey,
+        } as any)
+        .signers([user3])
+        .rpc();
+
+      const market = await program.account.market.fetch(marketPda);
+      expect(market.totalYes.toString()).to.equal(fixedStake.toString());
+      expect(market.totalNo.toString()).to.equal(fixedStake.toString());
+    });
+  });
+
 });

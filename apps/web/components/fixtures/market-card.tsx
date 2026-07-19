@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js"
 import { BN } from "@coral-xyz/anchor"
 import { useWalletModal } from "@solana/wallet-adapter-react-ui"
-import { getVaultPda, getPositionPda } from "@workspace/goalana-sdk/pdas"
+import { getVaultPda, getPositionPda, getChallengePoolPda } from "@workspace/goalana-sdk/pdas"
 import { explorerTxUrl, explorerAddressUrl } from "@/lib/solana-explorer"
 import { marketTypeLabels } from "@/lib/market-groups"
 import { getSiteUrl } from "@/lib/site"
@@ -28,6 +28,7 @@ import { PoolVsReference } from "@/components/fixtures/pool-vs-reference"
 import { useGoalanaProgram } from "@/hooks/use-goalana-program"
 import { useMarketAccount } from "@/hooks/use-market-account"
 import { usePositionAccount } from "@/hooks/use-position-account"
+import { useBetSlip } from "@/components/bet-slip/bet-slip-context"
 
 export function MarketCard({ market }: { market: any }) {
   const [selected, setSelected] = useState<"YES" | "NO" | null>(null)
@@ -46,6 +47,7 @@ export function MarketCard({ market }: { market: any }) {
 
   const { program, connected, publicKey } = useGoalanaProgram()
   const { setVisible } = useWalletModal()
+  const { addItem, has: inSlip } = useBetSlip()
   const {
     market: onChainMarket,
     loading: marketLoading,
@@ -76,6 +78,26 @@ export function MarketCard({ market }: { market: any }) {
   const poolTotal = (poolYes ?? 0) + (poolNo ?? 0)
   const poolYesPct = poolTotal > 0 ? ((poolYes ?? 0) / poolTotal) * 100 : 50
 
+  // ─── Challenge Pool (fixed-stake N-vs-N) ────────────────────────────────
+  // A user-proposed pool: everyone stakes the SAME amount, N slots per side.
+  // The escrow is the same pari-mutuel path — balanced fixed stakes just mean
+  // each winner doubles up. `fixedStakeLamports` arrives as a string (BigInt).
+  const fixedStakeLamports = market.fixedStakeLamports
+    ? Number(market.fixedStakeLamports)
+    : null
+  const isChallenge = fixedStakeLamports != null && fixedStakeLamports > 0
+  const fixedStakeSol = isChallenge ? fixedStakeLamports! / LAMPORTS_PER_SOL : null
+  const slotsPerSide: number | null = isChallenge ? market.slotsPerSide ?? null : null
+  // Slot fill = how many fixed stakes are already in each side's pool.
+  const yesSlotsFilled =
+    isChallenge && fixedStakeLamports
+      ? Math.round((Number(onChainMarket?.totalYes ?? 0n) / fixedStakeLamports))
+      : 0
+  const noSlotsFilled =
+    isChallenge && fixedStakeLamports
+      ? Math.round((Number(onChainMarket?.totalNo ?? 0n) / fixedStakeLamports))
+      : 0
+
   // currentYesPct/currentNoPct are the live TxLINE reference probability
   // (server-joined from the current Odds row); fall back to the opening
   // snapshot captured at market creation if a live match isn't available yet.
@@ -94,7 +116,9 @@ export function MarketCard({ market }: { market: any }) {
 
     if (!selected) return
 
-    const parsedAmount = Number(amount)
+    // Challenge pools ignore the free-text amount — the stake is fixed so
+    // every entrant contributes an equal share of the N-vs-N pool.
+    const parsedAmount = isChallenge ? fixedStakeSol! : Number(amount)
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       toast.error("Enter a valid SOL amount")
       return
@@ -115,20 +139,33 @@ export function MarketCard({ market }: { market: any }) {
       const [vaultPda] = getVaultPda(marketPubkey)
       const [positionPda] = getPositionPda(marketPubkey, publicKey)
       const lamports = Math.round(parsedAmount * LAMPORTS_PER_SOL)
+      const side = selected === "YES" ? { yes: {} } : { no: {} }
 
-      const signature = await program.methods
-        .placeBet(
-          selected === "YES" ? { yes: {} } : { no: {} },
-          new BN(lamports)
-        )
-        .accountsPartial({
-          market: marketPubkey,
-          vault: vaultPda,
-          position: positionPda,
-          user: publicKey,
-          systemProgram: SystemProgram.programId,
-        })
-        .rpc()
+      // Challenge pools go through the enforced instruction: the stake is fixed
+      // on-chain (taken from the ChallengePool account, not the client) and the
+      // per-side cap is checked in consensus.
+      const signature = isChallenge
+        ? await program.methods
+            .placeChallengeBet(side)
+            .accountsPartial({
+              market: marketPubkey,
+              challengePool: getChallengePoolPda(marketPubkey)[0],
+              vault: vaultPda,
+              position: positionPda,
+              user: publicKey,
+              systemProgram: SystemProgram.programId,
+            })
+            .rpc()
+        : await program.methods
+            .placeBet(side, new BN(lamports))
+            .accountsPartial({
+              market: marketPubkey,
+              vault: vaultPda,
+              position: positionPda,
+              user: publicKey,
+              systemProgram: SystemProgram.programId,
+            })
+            .rpc()
 
       toast.success(`Bet placed: ${parsedAmount} SOL on ${selected}`, {
         id: toastId,
@@ -146,6 +183,27 @@ export function MarketCard({ market }: { market: any }) {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function handleAddToSlip() {
+    if (!selected) return
+    const parsedAmount = isChallenge ? fixedStakeSol! : Number(amount)
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      toast.error("Enter a valid SOL amount first")
+      return
+    }
+    addItem({
+      marketPda: market.marketPda,
+      question: market.question,
+      side: selected,
+      lamports: Math.round(parsedAmount * LAMPORTS_PER_SOL),
+      fixedStake: isChallenge,
+    })
+    toast.success("Added to bet slip", {
+      description: "Stake several markets, then sign once.",
+    })
+    setSelected(null)
+    setAmount("")
   }
 
   // Claimability — mirrors the constraints enforced on-chain by
@@ -261,9 +319,17 @@ export function MarketCard({ market }: { market: any }) {
         <div className="mt-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="font-mono text-[10px] text-muted-foreground uppercase">
-              {marketTypeLabels[market.marketType] ||
-                market.marketType.replace(/_/g, " ")}
+              {isChallenge
+                ? `Challenge Pool · ${slotsPerSide}v${slotsPerSide}`
+                : marketTypeLabels[market.marketType] ||
+                  market.marketType.replace(/_/g, " ")}
             </span>
+            {isChallenge && (
+              <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                {fixedStakeSol} SOL · YES {yesSlotsFilled}/{slotsPerSide} · NO{" "}
+                {noSlotsFilled}/{slotsPerSide}
+              </span>
+            )}
             {/* A market is "hot" if it has active liquidity OR if the odds have shifted significantly (> 5%) from opening */}
             {(poolTotal > 0 ||
               (!isUnpriced &&
@@ -366,28 +432,38 @@ export function MarketCard({ market }: { market: any }) {
                 min="0"
                 step="0.01"
                 placeholder="Amount in SOL"
-                value={amount}
+                value={isChallenge ? String(fixedStakeSol) : amount}
                 onChange={(e) => setAmount(e.target.value)}
-                disabled={submitting}
+                disabled={submitting || isChallenge}
+                readOnly={isChallenge}
                 className="font-mono"
               />
               <Button
                 onClick={handlePlaceBet}
-                disabled={submitting || !amount}
+                disabled={submitting || (!isChallenge && !amount)}
                 className="shrink-0 font-heading tracking-widest uppercase"
               >
                 {submitting ? (
                   <Spinner className="size-3.5" />
                 ) : connected ? (
-                  "Place Bet"
+                  isChallenge ? `Join ${fixedStakeSol} SOL` : "Place Bet"
                 ) : (
                   "Connect"
                 )}
               </Button>
             </div>
+            <Button
+              variant="outline"
+              onClick={handleAddToSlip}
+              disabled={submitting || (!isChallenge && !amount) || inSlip(market.marketPda)}
+              className="font-heading text-[11px] tracking-widest uppercase"
+            >
+              {inSlip(market.marketPda) ? "In bet slip" : "+ Add to bet slip"}
+            </Button>
             <span className="font-mono text-[10px] text-muted-foreground">
-              Devnet SOL only. Position is pari-mutuel — payout depends on the
-              final pool split.
+              {isChallenge
+                ? `Fixed-stake challenge pool — every entrant stakes exactly ${fixedStakeSol} SOL. Winners split the pool pari-mutuel (a balanced ${slotsPerSide}v${slotsPerSide} doubles each winner's stake).`
+                : "Devnet SOL only. Position is pari-mutuel — payout depends on the final pool split."}
             </span>
           </div>
         )}

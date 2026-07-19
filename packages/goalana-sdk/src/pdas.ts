@@ -59,6 +59,20 @@ export function getPositionPda(
 }
 
 /**
+ * Derives the `ChallengePool` PDA companion to a challenge-pool Market. Holds
+ * the on-chain, immutable fixed-stake + per-side-cap terms enforced by
+ * `place_challenge_bet`.
+ *
+ * Seeds: [b"challenge", market_pubkey]
+ */
+export function getChallengePoolPda(market: PublicKey): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from(SEEDS.CHALLENGE), market.toBuffer()],
+    GOALANA_PROGRAM_ID
+  );
+}
+
+/**
  * Derives TxLINE oracle's `daily_scores_roots` PDA for the day containing a
  * given oracle timestamp (milliseconds since epoch).
  *

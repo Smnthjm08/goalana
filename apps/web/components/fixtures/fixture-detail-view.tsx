@@ -26,6 +26,7 @@ import {
 } from "@/components/fixtures/proof-integrity-panel"
 import { MatchTimeStatus } from "@/components/fixtures/match-time-status"
 import { MarketCard } from "@/components/fixtures/market-card"
+import { ChallengePoolPanel } from "@/components/fixtures/challenge-pool-panel"
 import { TeamMatchBadges } from "@/components/fixtures/team-match-badges"
 import { TeamBadge } from "@/components/team-badge"
 import { ShareActions } from "@/components/share/share-actions"
@@ -265,7 +266,7 @@ export function FixtureDetailView({ fixtureId }: { fixtureId: string }) {
 
           <TabsContent
             value="MARKETS"
-            className="mt-8 border-none p-0 outline-none"
+            className="mt-8 flex flex-col gap-8 border-none p-0 outline-none"
           >
             {marketGroups.length === 0 ? (
               <div className="flex flex-col items-center gap-3 rounded-sm border border-dashed border-border bg-card px-6 py-16 text-center">
@@ -293,6 +294,12 @@ export function FixtureDetailView({ fixtureId }: { fixtureId: string }) {
                 ))}
               </div>
             )}
+
+            <ChallengePoolPanel
+              fixtureId={fixture.fixtureId}
+              startTime={fixture.startTime}
+              isFinal={Boolean(fixture.liveScore?.isFinal)}
+            />
           </TabsContent>
 
           <TabsContent

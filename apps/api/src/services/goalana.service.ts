@@ -114,6 +114,57 @@ export async function createMarketForFixture(
   return { marketPda, predicateHash, txSignature, alreadyExists: false };
 }
 
+/**
+ * Creates a challenge-pool market on-chain: a normal Market PLUS a companion
+ * ChallengePool account committing the fixed-stake + per-side-cap terms into
+ * consensus (enforced by place_challenge_bet). Mirrors createMarketForFixture,
+ * adding the three challenge args. `proposedBy` is the requester wallet —
+ * on-chain provenance only, it holds no authority.
+ */
+export async function createChallengeMarketForFixture(
+  fixtureId: bigint,
+  predicate: Predicate,
+  locksAtDate: Date,
+  settleAfterDate: Date,
+  fixedStakeLamports: bigint,
+  slotsPerSide: number,
+  proposedBy: PublicKey
+) {
+  const predicateHash = derivePredicateHash(predicate);
+  const [marketPda] = getMarketPda(fixtureId, predicateHash);
+
+  const accountInfo = await connection.getAccountInfo(marketPda);
+  if (accountInfo) {
+    logger.info("goalana.service", `Challenge market for fixture ${fixtureId} already exists. Skipping.`);
+    return { marketPda, predicateHash, txSignature: null, alreadyExists: true };
+  }
+
+  const locksAt = new BN(Math.floor(locksAtDate.getTime() / 1000));
+  const settleAfter = new BN(Math.floor(settleAfterDate.getTime() / 1000));
+
+  logger.info("goalana.service", `Creating challenge market for fixture ${fixtureId}...`);
+
+  const txSignature = await program.methods
+    .createChallengeMarket(
+      new BN(fixtureId.toString()),
+      predicate,
+      [...predicateHash],
+      locksAt,
+      settleAfter,
+      new BN(fixedStakeLamports.toString()),
+      slotsPerSide,
+      proposedBy
+    )
+    .accountsPartial({
+      creator: provider.wallet.publicKey,
+      systemProgram: SystemProgram.programId,
+    })
+    .rpc();
+
+  logger.success("goalana.service", `Challenge market created. Signature: ${txSignature}`);
+  return { marketPda, predicateHash, txSignature, alreadyExists: false };
+}
+
 export type OnChainMarketStatus = "Open" | "Locked" | "Settled" | "Cancelled";
 
 export interface OnChainMarket {

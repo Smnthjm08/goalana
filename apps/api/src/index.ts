@@ -16,6 +16,14 @@ import { getHealthSnapshot } from "./services/stream-health.service";
 import { SUPPORTED_MARKETS } from "./services/market-definitions";
 import { getMatchTimeline, getCornerTally, formatMinute } from "./services/match-timeline.service";
 import { upsertUserForWallet } from "./services/user.service";
+import {
+  createChallengeRequest,
+  listChallengeRequests,
+  approveChallengeRequest,
+  rejectChallengeRequest,
+  ChallengeRequestError,
+  type ChallengeStat,
+} from "./services/market-request.service";
 import path from "path";
 import { fileURLToPath } from "url";
 import { logger } from "./utils/logger";
@@ -437,6 +445,87 @@ app.get("/api/fixtures/:id/proof-preview", async (req, res) => {
   } catch (error) {
     logger.error("api", `Error building proof preview for fixture ${req.params.id}`, error);
     return res.status(500).json({ error: "internal server error" });
+  }
+});
+
+// ─── Challenge Pools (final-features.md #1) ─────────────────────────────────
+// User-proposed fixed-stake N-vs-N pools. Submit is open (anyone can propose);
+// approve/reject are house-gated with the same admin secret as /fixtures/sync,
+// because approval signs a real authority-gated create_market on-chain.
+
+app.post("/api/market-requests", async (req, res) => {
+  try {
+    const { fixtureId, requesterWallet, stat, threshold, fixedStakeSol, slotsPerSide } =
+      req.body ?? {};
+
+    const parsedFixtureId = typeof fixtureId === "string" || typeof fixtureId === "number"
+      ? parseFixtureId(String(fixtureId))
+      : null;
+    if (!parsedFixtureId) {
+      return res.status(400).json({ success: false, error: "invalid fixtureId" });
+    }
+
+    const request = await createChallengeRequest({
+      fixtureId: parsedFixtureId,
+      requesterWallet: String(requesterWallet ?? ""),
+      stat: stat as ChallengeStat,
+      threshold: Number(threshold),
+      fixedStakeSol: Number(fixedStakeSol),
+      slotsPerSide: Number(slotsPerSide),
+    });
+
+    return res.status(201).json({ success: true, request });
+  } catch (error) {
+    if (error instanceof ChallengeRequestError) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    logger.error("api", "Error creating challenge request", error);
+    return res.status(500).json({ success: false, error: "internal server error" });
+  }
+});
+
+app.get("/api/market-requests", async (req, res) => {
+  try {
+    const fixtureIdRaw = typeof req.query.fixtureId === "string" ? req.query.fixtureId : undefined;
+    const statusRaw = typeof req.query.status === "string" ? req.query.status : undefined;
+
+    const fixtureId = fixtureIdRaw ? parseFixtureId(fixtureIdRaw) ?? undefined : undefined;
+    if (fixtureIdRaw && !fixtureId) {
+      return res.status(400).json({ success: false, error: "invalid fixtureId" });
+    }
+
+    const requests = await listChallengeRequests({ fixtureId, status: statusRaw });
+    return res.json({ success: true, requests });
+  } catch (error) {
+    logger.error("api", "Error listing challenge requests", error);
+    return res.status(500).json({ success: false, error: "internal server error" });
+  }
+});
+
+app.post("/api/market-requests/:id/review", async (req, res) => {
+  const adminSecret = process.env.ADMIN_SYNC_SECRET;
+  if (adminSecret && req.headers["x-admin-secret"] !== adminSecret) {
+    return res.status(401).json({ success: false, error: "unauthorized" });
+  }
+
+  try {
+    const { action, reviewNote } = req.body ?? {};
+    if (action !== "approve" && action !== "reject") {
+      return res.status(400).json({ success: false, error: "action must be 'approve' or 'reject'" });
+    }
+
+    const request =
+      action === "approve"
+        ? await approveChallengeRequest(req.params.id, reviewNote)
+        : await rejectChallengeRequest(req.params.id, reviewNote);
+
+    return res.json({ success: true, request });
+  } catch (error) {
+    if (error instanceof ChallengeRequestError) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    logger.error("api", "Error reviewing challenge request", error);
+    return res.status(500).json({ success: false, error: "internal server error" });
   }
 });
 
