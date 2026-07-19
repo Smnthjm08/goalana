@@ -205,7 +205,8 @@ export function MarketCard({ market }: { market: any }) {
       // submit. The client-side check above catches the common case; this
       // catches the on-chain revert (ChallengePoolSideFull, place_challenge_bet.rs)
       // for the leftover window and turns the raw AnchorError into plain English.
-      const rawMessage = err instanceof Error ? err.message : "Transaction failed"
+      const rawMessage =
+        err instanceof Error ? err.message : "Transaction failed"
       const sideFull = rawMessage.includes("ChallengePoolSideFull")
       if (sideFull) {
         toast.error(`${selected} side just filled up`, {

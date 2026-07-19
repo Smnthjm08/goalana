@@ -69,6 +69,6 @@ test-ledger
 
 .superstack
 
-docs
+# docs
 
 llm.txt

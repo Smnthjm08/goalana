@@ -39,47 +39,46 @@ export function useMarketAccount(marketPda: string | null | undefined) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadMarket = useCallback(async ({
-    cancelled,
-  }: {
-    cancelled: () => boolean
-  }) => {
-    if (!marketPda) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      const account = await program.account.market.fetch(
-        new PublicKey(marketPda)
-      )
-
-      if (cancelled()) return
-
-      setMarket({
-        status: decodeStatus(
-          account.status as unknown as Record<string, unknown>
-        ),
-        outcome: (account.outcome as boolean | null) ?? null,
-        totalYes: BigInt(account.totalYes.toString()),
-        totalNo: BigInt(account.totalNo.toString()),
-        locksAt: Number(account.locksAt),
-        settleAfter: Number(account.settleAfter),
-        lockedAt: account.lockedAt !== null ? Number(account.lockedAt) : null,
-        settledAt:
-          account.settledAt !== null ? Number(account.settledAt) : null,
-      })
-      setError(null)
-    } catch (err) {
-      if (cancelled()) return
-      console.error("useMarketAccount: failed to fetch market account", err)
-      setError("Failed to read on-chain market state")
-    } finally {
-      if (!cancelled()) {
+  const loadMarket = useCallback(
+    async ({ cancelled }: { cancelled: () => boolean }) => {
+      if (!marketPda) {
         setLoading(false)
+        return
       }
-    }
-  }, [program, marketPda])
+
+      try {
+        const account = await program.account.market.fetch(
+          new PublicKey(marketPda)
+        )
+
+        if (cancelled()) return
+
+        setMarket({
+          status: decodeStatus(
+            account.status as unknown as Record<string, unknown>
+          ),
+          outcome: (account.outcome as boolean | null) ?? null,
+          totalYes: BigInt(account.totalYes.toString()),
+          totalNo: BigInt(account.totalNo.toString()),
+          locksAt: Number(account.locksAt),
+          settleAfter: Number(account.settleAfter),
+          lockedAt: account.lockedAt !== null ? Number(account.lockedAt) : null,
+          settledAt:
+            account.settledAt !== null ? Number(account.settledAt) : null,
+        })
+        setError(null)
+      } catch (err) {
+        if (cancelled()) return
+        console.error("useMarketAccount: failed to fetch market account", err)
+        setError("Failed to read on-chain market state")
+      } finally {
+        if (!cancelled()) {
+          setLoading(false)
+        }
+      }
+    },
+    [program, marketPda]
+  )
 
   const refetch = useCallback(() => {
     void loadMarket({ cancelled: () => false })

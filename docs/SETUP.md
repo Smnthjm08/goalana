@@ -1,21 +1,132 @@
-# Deploying Goalana to a New Program Address
+# Goalana — Setup & Deployment
+
+Related docs: [ARCHITECTURE.md](ARCHITECTURE.md) · [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) · [RISKS.md](../RISKS.md)
+
+Two independent procedures live in this doc:
+
+- **[Part A](#part-a--vm-deployment-manual-deployment-of-appsapi)** — deploying the already-built `apps/api` server to a VM (AWS EC2, DigitalOcean Droplet, etc.) via Bun + PM2. Do this for a normal deploy/redeploy of the backend.
+- **[Part B](#part-b--redeploying-the-anchor-program-to-a-new-program-address)** — redeploying the `goalana_program` Anchor program itself under a **brand-new program ID** (fresh keypair, fresh on-chain state) and wiring every consumer (SDK, API, web) to it. Only needed for a clean-slate on-chain redeploy, not a routine backend deploy. Written as a checklist with real incident notes from the actual redeploy that produced the program's current live address, `ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42`.
+
+---
+
+## Part A — VM deployment (manual deployment of `apps/api`)
+
+### 1. Prerequisites on the VM
+
+Make sure you have **Bun** and **Git** installed on your VM.
+
+```bash
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+```
+
+### 2. Clone and install
+
+SSH into your VM, clone your repository, and install the monorepo dependencies.
+
+```bash
+git clone <your-repo-url>
+cd goalana
+
+# Install all dependencies across the monorepo
+bun install
+```
+
+### 3. Set up environment variables
+
+Create your `.env` file on the VM. You can copy the structure from your local environment.
+
+> [!CAUTION]
+> **Never commit `.env` or `.env.production` files containing real secrets to version control.** Always inject them securely on the server.
+
+```bash
+nano .env
+# Paste your production env vars (DATABASE_URL, SOLANA_RPC_URL, WALLET_PRIVATE_KEY, etc.)
+```
+
+### 4. Run production migrations
+
+Apply your Prisma schema to the production database safely using the `migrate:deploy` command.
+
+```bash
+cd packages/db
+bun run migrate:deploy
+cd ../../
+```
+
+### 5. Start the API server
+
+For a VM, you should use a process manager like **PM2** so the server stays running in the background and restarts automatically if it crashes or the server reboots.
+
+```bash
+# Install pm2 globally
+bun add -g pm2
+
+# Start the API using Bun through PM2
+pm2 start "bun run start" --name "goalana-api" --cwd "./apps/api"
+
+# Save the PM2 process list so it restarts on server reboots
+pm2 save
+pm2 startup
+```
+
+### 6. Verifying the Solana Anchor wallet key
+
+If you are passing the `WALLET_PRIVATE_KEY` as a JSON byte array string in your `.env` (e.g., `WALLET_PRIVATE_KEY='[190,65,244,...]'`), you can quickly verify that it is properly formatted and ready for the Anchor program by running a small script.
+
+Create a temporary script to test parsing the key into a valid Solana Keypair:
+
+```bash
+# Create a test script
+cat << 'EOF' > test-key.ts
+import { Keypair } from "@solana/web3.js";
+import "dotenv/config";
+
+try {
+  // Parse the JSON array string from .env
+  const secretKeyString = process.env.WALLET_PRIVATE_KEY;
+  if (!secretKeyString) throw new Error("WALLET_PRIVATE_KEY not found in .env");
+
+  const secretKeyArray = JSON.parse(secretKeyString);
+  const secretKeyUint8 = new Uint8Array(secretKeyArray);
+
+  // Attempt to create a Keypair from the parsed secret key
+  const keypair = Keypair.fromSecretKey(secretKeyUint8);
+
+  console.log("✅ Key is valid!");
+  console.log("Public Key:", keypair.publicKey.toBase58());
+} catch (error) {
+  console.error("❌ Failed to parse key:", error.message);
+}
+EOF
+
+# Run the script using bun (which automatically loads .env)
+bun run test-key.ts
+
+# Delete the script after testing
+rm test-key.ts
+```
+
+If the script outputs `✅ Key is valid!` along with your expected Public Key, then your `WALLET_PRIVATE_KEY` is correctly formatted for Anchor and `@solana/web3.js` to use in production.
+
+---
+
+## Part B — Redeploying the Anchor program to a new program address
 
 Checklist for redeploying `goalana_program` under a **brand-new program ID**
 on devnet (fresh keypair, fresh on-chain state) and wiring every consumer
-(SDK, API, web) to it.
+(SDK, API, web) to it. This is different from Part A above, which covers
+deploying the already-built `apps/api` server to a VM — this part is about
+the Anchor program itself getting a new address.
 
-> This is different from `docs/DEPLOYMENT.md`, which covers deploying the
-> already-built `apps/api` server to a VM. This doc is about the Anchor
-> program itself getting a new address.
-
-## Why the program ID is scattered
+### Why the program ID is scattered
 
 There's no single `PROGRAM_ID` env var — the ID is hardcoded in 6 places
 because Anchor's IDL/type codegen and the SDK constants are independent
 sources of truth:
 
 | #   | File                                                                                 | What it is                                                     |
-| --- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| --- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
 | 1   | `goalana_program/programs/goalana_program/src/lib.rs:12`                             | `declare_id!` — compiled into the on-chain binary              |
 | 2   | `goalana_program/Anchor.toml`                                                        | `[programs.localnet]` entry Anchor CLI uses for deploy/test    |
 | 3   | `packages/goalana-sdk/scripts/sync-idl.ts:5`                                         | `TARGET_PROGRAM_ID` — stamped into the IDL/types on sync       |
@@ -30,15 +141,13 @@ env vars either — they get set on-chain, once, to whichever wallet signs
 `cancel_market`, `create_market`, `close_position`) will reject the API's
 transactions afterward.
 
----
+### Step 0 — Prereqs ✅
 
-## Step 0 — Prereqs ✅
-
-- `anchor-cli 1.1.2`, `solana-cli 3.x` (already installed and on `PATH` here)
+- `anchor-cli 1.1.2`, `solana-cli 3.x`
 - A devnet-funded keypair to pay for the deploy (rent + program buffer, a few SOL)
 - `bun install` already run at repo root
 
-## Step 0.5 — Choose the new production authority wallet ⚠️ superseded
+### Step 0.5 — Choose the new production authority wallet ⚠️ superseded
 
 **Attempted, but didn't end up as the real authority — see incident note
 below.** Generated `./goalana-prod-authority.json`, pubkey
@@ -72,9 +181,9 @@ offending background process (PID 64926) was killed
 
 **Lesson for next time:** before editing any file a long-running `bun --watch`
 process might reload (SDK constants, IDL, anything workspace-linked), check
-for and stop stray background processes first — `todo.md` had already
-documented this general class of bug (concurrent processes double-processing
-cron ticks) but it wasn't checked for at the start of this pass.
+for and stop stray background processes first — this general class of bug
+(concurrent processes double-processing cron ticks) had already been seen
+once before, but wasn't checked for at the start of this pass.
 
 There is no `rotate_authority` instruction. Whichever keypair signs Step 8's
 `initialize_config` becomes `config.authority` / `market_authority` /
@@ -102,7 +211,7 @@ losing the ability to lock/cancel/settle every market ever created under this
 program address. You'll paste its secret key into `WALLET_PRIVATE_KEY` in
 Step 7.
 
-## Step 1 — Generate the new program keypair ✅
+### Step 1 — Generate the new program keypair ✅
 
 **Done.** `<NEW_PROGRAM_ID>` = `ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42`,
 written to `goalana_program/target/deploy/goalana_program-keypair.json`.
@@ -118,7 +227,7 @@ program's upgrade authority mechanism (Anchor deploys upgradeable programs);
 back it up somewhere durable, it's gitignored (`goalana_program/target` isn't
 tracked) and losing it means losing upgrade authority.
 
-## Step 2 — Point the source at the new ID ✅
+### Step 2 — Point the source at the new ID ✅
 
 **Done.** `lib.rs`'s `declare_id!` and both `Anchor.toml` tables
 (`[programs.localnet]` + new `[programs.devnet]`) now hold
@@ -142,12 +251,12 @@ Don't touch `txline_cpi.rs` or `txoracle_mock` — that `declare_id!`
 (`6pW64gN...`) is TxLINE's oracle program, a separate deployment you're not
 changing.
 
-## Step 3 — Build ✅
+### Step 3 — Build ✅
 
 **Done.** `anchor build` finished clean (release + test profiles, unit tests
 ran). It also printed a `Program ID mismatch` warning for `txoracle_mock` —
-confirmed unrelated: that keypair file is dated July 13 (pre-dates this
-whole pass) and isn't something Step 1/2 touched. Its real CPI-target ID
+confirmed unrelated: that keypair file pre-dates this whole pass and isn't
+something Step 1/2 touched. Its real CPI-target ID
 (`txline_cpi.rs`'s `declare_id!`, `6pW64gN...`) is untouched and correct.
 **Do not run `anchor keys sync`** — it would overwrite that unrelated
 program's ID and break the CPI wiring.
@@ -160,7 +269,7 @@ anchor build
 This recompiles the `.so` with the new ID baked in and regenerates
 `target/idl/goalana_program.json` + `target/types/goalana_program.ts`.
 
-## Step 4 — Deploy to devnet ✅
+### Step 4 — Deploy to devnet ✅
 
 **Done.** Deployed with `--provider.wallet ../goalana-prod-authority.json`
 against the public `https://api.devnet.solana.com` RPC. The CLI reported
@@ -206,7 +315,7 @@ Confirm it landed:
 solana program show <NEW_PROGRAM_ID> --url devnet
 ```
 
-## Step 5 — Sync the IDL into the SDK ✅
+### Step 5 — Sync the IDL into the SDK ✅
 
 **Done.** `sync-idl.ts` ran clean; confirmed via diff that
 `idl/goalana_program.json` and `types/goalana_program.ts` both got their
@@ -229,18 +338,18 @@ This copies `goalana_program/target/idl/goalana_program.json` and
 (nested account addresses like the System Program / TxOracle CPI target are
 left alone — see the comment in that script).
 
-## Step 6 — Update the two manual constants ✅
+### Step 6 — Update the two manual constants ✅
 
 **Done.** Both confirmed via diff:
 
 - `packages/goalana-sdk/src/constants.ts:7` — `GOALANA_PROGRAM_ID = new PublicKey("<NEW_PROGRAM_ID>")`
 - `apps/web/lib/protocol.ts:7` — `GOALANA_PROGRAM_ID = "<NEW_PROGRAM_ID>"`
 
-## Step 7 — Env vars (`.env`, `.env.production`) ✅
+### Step 7 — Env vars (`.env`, `.env.production`) ✅
 
 **Done.** Values finalized in `.env.devnet`: `TXLINE_API_ORIGIN`,
-`TXLINE_JWT`, `TXLINE_API_TOKEN`, `DATABASE_URL` (a fresh, separate Neon DB —
-`ep-patient-night...`, deliberately not the same one `.env.production` uses),
+`TXLINE_JWT`, `TXLINE_API_TOKEN`, `DATABASE_URL` (a fresh, separate Neon DB,
+deliberately not the same one `.env.production` uses),
 `BE_PORT`, `API_ONLY`, `SOLANA_RPC_URL` / `NEXT_PUBLIC_SOLANA_RPC_URL`,
 `WALLET_PRIVATE_KEY` (byte-for-byte verified against
 `goalana-prod-authority.json`), `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL`.
@@ -262,14 +371,14 @@ Nothing here names the program ID directly, but double check these still
 point where you expect for the network you just deployed to:
 
 - `SOLANA_RPC_URL` / `NEXT_PUBLIC_SOLANA_RPC_URL` — devnet RPC endpoint (a
-  dedicated provider, not the public `api.devnet.solana.com`, per the note
+  dedicated provider, not the public `api.devnet.solana.com` — see the note
   in `apps/web/components/providers/solana-provider.tsx:21`)
 - `WALLET_PRIVATE_KEY` — **this is the wallet that must sign Step 8 below.**
   It's the API's fee-payer/authority (`apps/api/src/services/goalana.service.ts:18-34`),
   accepts either a base58 string or a JSON byte-array string. Make sure it
   holds devnet SOL.
 
-## Step 8 — Initialize on-chain config (new program = empty state) ✅
+### Step 8 — Initialize on-chain config (new program = empty state) ✅
 
 **Done — but not the way planned.** A background process (see Step 0.5's
 incident note) triggered this automatically before it was run deliberately.
@@ -294,7 +403,7 @@ becomes `authority` / `market_authority` / `settlement_authority` for good
 
 **`bun run -e '<multi-line string>'` doesn't reliably parse** (confirmed —
 it fell through to the help menu instead of running). Use a temp script file
-instead, the same pattern `docs/DEPLOYMENT.md` already uses elsewhere:
+instead, the same pattern Part A above uses elsewhere:
 
 ```bash
 cd apps/api
@@ -310,17 +419,17 @@ rm init-config-once.ts
 is idempotent — it no-ops if the config PDA already exists, so it's safe to
 re-run.)
 
-## Step 9 — Rebuild and restart the apps
+### Step 9 — Rebuild and restart the apps
 
 ```bash
 bun run build       # turbo build across the monorepo picks up the new SDK constants
 ```
 
 Restart whatever's running `apps/api` (`pm2 reload goalana-api --update-env`
-if using the VM flow in `docs/DEPLOYMENT.md`) and redeploy/restart
+if using the VM flow in Part A above) and redeploy/restart
 `apps/web` so the new `NEXT_PUBLIC_*`-baked build ships.
 
-## Step 10 — Sanity check
+### Step 10 — Sanity check
 
 - `solana program show <NEW_PROGRAM_ID> --url devnet` — confirm deployed slot
 - Hit the app, place a test bet on devnet, confirm the tx shows the new
@@ -350,9 +459,7 @@ or throw away later.
 
 `deploy.sh` deploys whatever is on the `production` branch
 (`git checkout production && git pull --ff-only origin production`), **not**
-`main`. As of this writing `production` is a clean fast-forward candidate —
-7 commits behind `main`, 0 commits of its own ahead — so this is a safe,
-conflict-free fast-forward, not a merge:
+`main`.
 
 ```bash
 git checkout production
@@ -361,10 +468,7 @@ git push origin production
 git checkout main
 ```
 
-Skipping this step means the VM redeploys 7-commits-stale code (missing the
-CORS required-env fix, the share/market/position pages, the reverted
-multi-competition config, etc.) while you believe you're shipping current
-`main`. Re-check `git rev-list --left-right --count main...production`
+Re-check `git rev-list --left-right --count main...production`
 before every future deploy — if it's ever not `N 0`, `production` has drifted
 and you have real commits to reconcile, not a fast-forward.
 
@@ -408,7 +512,7 @@ changes. The correct sequence is:
 ### Step 14 — First deploy (VM has no `goalana-api` pm2 process yet)
 
 If this VM has never run the app before, `deploy.sh`'s `pm2 reload goalana-api` will fail (nothing to reload). Bootstrap once using
-`docs/DEPLOYMENT.md`'s flow, then `deploy.sh` works for every deploy after:
+Part A's flow above, then `deploy.sh` works for every deploy after:
 
 ```bash
 ssh <vm>
@@ -442,10 +546,10 @@ From here on, every subsequent deploy is just running `./deploy.sh` (Steps
 
 ### Step 15 — Don't run a second ingesting process locally
 
-`todo.md` already documents the failure mode: **3 concurrent `apps/api`
-processes double-processing the same lifecycle cron ticks.** Once the VM is
-live with `API_ONLY=false`, run locally only with `API_ONLY=true` (i.e.
-`bun run dev:api`, never plain `bun run dev`) — that gives you a local
+**3 concurrent `apps/api` processes double-processing the same lifecycle cron
+ticks** is a real failure mode seen during this project's development. Once
+the VM is live with `API_ONLY=false`, run locally only with `API_ONLY=true`
+(i.e. `bun run dev:api`, never plain `bun run dev`) — that gives you a local
 read-only API against the same DB for testing, without a second process
 racing the VM's cron for lock/settle/create-market calls.
 

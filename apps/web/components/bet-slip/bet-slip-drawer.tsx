@@ -108,7 +108,8 @@ export function BetSlipDrawer() {
       // ChallengePoolSideFull) since it was staged, the WHOLE slip reverts,
       // not just that leg. Say that plainly rather than surfacing the raw
       // AnchorError, since it's a different failure shape than a single bet.
-      const rawMessage = err instanceof Error ? err.message : "Transaction failed"
+      const rawMessage =
+        err instanceof Error ? err.message : "Transaction failed"
       const sideFull = rawMessage.includes("ChallengePoolSideFull")
       toast.error(sideFull ? "A pool side filled up" : "Bet slip failed", {
         id: toastId,

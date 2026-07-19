@@ -33,39 +33,38 @@ export function useMarketMeta(marketPda: string | null | undefined) {
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const loadMarket = useCallback(async ({
-    cancelled,
-  }: {
-    cancelled: () => boolean
-  }) => {
-    if (!marketPda) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      const res = await axiosInstance.get(`/markets/${marketPda}`)
-      if (cancelled()) return
-      if (res.data?.data) {
-        setMarket(res.data.data)
-        setNotFound(false)
-        setError(null)
-      }
-    } catch (err: any) {
-      if (err?.response?.status === 404) {
-        setMarket(null)
-        setNotFound(true)
-        setError(null)
-      } else {
-        console.error("useMarketMeta: failed to load market", err)
-        setError("Live update failed — showing last known data")
-      }
-    } finally {
-      if (!cancelled()) {
+  const loadMarket = useCallback(
+    async ({ cancelled }: { cancelled: () => boolean }) => {
+      if (!marketPda) {
         setLoading(false)
+        return
       }
-    }
-  }, [marketPda])
+
+      try {
+        const res = await axiosInstance.get(`/markets/${marketPda}`)
+        if (cancelled()) return
+        if (res.data?.data) {
+          setMarket(res.data.data)
+          setNotFound(false)
+          setError(null)
+        }
+      } catch (err: any) {
+        if (err?.response?.status === 404) {
+          setMarket(null)
+          setNotFound(true)
+          setError(null)
+        } else {
+          console.error("useMarketMeta: failed to load market", err)
+          setError("Live update failed — showing last known data")
+        }
+      } finally {
+        if (!cancelled()) {
+          setLoading(false)
+        }
+      }
+    },
+    [marketPda]
+  )
 
   const refetch = useCallback(() => {
     void loadMarket({ cancelled: () => false })

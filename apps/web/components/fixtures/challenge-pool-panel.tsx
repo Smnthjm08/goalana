@@ -162,11 +162,11 @@ export function ChallengePoolPanel({
             Challenge Pools
           </h3>
           <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
-            Design your own fixed-stake, N-vs-N bet on a real match
-            statistic. Everyone stakes the same amount; winners split the
-            pool. The house co-signs the exact same on-chain{" "}
-            <span className="text-foreground">create_market</span> the
-            protocol uses — it never decides the outcome, cryptography does.
+            Design your own fixed-stake, N-vs-N bet on a real match statistic.
+            Everyone stakes the same amount; winners split the pool. The house
+            co-signs the exact same on-chain{" "}
+            <span className="text-foreground">create_market</span> the protocol
+            uses — it never decides the outcome, cryptography does.
           </p>
         </div>
 
@@ -184,8 +184,8 @@ export function ChallengePoolPanel({
             <DialogHeader>
               <DialogTitle>Propose a Challenge Pool</DialogTitle>
               <DialogDescription>
-                Design your own fixed-stake, {slotsPerSide}v{slotsPerSide}{" "}
-                bet on a real match statistic.
+                Design your own fixed-stake, {slotsPerSide}v{slotsPerSide} bet
+                on a real match statistic.
               </DialogDescription>
             </DialogHeader>
 
@@ -248,7 +248,9 @@ export function ChallengePoolPanel({
                   {FORMAT_OPTIONS.map((opt) => (
                     <Button
                       key={opt.slots}
-                      variant={slotsPerSide === opt.slots ? "default" : "outline"}
+                      variant={
+                        slotsPerSide === opt.slots ? "default" : "outline"
+                      }
                       onClick={() => setSlotsPerSide(opt.slots)}
                       className="h-auto rounded-sm py-2 font-mono text-[11px]"
                     >
