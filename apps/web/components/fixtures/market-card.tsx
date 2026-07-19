@@ -7,7 +7,11 @@ import { toast } from "sonner"
 import { PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js"
 import { BN } from "@coral-xyz/anchor"
 import { useWalletModal } from "@solana/wallet-adapter-react-ui"
-import { getVaultPda, getPositionPda, getChallengePoolPda } from "@workspace/goalana-sdk/pdas"
+import {
+  getVaultPda,
+  getPositionPda,
+  getChallengePoolPda,
+} from "@workspace/goalana-sdk/pdas"
 import { explorerTxUrl, explorerAddressUrl } from "@/lib/solana-explorer"
 import { marketTypeLabels } from "@/lib/market-groups"
 import { getSiteUrl } from "@/lib/site"
@@ -86,16 +90,20 @@ export function MarketCard({ market }: { market: any }) {
     ? Number(market.fixedStakeLamports)
     : null
   const isChallenge = fixedStakeLamports != null && fixedStakeLamports > 0
-  const fixedStakeSol = isChallenge ? fixedStakeLamports! / LAMPORTS_PER_SOL : null
-  const slotsPerSide: number | null = isChallenge ? market.slotsPerSide ?? null : null
+  const fixedStakeSol = isChallenge
+    ? fixedStakeLamports! / LAMPORTS_PER_SOL
+    : null
+  const slotsPerSide: number | null = isChallenge
+    ? (market.slotsPerSide ?? null)
+    : null
   // Slot fill = how many fixed stakes are already in each side's pool.
   const yesSlotsFilled =
     isChallenge && fixedStakeLamports
-      ? Math.round((Number(onChainMarket?.totalYes ?? 0n) / fixedStakeLamports))
+      ? Math.round(Number(onChainMarket?.totalYes ?? 0n) / fixedStakeLamports)
       : 0
   const noSlotsFilled =
     isChallenge && fixedStakeLamports
-      ? Math.round((Number(onChainMarket?.totalNo ?? 0n) / fixedStakeLamports))
+      ? Math.round(Number(onChainMarket?.totalNo ?? 0n) / fixedStakeLamports)
       : 0
 
   // currentYesPct/currentNoPct are the live TxLINE reference probability
@@ -246,7 +254,7 @@ export function MarketCard({ market }: { market: any }) {
   const payoutPreview =
     canClaimWinnings && onChainMarket
       ? (winningStake * (onChainMarket.totalYes + onChainMarket.totalNo)) /
-      (outcome ? onChainMarket.totalYes : onChainMarket.totalNo)
+        (outcome ? onChainMarket.totalYes : onChainMarket.totalNo)
       : null
 
   async function handleClaim(kind: "winnings" | "refund") {
@@ -334,11 +342,11 @@ export function MarketCard({ market }: { market: any }) {
             {(poolTotal > 0 ||
               (!isUnpriced &&
                 Math.abs(yesPct - Number(market.initialYesPct)) >= 5)) && (
-                <div className="flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-bold text-orange-500">
-                  <Flame className="size-3" />
-                  HOT
-                </div>
-              )}
+              <div className="flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-bold text-orange-500">
+                <Flame className="size-3" />
+                HOT
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <MarketLockStatus locksAt={market.locksAt} status={status} />
@@ -359,10 +367,11 @@ export function MarketCard({ market }: { market: any }) {
             disabled={!isOpen}
             aria-pressed={selected === "YES"}
             onClick={() => setSelected(selected === "YES" ? null : "YES")}
-            className={`h-auto flex-row items-center justify-between rounded-sm p-4 transition-colors ${selected === "YES"
-              ? "border-pos bg-pos text-pos-foreground! hover:border-pos hover:bg-pos/90 hover:text-pos-foreground!"
-              : "group/yes border-pos/20 bg-pos/5 hover:border-pos/50 hover:bg-pos/10"
-              }`}
+            className={`h-auto flex-row items-center justify-between rounded-sm p-4 transition-colors ${
+              selected === "YES"
+                ? "border-pos bg-pos text-pos-foreground! hover:border-pos hover:bg-pos/90 hover:text-pos-foreground!"
+                : "group/yes border-pos/20 bg-pos/5 hover:border-pos/50 hover:bg-pos/10"
+            }`}
           >
             <div className="flex flex-col items-start gap-1">
               <span
@@ -370,7 +379,9 @@ export function MarketCard({ market }: { market: any }) {
               >
                 YES
               </span>
-              <span className={`font-mono text-[10px] tabular-nums ${selected === "YES" ? "text-pos-foreground/60" : "text-pos/50 group-hover/yes:text-pos/70"} transition-colors`}>
+              <span
+                className={`font-mono text-[10px] tabular-nums ${selected === "YES" ? "text-pos-foreground/60" : "text-pos/50 group-hover/yes:text-pos/70"} transition-colors`}
+              >
                 {poolYes?.toFixed(2) ?? "0.00"} SOL
               </span>
             </div>
@@ -394,10 +405,11 @@ export function MarketCard({ market }: { market: any }) {
             disabled={!isOpen}
             aria-pressed={selected === "NO"}
             onClick={() => setSelected(selected === "NO" ? null : "NO")}
-            className={`h-auto flex-row items-center justify-between rounded-sm p-4 transition-colors ${selected === "NO"
-              ? "border-neg bg-neg text-neg-foreground! hover:border-neg hover:bg-neg/90 hover:text-neg-foreground!"
-              : "group/no border-neg/20 bg-neg/5 hover:border-neg/50 hover:bg-neg/10"
-              }`}
+            className={`h-auto flex-row items-center justify-between rounded-sm p-4 transition-colors ${
+              selected === "NO"
+                ? "border-neg bg-neg text-neg-foreground! hover:border-neg hover:bg-neg/90 hover:text-neg-foreground!"
+                : "group/no border-neg/20 bg-neg/5 hover:border-neg/50 hover:bg-neg/10"
+            }`}
           >
             <div className="flex flex-col items-start gap-1">
               <span
@@ -405,7 +417,9 @@ export function MarketCard({ market }: { market: any }) {
               >
                 NO
               </span>
-              <span className={`font-mono text-[10px] tabular-nums ${selected === "NO" ? "text-neg-foreground/60" : "text-neg/50 group-hover/no:text-neg/70"} transition-colors`}>
+              <span
+                className={`font-mono text-[10px] tabular-nums ${selected === "NO" ? "text-neg-foreground/60" : "text-neg/50 group-hover/no:text-neg/70"} transition-colors`}
+              >
                 {poolNo?.toFixed(2) ?? "0.00"} SOL
               </span>
             </div>
@@ -451,7 +465,11 @@ export function MarketCard({ market }: { market: any }) {
                     {isChallenge ? "Joining…" : "Placing…"}
                   </>
                 ) : connected ? (
-                  isChallenge ? `Join ${fixedStakeSol} SOL` : "Place Bet"
+                  isChallenge ? (
+                    `Join ${fixedStakeSol} SOL`
+                  ) : (
+                    "Place Bet"
+                  )
                 ) : (
                   "Connect"
                 )}
@@ -460,7 +478,11 @@ export function MarketCard({ market }: { market: any }) {
             <Button
               variant="outline"
               onClick={handleAddToSlip}
-              disabled={submitting || (!isChallenge && !amount) || inSlip(market.marketPda)}
+              disabled={
+                submitting ||
+                (!isChallenge && !amount) ||
+                inSlip(market.marketPda)
+              }
               className="font-heading text-[11px] tracking-widest uppercase"
             >
               {inSlip(market.marketPda) ? "In bet slip" : "+ Add to bet slip"}

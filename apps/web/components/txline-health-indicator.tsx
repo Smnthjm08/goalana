@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import axiosInstance from "@/lib/axios-instance"
+import { useSmartPolling } from "@/hooks/use-smart-polling"
 import {
   Tooltip,
   TooltipContent,
@@ -67,34 +68,25 @@ export function TxlineHealthIndicator() {
   // Recomputed on each poll so "4m ago" doesn't silently go stale between them.
   const [now, setNow] = useState(() => Date.now())
 
-  useEffect(() => {
-    let cancelled = false
-
-    const fetchHealth = () =>
-      axiosInstance
-        .get("/health")
-        .then((res) => {
-          if (cancelled) return
-          setHealth(res.data?.data ?? null)
-          setReachable(true)
-          setNow(Date.now())
-        })
-        .catch(() => {
-          if (cancelled) return
-          // Backend unreachable is itself a disconnected state — keep the last
-          // snapshot for detail, but the dot must go red.
-          setReachable(false)
-          setNow(Date.now())
-        })
-
-    void fetchHealth()
-    const intervalId = setInterval(() => void fetchHealth(), POLL_INTERVAL_MS)
-
-    return () => {
-      cancelled = true
-      clearInterval(intervalId)
-    }
-  }, [])
+  useSmartPolling(
+    async ({ cancelled }) => {
+      try {
+        const res = await axiosInstance.get("/health")
+        if (cancelled()) return
+        setHealth(res.data?.data ?? null)
+        setReachable(true)
+        setNow(Date.now())
+      } catch {
+        if (cancelled()) return
+        // Backend unreachable is itself a disconnected state — keep the last
+        // snapshot for detail, but the dot must go red.
+        setReachable(false)
+        setNow(Date.now())
+      }
+    },
+    POLL_INTERVAL_MS,
+    []
+  )
 
   const connected = reachable && Boolean(health?.txline.connected)
   const loading = health === null && reachable
@@ -125,115 +117,109 @@ export function TxlineHealthIndicator() {
 
   return (
     <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            aria-label={`TxLINE feed status: ${label}`}
-            className="flex cursor-default items-center gap-2 rounded-sm border border-border bg-card px-2 py-1.5 transition-colors hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            <span className="relative flex h-2 w-2 shrink-0">
-              {connected && (
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
-              )}
-              <span
-                className={`relative inline-flex h-2 w-2 rounded-full ${
-                  loading
-                    ? "bg-muted-foreground"
-                    : connected
-                      ? "bg-primary"
-                      : "bg-destructive"
-                }`}
-              />
-            </span>
-            {/* The dot alone carries the state on narrow screens. */}
-            <span className="hidden font-mono text-[10px] tracking-widest text-muted-foreground uppercase sm:inline">
-              {label}
-            </span>
-          </button>
-        </TooltipTrigger>
-
-        <TooltipContent
-          side="bottom"
-          align="end"
-          className="w-64 border border-border bg-popover p-3 text-popover-foreground"
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={`TxLINE feed status: ${label}`}
+          className="flex cursor-default items-center gap-2 rounded-sm border border-border bg-card px-2 py-1.5 transition-colors hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-6 border-b border-border pb-2">
-              <span className="font-heading text-[11px] tracking-widest text-foreground uppercase">
-                Live Feed
-              </span>
-              <span
-                className={`font-mono text-[10px] tracking-widest uppercase ${
-                  connected ? "text-primary" : "text-destructive"
-                }`}
-              >
-                {connected ? "Healthy" : "Degraded"}
-              </span>
-            </div>
-
-            {!reachable ? (
-              <span className="font-mono text-[10px] leading-relaxed text-muted-foreground">
-                Backend unreachable — retrying every 15s.
-              </span>
-            ) : !health ? (
-              <span className="font-mono text-[10px] text-muted-foreground">
-                Loading…
-              </span>
-            ) : (
-              <>
-                <Row
-                  label="SSE Odds"
-                  value={
-                    health.txline.streams.odds.connected ? "Connected" : "Down"
-                  }
-                  ok={health.txline.streams.odds.connected}
-                />
-                <Row
-                  label="SSE Scores"
-                  value={
-                    health.txline.streams.scores.connected
-                      ? "Connected"
-                      : "Down"
-                  }
-                  ok={health.txline.streams.scores.connected}
-                />
-                <Row
-                  label="Heartbeat"
-                  value={
-                    lastFrameAt ? formatRelativeAgo(lastFrameAt, now) : "—"
-                  }
-                />
-                <Row
-                  label="Last event"
-                  value={
-                    lastEventAt
-                      ? formatRelativeAgo(lastEventAt, now)
-                      : "None yet"
-                  }
-                />
-                <Row
-                  label="Last odds"
-                  value={lastOddsAt ? formatRelativeAgo(lastOddsAt, now) : "—"}
-                />
-                <Row
-                  label="Fixtures"
-                  value={`${health.fixtures.tracked} tracked`}
-                />
-                <Row
-                  label="RPC"
-                  value={health.rpc.healthy ? "Healthy" : "Unreachable"}
-                  ok={health.rpc.healthy}
-                />
-
-                <span className="border-t border-border pt-2 font-mono text-[9px] leading-relaxed text-muted-foreground">
-                  Odds and scores stream live from TxLINE over SSE. Between
-                  matches the feed is quiet — the heartbeat is what proves the
-                  socket is open.
-                </span>
-              </>
+          <span className="relative flex h-2 w-2 shrink-0">
+            {connected && (
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
             )}
+            <span
+              className={`relative inline-flex h-2 w-2 rounded-full ${
+                loading
+                  ? "bg-muted-foreground"
+                  : connected
+                    ? "bg-primary"
+                    : "bg-destructive"
+              }`}
+            />
+          </span>
+          {/* The dot alone carries the state on narrow screens. */}
+          <span className="hidden font-mono text-[10px] tracking-widest text-muted-foreground uppercase sm:inline">
+            {label}
+          </span>
+        </button>
+      </TooltipTrigger>
+
+      <TooltipContent
+        side="bottom"
+        align="end"
+        className="w-64 border border-border bg-popover p-3 text-popover-foreground"
+      >
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-6 border-b border-border pb-2">
+            <span className="font-heading text-[11px] tracking-widest text-foreground uppercase">
+              Live Feed
+            </span>
+            <span
+              className={`font-mono text-[10px] tracking-widest uppercase ${
+                connected ? "text-primary" : "text-destructive"
+              }`}
+            >
+              {connected ? "Healthy" : "Degraded"}
+            </span>
           </div>
-        </TooltipContent>
+
+          {!reachable ? (
+            <span className="font-mono text-[10px] leading-relaxed text-muted-foreground">
+              Backend unreachable — retrying every 15s.
+            </span>
+          ) : !health ? (
+            <span className="font-mono text-[10px] text-muted-foreground">
+              Loading…
+            </span>
+          ) : (
+            <>
+              <Row
+                label="SSE Odds"
+                value={
+                  health.txline.streams.odds.connected ? "Connected" : "Down"
+                }
+                ok={health.txline.streams.odds.connected}
+              />
+              <Row
+                label="SSE Scores"
+                value={
+                  health.txline.streams.scores.connected ? "Connected" : "Down"
+                }
+                ok={health.txline.streams.scores.connected}
+              />
+              <Row
+                label="Heartbeat"
+                value={lastFrameAt ? formatRelativeAgo(lastFrameAt, now) : "—"}
+              />
+              <Row
+                label="Last event"
+                value={
+                  lastEventAt ? formatRelativeAgo(lastEventAt, now) : "None yet"
+                }
+              />
+              <Row
+                label="Last odds"
+                value={lastOddsAt ? formatRelativeAgo(lastOddsAt, now) : "—"}
+              />
+              <Row
+                label="Fixtures"
+                value={`${health.fixtures.tracked} tracked`}
+              />
+              <Row
+                label="RPC"
+                value={health.rpc.healthy ? "Healthy" : "Unreachable"}
+                ok={health.rpc.healthy}
+              />
+
+              <span className="border-t border-border pt-2 font-mono text-[9px] leading-relaxed text-muted-foreground">
+                Odds and scores stream live from TxLINE over SSE. Between
+                matches the feed is quiet — the heartbeat is what proves the
+                socket is open.
+              </span>
+            </>
+          )}
+        </div>
+      </TooltipContent>
     </Tooltip>
   )
 }

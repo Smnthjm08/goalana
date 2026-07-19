@@ -271,8 +271,8 @@ export function SettlementProofReceipt({
           </span>
         ) : verification.allVerified ? (
           <span className="text-lime-400">
-            ✓ Independently reproduced in your browser — matches
-            TxLINE&apos;s stated roots
+            ✓ Independently reproduced in your browser — matches TxLINE&apos;s
+            stated roots
           </span>
         ) : (
           <span className="text-muted-foreground">

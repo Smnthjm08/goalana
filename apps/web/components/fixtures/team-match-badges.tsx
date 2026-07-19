@@ -34,7 +34,9 @@ export function TeamMatchBadges({ events, team, align }: TeamMatchBadgesProps) {
         <span className="flex items-center gap-1">
           <span aria-hidden>⚽</span>
           {goals
-            .map((g) => g.minuteLabel ?? (g.minute != null ? `${g.minute}'` : "—"))
+            .map(
+              (g) => g.minuteLabel ?? (g.minute != null ? `${g.minute}'` : "—")
+            )
             .join(", ")}
         </span>
       )}

@@ -59,7 +59,10 @@ function concatBytes(...arrs: Uint8Array[]): Uint8Array {
 }
 
 async function sha256(bytes: Uint8Array): Promise<Uint8Array> {
-  const digest = await crypto.subtle.digest("SHA-256", bytes.slice().buffer as ArrayBuffer)
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    bytes.slice().buffer as ArrayBuffer
+  )
   return new Uint8Array(digest)
 }
 
@@ -139,7 +142,11 @@ export async function verifySettlementProof(proof: {
     proof.eventStatRoot
   )
   const stat2Result = proof.statToProve2
-    ? await verifyStatChain(proof.statToProve2, proof.statProof2, proof.eventStatRoot)
+    ? await verifyStatChain(
+        proof.statToProve2,
+        proof.statProof2,
+        proof.eventStatRoot
+      )
     : null
   const subTreeResult = await verifyRootChain(
     proof.eventStatRoot,

@@ -114,8 +114,7 @@ export default function ProofGalleryPage() {
           <p className="max-w-2xl font-mono text-[11px] leading-relaxed text-muted-foreground">
             Every market below resolved the same way: Goalana&apos;s{" "}
             <span className="text-foreground">settle_market</span> instruction
-            made a Cross-Program Invocation into TxLINE&apos;s oracle program
-            (
+            made a Cross-Program Invocation into TxLINE&apos;s oracle program (
             <a
               href={explorerAddressUrl(TXLINE_ORACLE_PROGRAM_ID)}
               target="_blank"
@@ -124,13 +123,12 @@ export default function ProofGalleryPage() {
             >
               validate_stat
             </a>
-            ), which re-derives a three-stage Merkle proof on-chain from a
-            stat leaf up to an already-anchored daily batch root. Goalana
-            never asserts the outcome — the oracle program does, in
-            consensus, and it reverts if any hash in the chain is wrong. This
-            page is a permanent, public record of that: real closed matches,
-            real settlement transactions, real proofs — inspectable without
-            connecting a wallet.
+            ), which re-derives a three-stage Merkle proof on-chain from a stat
+            leaf up to an already-anchored daily batch root. Goalana never
+            asserts the outcome — the oracle program does, in consensus, and it
+            reverts if any hash in the chain is wrong. This page is a permanent,
+            public record of that: real closed matches, real settlement
+            transactions, real proofs — inspectable without connecting a wallet.
           </p>
         </div>
 
@@ -178,8 +176,8 @@ export default function ProofGalleryPage() {
             </span>
             <p className="max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground">
               Once a fixture finishes and Goalana&apos;s permissionless{" "}
-              <span className="text-foreground">settle_market</span> call
-              lands on-chain, its proof will show up here automatically.
+              <span className="text-foreground">settle_market</span> call lands
+              on-chain, its proof will show up here automatically.
             </p>
           </div>
         )}
@@ -220,7 +218,8 @@ export default function ProofGalleryPage() {
                       <div className="flex items-center justify-between gap-2 px-1">
                         <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
                           {market.mode === "settled"
-                            ? (marketTypeLabels[market.marketType ?? ""] ?? market.marketType)
+                            ? (marketTypeLabels[market.marketType ?? ""] ??
+                              market.marketType)
                             : "Live TxLINE proof — no Goalana market settled yet"}
                         </span>
                         <span className="font-mono text-[11px] text-foreground">

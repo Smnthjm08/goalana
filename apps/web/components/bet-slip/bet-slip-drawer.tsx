@@ -8,15 +8,27 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { X, Layers, ChevronDown, ChevronUp } from "lucide-react"
-import { PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from "@solana/web3.js"
+import {
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  LAMPORTS_PER_SOL,
+} from "@solana/web3.js"
 import { BN } from "@coral-xyz/anchor"
 import { useWalletModal } from "@solana/wallet-adapter-react-ui"
-import { getVaultPda, getPositionPda, getChallengePoolPda } from "@workspace/goalana-sdk/pdas"
+import {
+  getVaultPda,
+  getPositionPda,
+  getChallengePoolPda,
+} from "@workspace/goalana-sdk/pdas"
 import { Button } from "@workspace/ui/components/button"
 import { Spinner } from "@workspace/ui/components/spinner"
 import { explorerTxUrl } from "@/lib/solana-explorer"
 import { useGoalanaProgram } from "@/hooks/use-goalana-program"
-import { useBetSlip, MAX_SLIP_LEGS } from "@/components/bet-slip/bet-slip-context"
+import {
+  useBetSlip,
+  MAX_SLIP_LEGS,
+} from "@/components/bet-slip/bet-slip-context"
 
 export function BetSlipDrawer() {
   const { items, removeItem, clear, totalLamports } = useBetSlip()
@@ -130,9 +142,7 @@ export function BetSlipDrawer() {
                   </span>
                   <span className="font-mono text-[10px] text-muted-foreground">
                     <span
-                      className={
-                        item.side === "YES" ? "text-pos" : "text-neg"
-                      }
+                      className={item.side === "YES" ? "text-pos" : "text-neg"}
                     >
                       {item.side}
                     </span>{" "}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js"
 import {
   TXLINE_STAT_LABELS,
@@ -15,6 +15,7 @@ import {
   decodeStatus,
   type OnChainMarketStatus,
 } from "@/hooks/use-market-account"
+import { useSmartPolling } from "./use-smart-polling"
 
 // This page never signs or sends a transaction — it is a read-only view over
 // the same PDAs and account fetches the rest of the app already uses
@@ -240,33 +241,27 @@ export function useInspectorData() {
   const [loading, setLoading] = useState(true)
   const [refreshError, setRefreshError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
+  useSmartPolling(
+    async ({ cancelled }) => {
+      try {
+        const next = await loadInspectorData(program)
+        if (cancelled()) return
 
-    const fetchAll = () =>
-      loadInspectorData(program)
-        .then((next) => {
-          if (cancelled) return
-          setData(next)
-          setRefreshError(null)
-        })
-        .catch((err) => {
-          if (cancelled) return
-          console.error("Inspector: failed to load protocol state", err)
-          setRefreshError("Live refresh failed — showing last known state")
-        })
-
-    fetchAll().finally(() => {
-      if (!cancelled) setLoading(false)
-    })
-
-    const intervalId = setInterval(() => void fetchAll(), POLL_INTERVAL_MS)
-
-    return () => {
-      cancelled = true
-      clearInterval(intervalId)
-    }
-  }, [program])
+        setData(next)
+        setRefreshError(null)
+      } catch (err) {
+        if (cancelled()) return
+        console.error("Inspector: failed to load protocol state", err)
+        setRefreshError("Live refresh failed — showing last known state")
+      } finally {
+        if (!cancelled()) {
+          setLoading(false)
+        }
+      }
+    },
+    POLL_INTERVAL_MS,
+    [program]
+  )
 
   return { data, loading, refreshError }
 }

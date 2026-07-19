@@ -1,8 +1,9 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 import axiosInstance from "@/lib/axios-instance"
 import type { MarketMeta } from "@/lib/position-status"
+import { useSmartPolling } from "./use-smart-polling"
 
 /**
  * Full off-chain Market row from GET /api/markets/:marketPda — MarketMeta
@@ -32,7 +33,11 @@ export function useMarketMeta(marketPda: string | null | undefined) {
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
+  const loadMarket = useCallback(async ({
+    cancelled,
+  }: {
+    cancelled: () => boolean
+  }) => {
     if (!marketPda) {
       setLoading(false)
       return
@@ -40,6 +45,7 @@ export function useMarketMeta(marketPda: string | null | undefined) {
 
     try {
       const res = await axiosInstance.get(`/markets/${marketPda}`)
+      if (cancelled()) return
       if (res.data?.data) {
         setMarket(res.data.data)
         setNotFound(false)
@@ -55,20 +61,17 @@ export function useMarketMeta(marketPda: string | null | undefined) {
         setError("Live update failed — showing last known data")
       }
     } finally {
-      setLoading(false)
+      if (!cancelled()) {
+        setLoading(false)
+      }
     }
   }, [marketPda])
 
-  useEffect(() => {
-    setLoading(true)
-    void refetch()
+  const refetch = useCallback(() => {
+    void loadMarket({ cancelled: () => false })
+  }, [loadMarket])
 
-    const intervalId = setInterval(() => {
-      void refetch()
-    }, POLL_INTERVAL_MS)
-
-    return () => clearInterval(intervalId)
-  }, [refetch])
+  useSmartPolling(loadMarket, POLL_INTERVAL_MS, [loadMarket])
 
   return { market, loading, notFound, error, refetch }
 }

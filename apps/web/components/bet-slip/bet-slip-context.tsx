@@ -81,11 +81,21 @@ export function BetSlipProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo(
-    () => ({ items, addItem, removeItem, updateAmount, clear, has, totalLamports }),
+    () => ({
+      items,
+      addItem,
+      removeItem,
+      updateAmount,
+      clear,
+      has,
+      totalLamports,
+    }),
     [items, addItem, removeItem, updateAmount, clear, has, totalLamports]
   )
 
-  return <BetSlipContext.Provider value={value}>{children}</BetSlipContext.Provider>
+  return (
+    <BetSlipContext.Provider value={value}>{children}</BetSlipContext.Provider>
+  )
 }
 
 export function useBetSlip() {

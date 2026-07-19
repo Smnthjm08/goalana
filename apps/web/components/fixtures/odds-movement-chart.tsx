@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import axiosInstance from "@/lib/axios-instance"
+import { useSmartPolling } from "@/hooks/use-smart-polling"
 import { Button } from "@workspace/ui/components/button"
 import {
   ChartContainer,
@@ -112,40 +113,33 @@ export function OddsMovementChart({
   })
   const [range, setRange] = useState<TimeRange>("ALL")
 
-  useEffect(() => {
-    if (!fixtureId) return
+  useSmartPolling(
+    async ({ cancelled }) => {
+      if (!fixtureId) {
+        setLoading(false)
+        return
+      }
 
-    let cancelled = false
-
-    const fetchOddsHistory = () =>
-      axiosInstance
-        .get(`/fixtures/${fixtureId}/odds/history`)
-        .then((res) => {
-          if (cancelled) return
-          setOddsData(res.data?.data ?? null)
-          setError(null)
-        })
-        .catch((err) => {
-          if (cancelled) return
-          console.error("Error fetching odds history:", err)
-          // Keep whatever was last rendered — a transient poll failure must
-          // not blank out an already-visible chart.
-          setError("Live update failed — showing last known data")
-        })
-
-    fetchOddsHistory().finally(() => {
-      if (!cancelled) setLoading(false)
-    })
-
-    const intervalId = setInterval(() => {
-      void fetchOddsHistory()
-    }, POLL_INTERVAL_MS)
-
-    return () => {
-      cancelled = true
-      clearInterval(intervalId)
-    }
-  }, [fixtureId])
+      try {
+        const res = await axiosInstance.get(
+          `/fixtures/${fixtureId}/odds/history`
+        )
+        if (cancelled()) return
+        setOddsData(res.data?.data ?? null)
+        setError(null)
+      } catch (err) {
+        if (cancelled()) return
+        console.error("Error fetching odds history:", err)
+        // Keep whatever was last rendered — a transient poll failure must
+        // not blank out an already-visible chart.
+        setError("Live update failed — showing last known data")
+      } finally {
+        if (!cancelled()) setLoading(false)
+      }
+    },
+    POLL_INTERVAL_MS,
+    [fixtureId]
+  )
 
   const toggleSeries = (series: "home" | "draw" | "away") => {
     setVisibleSeries((prev) => ({ ...prev, [series]: !prev[series] }))

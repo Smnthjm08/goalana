@@ -1,10 +1,17 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
-import { BarChart2, CheckCircle2, ListChecks, ShieldCheck, TrendingUp } from "lucide-react"
+import {
+  BarChart2,
+  CheckCircle2,
+  ListChecks,
+  ShieldCheck,
+  TrendingUp,
+} from "lucide-react"
 import axiosInstance from "@/lib/axios-instance"
 import { groupMarkets } from "@/lib/market-groups"
+import { useSmartPolling } from "@/hooks/use-smart-polling"
 import { getSiteUrl } from "@/lib/site"
 import { Button } from "@workspace/ui/components/button"
 import { Skeleton } from "@workspace/ui/components/skeleton"
@@ -42,42 +49,33 @@ export function FixtureDetailView({ fixtureId }: { fixtureId: string }) {
   const [loading, setLoading] = useState(true)
   const [refreshError, setRefreshError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!fixtureId) return
+  useSmartPolling(
+    async ({ cancelled }) => {
+      if (!fixtureId) {
+        setLoading(false)
+        return
+      }
 
-    let cancelled = false
-
-    const fetchFixture = () =>
-      axiosInstance
-        .get(`/fixtures/${fixtureId}`)
-        .then((res) => {
-          if (cancelled) return
-          if (res.data?.data) {
-            setFixture(res.data.data)
-            setRefreshError(null)
-          }
-        })
-        .catch((err) => {
-          if (cancelled) return
-          console.error("Error fetching fixture:", err)
-          // Keep whatever is already rendered — a transient poll failure
-          // must not blank out the market cards.
-          setRefreshError("Live update failed — showing last known data")
-        })
-
-    fetchFixture().finally(() => {
-      if (!cancelled) setLoading(false)
-    })
-
-    const intervalId = setInterval(() => {
-      void fetchFixture()
-    }, FIXTURE_POLL_INTERVAL_MS)
-
-    return () => {
-      cancelled = true
-      clearInterval(intervalId)
-    }
-  }, [fixtureId])
+      try {
+        const res = await axiosInstance.get(`/fixtures/${fixtureId}`)
+        if (cancelled()) return
+        if (res.data?.data) {
+          setFixture(res.data.data)
+          setRefreshError(null)
+        }
+      } catch (err) {
+        if (cancelled()) return
+        console.error("Error fetching fixture:", err)
+        // Keep whatever is already rendered — a transient poll failure
+        // must not blank out the market cards.
+        setRefreshError("Live update failed — showing last known data")
+      } finally {
+        if (!cancelled()) setLoading(false)
+      }
+    },
+    FIXTURE_POLL_INTERVAL_MS,
+    [fixtureId]
+  )
 
   // Skeletons mirror the real layout (header band → strip → tab row → market
   // grid) so the page doesn't reflow when the data lands.

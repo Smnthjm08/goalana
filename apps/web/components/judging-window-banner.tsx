@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import axiosInstance from "@/lib/axios-instance"
+import { useSmartPolling } from "@/hooks/use-smart-polling"
 
 // v3-todo P2-3: TxLINE's free-tier access ends at the hackathon deadline, so
 // during judging the live feed may go quiet or the health indicator may turn
@@ -18,31 +19,22 @@ interface HealthSnapshot {
 export function JudgingWindowBanner() {
   const [degraded, setDegraded] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-
-    const check = () =>
-      axiosInstance
-        .get("/health")
-        .then((res) => {
-          if (cancelled) return
-          const snapshot = res.data?.data as HealthSnapshot | undefined
-          setDegraded(!snapshot || !snapshot.txline.connected)
-        })
-        .catch(() => {
-          if (cancelled) return
-          // Backend unreachable is itself the case this banner exists for.
-          setDegraded(true)
-        })
-
-    void check()
-    const intervalId = setInterval(() => void check(), POLL_INTERVAL_MS)
-
-    return () => {
-      cancelled = true
-      clearInterval(intervalId)
-    }
-  }, [])
+  useSmartPolling(
+    async ({ cancelled }) => {
+      try {
+        const res = await axiosInstance.get("/health")
+        if (cancelled()) return
+        const snapshot = res.data?.data as HealthSnapshot | undefined
+        setDegraded(!snapshot || !snapshot.txline.connected)
+      } catch {
+        if (cancelled()) return
+        // Backend unreachable is itself the case this banner exists for.
+        setDegraded(true)
+      }
+    },
+    POLL_INTERVAL_MS,
+    []
+  )
 
   if (!degraded) return null
 

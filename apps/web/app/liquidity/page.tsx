@@ -108,11 +108,10 @@ export default function LiquidityPage() {
             Cross-Market Liquidity
           </h1>
           <p className="max-w-2xl font-mono text-[11px] leading-relaxed text-muted-foreground">
-            Every open, locked, and settled market across the tournament,
-            ranked together. Pool size and split are read live from each
-            market&apos;s on-chain account; the reference column is
-            TxLINE&apos;s independent implied probability, not Goalana&apos;s
-            own price.
+            Every open, locked, and settled market across the tournament, ranked
+            together. Pool size and split are read live from each market&apos;s
+            on-chain account; the reference column is TxLINE&apos;s independent
+            implied probability, not Goalana&apos;s own price.
           </p>
           {markets && markets.length > 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-4 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
@@ -208,7 +207,7 @@ export default function LiquidityPage() {
 
                 return (
                   <TableRow key={market.marketPda}>
-                    <TableCell className="max-w-[280px] whitespace-normal">
+                    <TableCell className="max-w-70 whitespace-normal">
                       <Link
                         href={`/fixtures/${market.fixture.fixtureId}`}
                         className="flex flex-col gap-0.5 hover:text-primary"

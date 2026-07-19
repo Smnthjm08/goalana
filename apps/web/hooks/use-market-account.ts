@@ -1,8 +1,9 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 import { PublicKey } from "@solana/web3.js"
 import { useGoalanaProgram } from "./use-goalana-program"
+import { useSmartPolling } from "./use-smart-polling"
 
 export type OnChainMarketStatus = "Open" | "Locked" | "Settled" | "Cancelled"
 
@@ -38,7 +39,11 @@ export function useMarketAccount(marketPda: string | null | undefined) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
+  const loadMarket = useCallback(async ({
+    cancelled,
+  }: {
+    cancelled: () => boolean
+  }) => {
     if (!marketPda) {
       setLoading(false)
       return
@@ -48,6 +53,8 @@ export function useMarketAccount(marketPda: string | null | undefined) {
       const account = await program.account.market.fetch(
         new PublicKey(marketPda)
       )
+
+      if (cancelled()) return
 
       setMarket({
         status: decodeStatus(
@@ -64,23 +71,21 @@ export function useMarketAccount(marketPda: string | null | undefined) {
       })
       setError(null)
     } catch (err) {
+      if (cancelled()) return
       console.error("useMarketAccount: failed to fetch market account", err)
       setError("Failed to read on-chain market state")
     } finally {
-      setLoading(false)
+      if (!cancelled()) {
+        setLoading(false)
+      }
     }
   }, [program, marketPda])
 
-  useEffect(() => {
-    setLoading(true)
-    void refetch()
+  const refetch = useCallback(() => {
+    void loadMarket({ cancelled: () => false })
+  }, [loadMarket])
 
-    const intervalId = setInterval(() => {
-      void refetch()
-    }, POLL_INTERVAL_MS)
-
-    return () => clearInterval(intervalId)
-  }, [refetch])
+  useSmartPolling(loadMarket, POLL_INTERVAL_MS, [loadMarket])
 
   return { market, loading, error, refetch }
 }

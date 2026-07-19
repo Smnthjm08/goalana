@@ -1,10 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { LAMPORTS_PER_SOL } from "@solana/web3.js"
 import axiosInstance from "@/lib/axios-instance"
 import { useGoalanaProgram } from "@/hooks/use-goalana-program"
-import { decodeStatus, type OnChainMarketStatus } from "@/hooks/use-market-account"
+import { useSmartPolling } from "./use-smart-polling"
+import {
+  decodeStatus,
+  type OnChainMarketStatus,
+} from "@/hooks/use-market-account"
 
 // Same "batch-fetch all Market accounts, join against /api/markets" pattern
 // use-inspector-data.ts already uses — one getProgramAccounts call instead of
@@ -60,7 +64,10 @@ async function loadLiquidityData(
   ])
 
   const onChainByPda = new Map(
-    marketEntries.map((entry) => [entry.publicKey.toBase58(), entry.account as unknown as Record<string, any>])
+    marketEntries.map((entry) => [
+      entry.publicKey.toBase58(),
+      entry.account as unknown as Record<string, any>,
+    ])
   )
 
   return dbMarkets
@@ -100,33 +107,27 @@ export function useLiquidityData() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
+  useSmartPolling(
+    async ({ cancelled }) => {
+      try {
+        const next = await loadLiquidityData(program)
+        if (cancelled()) return
 
-    const fetchAll = () =>
-      loadLiquidityData(program)
-        .then((next) => {
-          if (cancelled) return
-          setMarkets(next)
-          setError(null)
-        })
-        .catch((err) => {
-          if (cancelled) return
-          console.error("Liquidity dashboard: failed to load market data", err)
-          setError("Could not load live pool data.")
-        })
-
-    fetchAll().finally(() => {
-      if (!cancelled) setLoading(false)
-    })
-
-    const intervalId = setInterval(() => void fetchAll(), POLL_INTERVAL_MS)
-
-    return () => {
-      cancelled = true
-      clearInterval(intervalId)
-    }
-  }, [program])
+        setMarkets(next)
+        setError(null)
+      } catch (err) {
+        if (cancelled()) return
+        console.error("Liquidity dashboard: failed to load market data", err)
+        setError("Could not load live pool data.")
+      } finally {
+        if (!cancelled()) {
+          setLoading(false)
+        }
+      }
+    },
+    POLL_INTERVAL_MS,
+    [program]
+  )
 
   return { markets, loading, error }
 }

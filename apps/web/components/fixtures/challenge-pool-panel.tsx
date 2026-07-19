@@ -69,7 +69,8 @@ export function ChallengePoolPanel({
   const now = useNow(30_000)
   const matchStarted = isFinal || (now !== null && Number(startTime) <= now)
 
-  const [stat, setStat] = useState<(typeof STAT_OPTIONS)[number]["value"]>("CORNERS")
+  const [stat, setStat] =
+    useState<(typeof STAT_OPTIONS)[number]["value"]>("CORNERS")
   const [threshold, setThreshold] = useState("9")
   const [slotsPerSide, setSlotsPerSide] = useState(1)
   const [stakeSol, setStakeSol] = useState("0.1")
@@ -134,8 +135,8 @@ export function ChallengePoolPanel({
       await loadRequests()
     } catch (err) {
       const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        "Request failed"
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error ?? "Request failed"
       toast.error("Could not submit", { id: toastId, description: message })
     } finally {
       setSubmitting(false)
@@ -145,13 +146,15 @@ export function ChallengePoolPanel({
   return (
     <Card className="rounded-sm">
       <CardHeader className="border-b border-border p-5">
-        <h3 className="font-heading text-base tracking-wide">Propose a Challenge Pool</h3>
+        <h3 className="font-heading text-base tracking-wide">
+          Propose a Challenge Pool
+        </h3>
         <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
-          Design your own fixed-stake, {slotsPerSide}v{slotsPerSide} bet on a real
-          match statistic. Everyone stakes the same amount; winners split the pool.
-          The house co-signs the exact same on-chain{" "}
-          <span className="text-foreground">create_market</span> the protocol uses —
-          it never decides the outcome, cryptography does.
+          Design your own fixed-stake, {slotsPerSide}v{slotsPerSide} bet on a
+          real match statistic. Everyone stakes the same amount; winners split
+          the pool. The house co-signs the exact same on-chain{" "}
+          <span className="text-foreground">create_market</span> the protocol
+          uses — it never decides the outcome, cryptography does.
         </p>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 p-5">
@@ -163,7 +166,7 @@ export function ChallengePoolPanel({
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="font-mono text-[10px] uppercase text-muted-foreground">
+              <label className="font-mono text-[10px] text-muted-foreground uppercase">
                 Statistic
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -182,7 +185,7 @@ export function ChallengePoolPanel({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="font-mono text-[10px] uppercase text-muted-foreground">
+                <label className="font-mono text-[10px] text-muted-foreground uppercase">
                   Over line (whole number)
                 </label>
                 <Input
@@ -198,7 +201,7 @@ export function ChallengePoolPanel({
                 </span>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="font-mono text-[10px] uppercase text-muted-foreground">
+                <label className="font-mono text-[10px] text-muted-foreground uppercase">
                   Fixed stake (SOL)
                 </label>
                 <Input
@@ -213,7 +216,7 @@ export function ChallengePoolPanel({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="font-mono text-[10px] uppercase text-muted-foreground">
+              <label className="font-mono text-[10px] text-muted-foreground uppercase">
                 Format
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -248,7 +251,7 @@ export function ChallengePoolPanel({
 
         {/* Existing requests for this fixture */}
         <div className="flex flex-col gap-2 border-t border-border pt-4">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
             Community requests
           </span>
           {loading ? (
