@@ -105,6 +105,14 @@ export function MarketCard({ market }: { market: any }) {
     isChallenge && fixedStakeLamports
       ? Math.round(Number(onChainMarket?.totalNo ?? 0n) / fixedStakeLamports)
       : 0
+  // Mirrors place_challenge_bet.rs's on-chain cap (fixed_stake * slots_per_side)
+  // so the UI can refuse a doomed bet before ever building a transaction.
+  const yesSideFull = Boolean(
+    isChallenge && slotsPerSide != null && yesSlotsFilled >= slotsPerSide
+  )
+  const noSideFull = Boolean(
+    isChallenge && slotsPerSide != null && noSlotsFilled >= slotsPerSide
+  )
 
   // currentYesPct/currentNoPct are the live TxLINE reference probability
   // (server-joined from the current Odds row); fall back to the opening
@@ -136,6 +144,13 @@ export function MarketCard({ market }: { market: any }) {
       toast.error(
         `Market is ${onChainMarket.status.toLowerCase()} — betting is closed`
       )
+      return
+    }
+
+    if (isChallenge && (selected === "YES" ? yesSideFull : noSideFull)) {
+      toast.error(`${selected} side is full`, {
+        description: `All ${slotsPerSide} slot(s) are taken — try the other side.`,
+      })
       return
     }
 
@@ -186,8 +201,22 @@ export function MarketCard({ market }: { market: any }) {
       await Promise.all([refetchMarket(), refetchPosition()])
     } catch (err) {
       console.error("place_bet failed", err)
-      const message = err instanceof Error ? err.message : "Transaction failed"
-      toast.error("Bet failed", { id: toastId, description: message })
+      // Rare race: another entrant filled this side between our read and our
+      // submit. The client-side check above catches the common case; this
+      // catches the on-chain revert (ChallengePoolSideFull, place_challenge_bet.rs)
+      // for the leftover window and turns the raw AnchorError into plain English.
+      const rawMessage = err instanceof Error ? err.message : "Transaction failed"
+      const sideFull = rawMessage.includes("ChallengePoolSideFull")
+      if (sideFull) {
+        toast.error(`${selected} side just filled up`, {
+          id: toastId,
+          description: "Someone else took the last slot — try the other side.",
+        })
+        setSelected(null)
+        await refetchMarket()
+      } else {
+        toast.error("Bet failed", { id: toastId, description: rawMessage })
+      }
     } finally {
       setSubmitting(false)
     }
@@ -198,6 +227,12 @@ export function MarketCard({ market }: { market: any }) {
     const parsedAmount = isChallenge ? fixedStakeSol! : Number(amount)
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       toast.error("Enter a valid SOL amount first")
+      return
+    }
+    if (isChallenge && (selected === "YES" ? yesSideFull : noSideFull)) {
+      toast.error(`${selected} side is full`, {
+        description: `All ${slotsPerSide} slot(s) are taken — try the other side.`,
+      })
       return
     }
     addItem({
@@ -364,13 +399,15 @@ export function MarketCard({ market }: { market: any }) {
         <div className="grid grid-cols-2 gap-4">
           <Button
             variant="outline"
-            disabled={!isOpen}
+            disabled={!isOpen || yesSideFull}
             aria-pressed={selected === "YES"}
             onClick={() => setSelected(selected === "YES" ? null : "YES")}
             className={`h-auto flex-row items-center justify-between rounded-sm p-4 transition-colors ${
-              selected === "YES"
-                ? "border-pos bg-pos text-pos-foreground! hover:border-pos hover:bg-pos/90 hover:text-pos-foreground!"
-                : "group/yes border-pos/20 bg-pos/5 hover:border-pos/50 hover:bg-pos/10"
+              yesSideFull
+                ? "cursor-not-allowed border-border bg-muted/30 opacity-60"
+                : selected === "YES"
+                  ? "border-pos bg-pos! text-pos-foreground! hover:border-pos hover:bg-pos/90! hover:text-pos-foreground!"
+                  : "group/yes border-pos/20 bg-pos/5 hover:border-pos/50 hover:bg-pos/10"
             }`}
           >
             <div className="flex flex-col items-start gap-1">
@@ -386,29 +423,39 @@ export function MarketCard({ market }: { market: any }) {
               </span>
             </div>
             <span className="flex flex-col items-end gap-0.5">
-              <span
-                className={`font-heading text-xl tabular-nums ${selected === "YES" ? "text-pos-foreground!" : "text-pos/90 group-hover/yes:text-pos"} transition-colors`}
-              >
-                {yesPct.toFixed(2)}%
-              </span>
-              {!isUnpriced && (
-                <OddsDelta
-                  current={yesPct}
-                  initial={Number(market.initialYesPct)}
-                  dimmed={selected === "YES"}
-                />
+              {yesSideFull ? (
+                <span className="font-heading text-xl text-muted-foreground">
+                  FULL
+                </span>
+              ) : (
+                <>
+                  <span
+                    className={`font-heading text-xl tabular-nums ${selected === "YES" ? "text-pos-foreground!" : "text-pos/90 group-hover/yes:text-pos"} transition-colors`}
+                  >
+                    {yesPct.toFixed(2)}%
+                  </span>
+                  {!isUnpriced && (
+                    <OddsDelta
+                      current={yesPct}
+                      initial={Number(market.initialYesPct)}
+                      dimmed={selected === "YES"}
+                    />
+                  )}
+                </>
               )}
             </span>
           </Button>
           <Button
             variant="outline"
-            disabled={!isOpen}
+            disabled={!isOpen || noSideFull}
             aria-pressed={selected === "NO"}
             onClick={() => setSelected(selected === "NO" ? null : "NO")}
             className={`h-auto flex-row items-center justify-between rounded-sm p-4 transition-colors ${
-              selected === "NO"
-                ? "border-neg bg-neg text-neg-foreground! hover:border-neg hover:bg-neg/90 hover:text-neg-foreground!"
-                : "group/no border-neg/20 bg-neg/5 hover:border-neg/50 hover:bg-neg/10"
+              noSideFull
+                ? "cursor-not-allowed border-border bg-muted/30 opacity-60"
+                : selected === "NO"
+                  ? "border-neg bg-neg! text-neg-foreground! hover:border-neg hover:bg-neg/90! hover:text-neg-foreground!"
+                  : "group/no border-neg/20 bg-neg/5 hover:border-neg/50 hover:bg-neg/10"
             }`}
           >
             <div className="flex flex-col items-start gap-1">
@@ -424,17 +471,25 @@ export function MarketCard({ market }: { market: any }) {
               </span>
             </div>
             <span className="flex flex-col items-end gap-0.5">
-              <span
-                className={`font-heading text-xl tabular-nums ${selected === "NO" ? "text-neg-foreground!" : "text-neg/90 group-hover/no:text-neg"} transition-colors`}
-              >
-                {noPct.toFixed(2)}%
-              </span>
-              {!isUnpriced && (
-                <OddsDelta
-                  current={noPct}
-                  initial={Number(market.initialNoPct)}
-                  dimmed={selected === "NO"}
-                />
+              {noSideFull ? (
+                <span className="font-heading text-xl text-muted-foreground">
+                  FULL
+                </span>
+              ) : (
+                <>
+                  <span
+                    className={`font-heading text-xl tabular-nums ${selected === "NO" ? "text-neg-foreground!" : "text-neg/90 group-hover/no:text-neg"} transition-colors`}
+                  >
+                    {noPct.toFixed(2)}%
+                  </span>
+                  {!isUnpriced && (
+                    <OddsDelta
+                      current={noPct}
+                      initial={Number(market.initialNoPct)}
+                      dimmed={selected === "NO"}
+                    />
+                  )}
+                </>
               )}
             </span>
           </Button>

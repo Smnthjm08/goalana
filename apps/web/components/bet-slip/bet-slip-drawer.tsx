@@ -103,8 +103,19 @@ export function BetSlipDrawer() {
       clear()
     } catch (err) {
       console.error("bet slip submit failed", err)
-      const message = err instanceof Error ? err.message : "Transaction failed"
-      toast.error("Bet slip failed", { id: toastId, description: message })
+      // The slip signs every leg in one atomic transaction — if any
+      // challenge-pool leg's side filled up (place_challenge_bet.rs's
+      // ChallengePoolSideFull) since it was staged, the WHOLE slip reverts,
+      // not just that leg. Say that plainly rather than surfacing the raw
+      // AnchorError, since it's a different failure shape than a single bet.
+      const rawMessage = err instanceof Error ? err.message : "Transaction failed"
+      const sideFull = rawMessage.includes("ChallengePoolSideFull")
+      toast.error(sideFull ? "A pool side filled up" : "Bet slip failed", {
+        id: toastId,
+        description: sideFull
+          ? "One of the challenge pools in this slip filled its side after you staged it — the whole slip reverted together. Remove it and resubmit."
+          : rawMessage,
+      })
     } finally {
       setSubmitting(false)
     }

@@ -17,6 +17,15 @@ import { Card, CardContent, CardHeader } from "@workspace/ui/components/card"
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Spinner } from "@workspace/ui/components/spinner"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@workspace/ui/components/dialog"
+import { Plus } from "lucide-react"
 
 const STAT_OPTIONS = [
   { value: "GOALS", label: "Total goals" },
@@ -69,6 +78,7 @@ export function ChallengePoolPanel({
   const now = useNow(30_000)
   const matchStarted = isFinal || (now !== null && Number(startTime) <= now)
 
+  const [open, setOpen] = useState(false)
   const [stat, setStat] =
     useState<(typeof STAT_OPTIONS)[number]["value"]>("CORNERS")
   const [threshold, setThreshold] = useState("9")
@@ -132,6 +142,7 @@ export function ChallengePoolPanel({
         id: toastId,
         description: "The house will review it before it goes live on-chain.",
       })
+      setOpen(false)
       await loadRequests()
     } catch (err) {
       const message =
@@ -145,112 +156,135 @@ export function ChallengePoolPanel({
 
   return (
     <Card className="rounded-sm">
-      <CardHeader className="border-b border-border p-5">
-        <h3 className="font-heading text-base tracking-wide">
-          Propose a Challenge Pool
-        </h3>
-        <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
-          Design your own fixed-stake, {slotsPerSide}v{slotsPerSide} bet on a
-          real match statistic. Everyone stakes the same amount; winners split
-          the pool. The house co-signs the exact same on-chain{" "}
-          <span className="text-foreground">create_market</span> the protocol
-          uses — it never decides the outcome, cryptography does.
-        </p>
+      <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-border p-5">
+        <div className="flex flex-col gap-1">
+          <h3 className="font-heading text-base tracking-wide">
+            Challenge Pools
+          </h3>
+          <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
+            Design your own fixed-stake, N-vs-N bet on a real match
+            statistic. Everyone stakes the same amount; winners split the
+            pool. The house co-signs the exact same on-chain{" "}
+            <span className="text-foreground">create_market</span> the
+            protocol uses — it never decides the outcome, cryptography does.
+          </p>
+        </div>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button
+              disabled={matchStarted}
+              className="shrink-0 gap-1.5 font-heading text-[11px] tracking-widest uppercase"
+            >
+              <Plus className="size-3.5" />
+              Create Pool
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Propose a Challenge Pool</DialogTitle>
+              <DialogDescription>
+                Design your own fixed-stake, {slotsPerSide}v{slotsPerSide}{" "}
+                bet on a real match statistic.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="font-mono text-[10px] text-muted-foreground uppercase">
+                  Statistic
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {STAT_OPTIONS.map((opt) => (
+                    <Button
+                      key={opt.value}
+                      variant={stat === opt.value ? "default" : "outline"}
+                      onClick={() => setStat(opt.value)}
+                      className="h-auto rounded-sm py-2 font-mono text-[11px]"
+                    >
+                      {opt.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="font-mono text-[10px] text-muted-foreground uppercase">
+                    Over line (whole number)
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={threshold}
+                    onChange={(e) => setThreshold(e.target.value)}
+                    className="font-mono"
+                  />
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {threshold ? `Settles YES if total > ${threshold}.5` : ""}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="font-mono text-[10px] text-muted-foreground uppercase">
+                    Fixed stake (SOL)
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={stakeSol}
+                    onChange={(e) => setStakeSol(e.target.value)}
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="font-mono text-[10px] text-muted-foreground uppercase">
+                  Format
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {FORMAT_OPTIONS.map((opt) => (
+                    <Button
+                      key={opt.slots}
+                      variant={slotsPerSide === opt.slots ? "default" : "outline"}
+                      onClick={() => setSlotsPerSide(opt.slots)}
+                      className="h-auto rounded-sm py-2 font-mono text-[11px]"
+                    >
+                      {opt.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <Button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="font-heading tracking-widest uppercase"
+              >
+                {submitting ? (
+                  <Spinner className="size-3.5" />
+                ) : publicKey ? (
+                  "Request Pool"
+                ) : (
+                  "Connect Wallet"
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 p-5">
-        {matchStarted ? (
+        {matchStarted && (
           <p className="font-mono text-[11px] text-muted-foreground">
             This match has kicked off — new pools can only be proposed before
             kickoff.
           </p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="font-mono text-[10px] text-muted-foreground uppercase">
-                Statistic
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {STAT_OPTIONS.map((opt) => (
-                  <Button
-                    key={opt.value}
-                    variant={stat === opt.value ? "default" : "outline"}
-                    onClick={() => setStat(opt.value)}
-                    className="h-auto rounded-sm py-2 font-mono text-[11px]"
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="font-mono text-[10px] text-muted-foreground uppercase">
-                  Over line (whole number)
-                </label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={threshold}
-                  onChange={(e) => setThreshold(e.target.value)}
-                  className="font-mono"
-                />
-                <span className="font-mono text-[10px] text-muted-foreground">
-                  {threshold ? `Settles YES if total > ${threshold}.5` : ""}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="font-mono text-[10px] text-muted-foreground uppercase">
-                  Fixed stake (SOL)
-                </label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={stakeSol}
-                  onChange={(e) => setStakeSol(e.target.value)}
-                  className="font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="font-mono text-[10px] text-muted-foreground uppercase">
-                Format
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {FORMAT_OPTIONS.map((opt) => (
-                  <Button
-                    key={opt.slots}
-                    variant={slotsPerSide === opt.slots ? "default" : "outline"}
-                    onClick={() => setSlotsPerSide(opt.slots)}
-                    className="h-auto rounded-sm py-2 font-mono text-[11px]"
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <Button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="font-heading tracking-widest uppercase"
-            >
-              {submitting ? (
-                <Spinner className="size-3.5" />
-              ) : publicKey ? (
-                "Request Pool"
-              ) : (
-                "Connect Wallet"
-              )}
-            </Button>
-          </div>
         )}
 
         {/* Existing requests for this fixture */}
-        <div className="flex flex-col gap-2 border-t border-border pt-4">
+        <div className="flex flex-col gap-2">
           <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
             Community requests
           </span>
