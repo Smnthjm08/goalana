@@ -1,6 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-import type { Txoracle } from "./types/txoracle";
-import txoracleIdl from "./idl/txoracle.json";
+import { getTxoracleProgram, getTokenTreasuryPda, getPricingMatrixPda } from "@workspace/goalana-sdk";
 import {
     ASSOCIATED_TOKEN_PROGRAM_ID,
     TOKEN_2022_PROGRAM_ID,
@@ -37,24 +36,18 @@ async function main(wallet: anchor.Wallet) {
     const provider = new anchor.AnchorProvider(connection, wallet, { commitment: "confirmed" });
     anchor.setProvider(provider);
 
-    const program = new anchor.Program<Txoracle>(txoracleIdl as Txoracle, provider);
+    const program = getTxoracleProgram(provider);
 
     if (!program.programId.equals(programId)) {
         throw new Error(`IDL program ${program.programId.toBase58()} != ${NETWORK} program ${programId.toBase58()}`);
     }
 
     // ---- 2. Subscribe on-chain ----
-    const [tokenTreasuryPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("token_treasury_v2")],
-        program.programId
-    );
+    const [tokenTreasuryPda] = getTokenTreasuryPda(program.programId);
     const tokenTreasuryVault = getAssociatedTokenAddressSync(
         txlTokenMint, tokenTreasuryPda, true, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
     );
-    const [pricingMatrixPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("pricing_matrix")],
-        program.programId
-    );
+    const [pricingMatrixPda] = getPricingMatrixPda(program.programId);
     const userTokenAccount = getAssociatedTokenAddressSync(
         txlTokenMint, provider.wallet.publicKey, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
     );

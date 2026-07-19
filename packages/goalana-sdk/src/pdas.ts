@@ -83,6 +83,34 @@ export function getChallengePoolPda(market: PublicKey): [PublicKey, number] {
  *
  * Seeds: [b"daily_scores_roots", epoch_day (u16 le)]
  */
+/**
+ * Derives TxLINE's `token_treasury_v2` PDA. Takes the `txoracle` program ID
+ * explicitly rather than the SDK's `TXORACLE_PROGRAM_ID` constant, because
+ * TxLINE deploys distinct program IDs per network (mainnet vs. devnet) — see
+ * `apps/api/src/scripts/activate.ts`'s network config.
+ *
+ * Seeds: [b"token_treasury_v2"]
+ */
+export function getTokenTreasuryPda(txoracleProgramId: PublicKey): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("token_treasury_v2")],
+    txoracleProgramId
+  );
+}
+
+/**
+ * Derives TxLINE's `pricing_matrix` PDA. Same per-network caveat as
+ * `getTokenTreasuryPda` above.
+ *
+ * Seeds: [b"pricing_matrix"]
+ */
+export function getPricingMatrixPda(txoracleProgramId: PublicKey): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("pricing_matrix")],
+    txoracleProgramId
+  );
+}
+
 export function getDailyScoresRootsPda(oracleTsMs: number): [PublicKey, number] {
   const epochDay = Math.floor(oracleTsMs / 86_400_000);
 
