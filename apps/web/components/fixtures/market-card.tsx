@@ -357,25 +357,26 @@ export function MarketCard({ market }: { market: any }) {
           <Button
             variant="outline"
             disabled={!isOpen}
+            aria-pressed={selected === "YES"}
             onClick={() => setSelected(selected === "YES" ? null : "YES")}
             className={`h-auto flex-row items-center justify-between rounded-sm p-4 transition-colors ${selected === "YES"
-              ? "border-lime-400 bg-lime-400 dark:bg-lime-400 text-black! hover:border-lime-500 hover:bg-lime-500 hover:dark:bg-lime-500 hover:text-black!"
-              : "group/yes border-lime-500/20 bg-lime-500/5 hover:border-lime-500/50 hover:bg-lime-500/10"
+              ? "border-pos bg-pos text-pos-foreground! hover:border-pos hover:bg-pos/90 hover:text-pos-foreground!"
+              : "group/yes border-pos/20 bg-pos/5 hover:border-pos/50 hover:bg-pos/10"
               }`}
           >
             <div className="flex flex-col items-start gap-1">
               <span
-                className={`font-mono text-xs ${selected === "YES" ? "text-black/80" : "text-lime-500/70 group-hover/yes:text-lime-500"} transition-colors`}
+                className={`font-mono text-xs ${selected === "YES" ? "text-pos-foreground/80" : "text-pos/70 group-hover/yes:text-pos"} transition-colors`}
               >
                 YES
               </span>
-              <span className={`font-mono text-[10px] ${selected === "YES" ? "text-black/60" : "text-lime-500/50 group-hover/yes:text-lime-500/70"} transition-colors`}>
+              <span className={`font-mono text-[10px] tabular-nums ${selected === "YES" ? "text-pos-foreground/60" : "text-pos/50 group-hover/yes:text-pos/70"} transition-colors`}>
                 {poolYes?.toFixed(2) ?? "0.00"} SOL
               </span>
             </div>
             <span className="flex flex-col items-end gap-0.5">
               <span
-                className={`font-heading text-xl ${selected === "YES" ? "text-black!" : "text-lime-500/90 group-hover/yes:text-lime-400"} transition-colors`}
+                className={`font-heading text-xl tabular-nums ${selected === "YES" ? "text-pos-foreground!" : "text-pos/90 group-hover/yes:text-pos"} transition-colors`}
               >
                 {yesPct.toFixed(2)}%
               </span>
@@ -391,25 +392,26 @@ export function MarketCard({ market }: { market: any }) {
           <Button
             variant="outline"
             disabled={!isOpen}
+            aria-pressed={selected === "NO"}
             onClick={() => setSelected(selected === "NO" ? null : "NO")}
             className={`h-auto flex-row items-center justify-between rounded-sm p-4 transition-colors ${selected === "NO"
-              ? "border-red-600 bg-red-600 dark:bg-red-600 text-white! hover:border-red-700 hover:bg-red-700 hover:dark:bg-red-700 hover:text-white!"
-              : "group/no border-red-500/20 bg-red-500/5 hover:border-red-500/50 hover:bg-red-500/10"
+              ? "border-neg bg-neg text-neg-foreground! hover:border-neg hover:bg-neg/90 hover:text-neg-foreground!"
+              : "group/no border-neg/20 bg-neg/5 hover:border-neg/50 hover:bg-neg/10"
               }`}
           >
             <div className="flex flex-col items-start gap-1">
               <span
-                className={`font-mono text-xs ${selected === "NO" ? "text-white/80" : "text-red-500/70 group-hover/no:text-red-500"} transition-colors`}
+                className={`font-mono text-xs ${selected === "NO" ? "text-neg-foreground/80" : "text-neg/70 group-hover/no:text-neg"} transition-colors`}
               >
                 NO
               </span>
-              <span className={`font-mono text-[10px] ${selected === "NO" ? "text-white/60" : "text-red-500/50 group-hover/no:text-red-500/70"} transition-colors`}>
+              <span className={`font-mono text-[10px] tabular-nums ${selected === "NO" ? "text-neg-foreground/60" : "text-neg/50 group-hover/no:text-neg/70"} transition-colors`}>
                 {poolNo?.toFixed(2) ?? "0.00"} SOL
               </span>
             </div>
             <span className="flex flex-col items-end gap-0.5">
               <span
-                className={`font-heading text-xl ${selected === "NO" ? "text-white!" : "text-red-500/90 group-hover/no:text-red-400"} transition-colors`}
+                className={`font-heading text-xl tabular-nums ${selected === "NO" ? "text-neg-foreground!" : "text-neg/90 group-hover/no:text-neg"} transition-colors`}
               >
                 {noPct.toFixed(2)}%
               </span>
@@ -444,7 +446,10 @@ export function MarketCard({ market }: { market: any }) {
                 className="shrink-0 font-heading tracking-widest uppercase"
               >
                 {submitting ? (
-                  <Spinner className="size-3.5" />
+                  <>
+                    <Spinner className="size-3.5" />
+                    {isChallenge ? "Joining…" : "Placing…"}
+                  </>
                 ) : connected ? (
                   isChallenge ? `Join ${fixedStakeSol} SOL` : "Place Bet"
                 ) : (
@@ -561,7 +566,10 @@ export function MarketCard({ market }: { market: any }) {
               className="font-heading tracking-widest uppercase"
             >
               {claiming ? (
-                <Spinner className="size-3.5" />
+                <>
+                  <Spinner className="size-3.5" />
+                  Claiming…
+                </>
               ) : canClaimWinnings ? (
                 `Claim Winnings${payoutPreview !== null ? ` (${(Number(payoutPreview) / LAMPORTS_PER_SOL).toFixed(4)} SOL)` : ""}`
               ) : (

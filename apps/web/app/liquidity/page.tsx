@@ -237,11 +237,11 @@ export default function LiquidityPage() {
                     <TableCell className="font-mono text-[10px] text-muted-foreground tabular-nums">
                       {market.poolYesPct !== null ? (
                         <span>
-                          <span className="text-lime-400">
+                          <span className="text-pos">
                             {market.poolYesPct.toFixed(0)}% YES
                           </span>{" "}
                           /{" "}
-                          <span className="text-rose-500">
+                          <span className="text-neg">
                             {(100 - market.poolYesPct).toFixed(0)}% NO
                           </span>
                         </span>
@@ -257,8 +257,8 @@ export default function LiquidityPage() {
                           className={
                             Math.abs(delta) >= 3
                               ? delta > 0
-                                ? "text-lime-400"
-                                : "text-rose-500"
+                                ? "text-pos"
+                                : "text-neg"
                               : "text-muted-foreground"
                           }
                         >

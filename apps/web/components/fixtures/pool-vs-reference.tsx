@@ -19,7 +19,7 @@ export function PoolVsReference({
         {referenceYesPct.toFixed(1)}%
       </span>
       {diverges && (
-        <span className={delta > 0 ? "text-lime-400" : "text-rose-500"}>
+        <span className={delta > 0 ? "text-pos" : "text-neg"}>
           {delta > 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)}pt
         </span>
       )}

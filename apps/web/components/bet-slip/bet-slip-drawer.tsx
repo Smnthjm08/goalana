@@ -14,6 +14,7 @@ import { useWalletModal } from "@solana/wallet-adapter-react-ui"
 import { getVaultPda, getPositionPda, getChallengePoolPda } from "@workspace/goalana-sdk/pdas"
 import { Button } from "@workspace/ui/components/button"
 import { Spinner } from "@workspace/ui/components/spinner"
+import { explorerTxUrl } from "@/lib/solana-explorer"
 import { useGoalanaProgram } from "@/hooks/use-goalana-program"
 import { useBetSlip, MAX_SLIP_LEGS } from "@/components/bet-slip/bet-slip-context"
 
@@ -98,10 +99,11 @@ export function BetSlipDrawer() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[min(92vw,22rem)] overflow-hidden rounded-sm border border-primary/40 bg-card shadow-xl">
+    <div className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 w-[min(92vw,22rem)] overflow-hidden rounded-sm border border-primary/40 bg-card shadow-xl">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2 border-b border-border bg-primary/10 px-4 py-2.5"
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 border-b border-border bg-primary/10 px-4 py-2.5 transition-colors hover:bg-primary/15 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         <span className="flex items-center gap-2 font-heading text-sm tracking-wide text-foreground">
           <Layers className="size-4 text-primary" />
@@ -129,7 +131,7 @@ export function BetSlipDrawer() {
                   <span className="font-mono text-[10px] text-muted-foreground">
                     <span
                       className={
-                        item.side === "YES" ? "text-lime-500" : "text-red-500"
+                        item.side === "YES" ? "text-pos" : "text-neg"
                       }
                     >
                       {item.side}
@@ -139,8 +141,8 @@ export function BetSlipDrawer() {
                 </div>
                 <button
                   onClick={() => removeItem(item.marketPda)}
-                  className="shrink-0 text-muted-foreground hover:text-foreground"
-                  aria-label="Remove from slip"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  aria-label={`Remove ${item.question} from slip`}
                 >
                   <X className="size-3.5" />
                 </button>
@@ -161,7 +163,10 @@ export function BetSlipDrawer() {
             className="w-full font-heading tracking-widest uppercase"
           >
             {submitting ? (
-              <Spinner className="size-3.5" />
+              <>
+                <Spinner className="size-3.5" />
+                Placing…
+              </>
             ) : connected ? (
               `Sign once · place ${items.length} bets`
             ) : (
@@ -178,7 +183,7 @@ export function BetSlipDrawer() {
 
           {lastSig && (
             <a
-              href={`https://explorer.solana.com/tx/${lastSig}?cluster=devnet`}
+              href={explorerTxUrl(lastSig)}
               target="_blank"
               rel="noreferrer"
               className="truncate font-mono text-[10px] text-primary hover:underline"

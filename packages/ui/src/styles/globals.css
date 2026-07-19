@@ -28,6 +28,10 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    --color-pos: var(--pos);
+    --color-pos-foreground: var(--pos-foreground);
+    --color-neg: var(--neg);
+    --color-neg-foreground: var(--neg-foreground);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
@@ -78,6 +82,12 @@
     --chart-3: #1E7DD8;
     --chart-4: #D97706;
     --chart-5: #059669;
+    /* Betting semantics — one green for YES/up, one red for NO/down, shared by
+       market buttons, odds deltas, the bet slip, and status text. */
+    --pos: #4D8B00;
+    --pos-foreground: #000000;
+    --neg: #DC2626;
+    --neg-foreground: #FFFFFF;
     --radius: 0.125rem;
     --sidebar: #FFFFFF;
     --sidebar-foreground: #0D0E10;
@@ -114,6 +124,10 @@
     --chart-3: #30A0F8;
     --chart-4: #F8B430;
     --chart-5: #30F8C0;
+    --pos: #A3E635;
+    --pos-foreground: #000000;
+    --neg: #F87171;
+    --neg-foreground: #000000;
     --radius: 0.125rem;
     --sidebar: #14161A;
     --sidebar-foreground: #FFFFFF;
@@ -134,5 +148,8 @@
     }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
+    }
+  button, [role="button"], a, input, select, textarea {
+    touch-action: manipulation;
     }
 }

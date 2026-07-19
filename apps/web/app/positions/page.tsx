@@ -2,8 +2,17 @@
 
 import Link from "next/link"
 import { useWalletModal } from "@solana/wallet-adapter-react-ui"
+import { Wallet, Inbox } from "lucide-react"
 import { Button } from "@workspace/ui/components/button"
 import { Skeleton } from "@workspace/ui/components/skeleton"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from "@workspace/ui/components/empty"
 import { useGoalanaProgram } from "@/hooks/use-goalana-program"
 import { useWalletPositions } from "@/hooks/use-wallet-positions"
 import { PageShell } from "@/components/positions/page-shell"
@@ -17,21 +26,31 @@ export default function PositionsPage() {
   if (!connected || !publicKey) {
     return (
       <PageShell>
-        <div className="flex flex-col items-center gap-4 rounded-sm border border-dashed border-border bg-card px-6 py-16 text-center">
-          <span className="font-heading text-lg tracking-widest text-foreground uppercase">
-            Connect your wallet
-          </span>
-          <p className="max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground">
-            Your positions are Solana accounts owned by your wallet. Connect to
-            read them from Devnet.
-          </p>
-          <Button
-            onClick={() => setVisible(true)}
-            className="mt-1 font-heading tracking-widest uppercase"
-          >
-            Connect Wallet
-          </Button>
-        </div>
+        <Empty className="rounded-sm border border-dashed border-border bg-card py-16">
+          <EmptyHeader>
+            <EmptyMedia
+              variant="icon"
+              className="size-10 rounded-sm border border-border bg-muted/40 text-muted-foreground"
+            >
+              <Wallet />
+            </EmptyMedia>
+            <EmptyTitle className="font-heading text-lg tracking-widest text-foreground uppercase">
+              Connect your wallet
+            </EmptyTitle>
+            <EmptyDescription className="font-mono text-[11px] leading-relaxed">
+              Your positions are Solana accounts owned by your wallet. Connect
+              to read them from Devnet.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button
+              onClick={() => setVisible(true)}
+              className="font-heading tracking-widest uppercase"
+            >
+              Connect Wallet
+            </Button>
+          </EmptyContent>
+        </Empty>
       </PageShell>
     )
   }
@@ -66,26 +85,28 @@ export default function PositionsPage() {
   if (positions.length === 0) {
     return (
       <PageShell>
-        <div className="flex flex-col items-center gap-4 rounded-sm border border-dashed border-border bg-card px-6 py-16 text-center">
-          <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-border bg-muted/40">
-            <span className="font-heading text-base text-muted-foreground">
-              0
-            </span>
-          </div>
-          <span className="font-heading text-lg tracking-widest text-foreground uppercase">
-            No positions yet
-          </span>
-          <p className="max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground">
-            This wallet hasn&apos;t bet on a Goalana market. Place one on any
-            open market and it will show up here with its on-chain proof.
-          </p>
-          <Button
-            asChild
-            className="mt-1 font-heading tracking-widest uppercase"
-          >
-            <Link href="/fixtures">Browse Fixtures</Link>
-          </Button>
-        </div>
+        <Empty className="rounded-sm border border-dashed border-border bg-card py-16">
+          <EmptyHeader>
+            <EmptyMedia
+              variant="icon"
+              className="size-10 rounded-sm border border-border bg-muted/40 text-muted-foreground"
+            >
+              <Inbox />
+            </EmptyMedia>
+            <EmptyTitle className="font-heading text-lg tracking-widest text-foreground uppercase">
+              No positions yet
+            </EmptyTitle>
+            <EmptyDescription className="font-mono text-[11px] leading-relaxed">
+              This wallet hasn&apos;t bet on a Goalana market. Place one on any
+              open market and it will show up here with its on-chain proof.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button asChild className="font-heading tracking-widest uppercase">
+              <Link href="/fixtures">Browse Fixtures</Link>
+            </Button>
+          </EmptyContent>
+        </Empty>
       </PageShell>
     )
   }

@@ -1,10 +1,19 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState } from "react"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { useWalletModal } from "@solana/wallet-adapter-react-ui"
+import { toast } from "sonner"
 import { Button } from "@workspace/ui/components/button"
-import { Copy, LogOut } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu"
+import { Check, Copy, LogOut } from "lucide-react"
 import { useWalletUser } from "@/components/providers/wallet-user-provider"
 
 // Deterministic avatar color from the wallet address so the same wallet
@@ -21,22 +30,7 @@ export function CustomWalletButton() {
   const { publicKey, disconnect } = useWallet()
   const { setVisible } = useWalletModal()
   const { registering } = useWalletUser()
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setDropdownOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+  const [copied, setCopied] = useState(false)
 
   if (!publicKey) {
     return (
@@ -53,49 +47,53 @@ export function CustomWalletButton() {
   const shortAddress = `${base58.slice(0, 4)}...${base58.slice(-4)}`
   const hue = avatarHue(base58)
 
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <Button
-        onClick={() => setDropdownOpen(!dropdownOpen)}
-        variant="outline"
-        className="flex h-9 items-center gap-2 rounded-sm border-border bg-card px-3 font-mono text-xs text-foreground hover:border-primary hover:bg-card"
-      >
-        <div
-          className="h-4 w-4 shrink-0 rounded-full border border-black/10"
-          style={{
-            background: `linear-gradient(135deg, hsl(${hue} 85% 55%), hsl(${(hue + 60) % 360} 85% 45%))`,
-          }}
-        />
-        {shortAddress}
-        {registering && (
-          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-        )}
-      </Button>
+  function copyAddress() {
+    navigator.clipboard.writeText(base58)
+    setCopied(true)
+    toast.success("Address copied", { description: shortAddress })
+    setTimeout(() => setCopied(false), 1500)
+  }
 
-      {dropdownOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-48 rounded-sm border border-border bg-card p-1 shadow-lg">
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(base58)
-              setDropdownOpen(false)
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          className="flex h-9 items-center gap-2 rounded-sm border-border bg-card px-3 font-mono text-xs text-foreground hover:border-primary hover:bg-card"
+        >
+          <div
+            className="h-4 w-4 shrink-0 rounded-full border border-black/10"
+            style={{
+              background: `linear-gradient(135deg, hsl(${hue} 85% 55%), hsl(${(hue + 60) % 360} 85% 45%))`,
             }}
-            className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-xs font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            <Copy className="h-3 w-3" />
-            Copy Address
-          </button>
-          <button
-            onClick={() => {
-              disconnect()
-              setDropdownOpen(false)
-            }}
-            className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-xs font-medium text-destructive transition-colors hover:bg-muted"
-          >
-            <LogOut className="h-3 w-3" />
-            Disconnect
-          </button>
-        </div>
-      )}
-    </div>
+          />
+          {shortAddress}
+          {registering && (
+            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" className="w-48 rounded-sm">
+        <DropdownMenuLabel className="font-mono text-[10px] tracking-widest uppercase">
+          Connected wallet
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault()
+            copyAddress()
+          }}
+          className="font-medium"
+        >
+          {copied ? <Check className="text-primary" /> : <Copy />}
+          {copied ? "Copied" : "Copy address"}
+        </DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" onSelect={() => disconnect()}>
+          <LogOut />
+          Disconnect
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

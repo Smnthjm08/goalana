@@ -68,9 +68,7 @@ export function MarketActivityPanel({
                 >
                   {shortAddr(entry.user)}
                 </a>
-                <span
-                  className={side === "NO" ? "text-rose-500" : "text-lime-500"}
-                >
+                <span className={side === "NO" ? "text-neg" : "text-pos"}>
                   {side}
                 </span>
                 <span className="text-foreground tabular-nums">

@@ -5,7 +5,6 @@ import axiosInstance from "@/lib/axios-instance"
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@workspace/ui/components/tooltip"
 import { formatRelativeAgo } from "@/lib/time"
@@ -125,13 +124,12 @@ export function TxlineHealthIndicator() {
     : null
 
   return (
-    <TooltipProvider delayDuration={100}>
-      <Tooltip>
+    <Tooltip>
         <TooltipTrigger asChild>
           <button
             type="button"
             aria-label={`TxLINE feed status: ${label}`}
-            className="flex cursor-default items-center gap-2 rounded-sm border border-border bg-card px-2 py-1.5 transition-colors hover:border-primary/50"
+            className="flex cursor-default items-center gap-2 rounded-sm border border-border bg-card px-2 py-1.5 transition-colors hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <span className="relative flex h-2 w-2 shrink-0">
               {connected && (
@@ -236,7 +234,6 @@ export function TxlineHealthIndicator() {
             )}
           </div>
         </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    </Tooltip>
   )
 }

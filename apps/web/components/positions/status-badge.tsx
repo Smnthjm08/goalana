@@ -9,7 +9,7 @@ const STATUS_STYLES: Record<PositionStatus, string> = {
   Open: "border-primary/20 bg-primary/5 text-primary",
   Locked: "border-amber-500/20 bg-amber-500/5 text-amber-500",
   Claimable: "border-primary/40 bg-primary/10 text-primary",
-  Settled: "border-rose-500/20 bg-rose-500/5 text-rose-500",
+  Settled: "border-neg/20 bg-neg/5 text-neg",
   Claimed: "border-sky-500/20 bg-sky-500/5 text-sky-500",
 }
 

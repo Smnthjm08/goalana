@@ -1,9 +1,16 @@
 "use client"
 import { useEffect, useState } from "react"
-import { AlertCircle, RefreshCw } from "lucide-react"
+import { AlertCircle, RefreshCw, CalendarOff } from "lucide-react"
 import axiosInstance from "@/lib/axios-instance"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Button } from "@workspace/ui/components/button"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@workspace/ui/components/empty"
 import { Hero } from "@/components/home/hero"
 import { FixtureCard } from "@/components/home/fixture-card"
 
@@ -70,16 +77,24 @@ export default function Page() {
               </Button>
             </div>
           ) : fixtures.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-sm border border-dashed border-border bg-card px-6 py-16 text-center">
-              <span className="font-heading text-lg tracking-widest text-foreground uppercase">
-                No fixtures tracked
-              </span>
-              <p className="max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground">
-                Goalana syncs World Cup fixtures from the TxLINE feed. If this
-                stays empty, the feed is unreachable — check the status
-                indicator in the header.
-              </p>
-            </div>
+            <Empty className="rounded-sm border border-dashed border-border bg-card py-16">
+              <EmptyHeader>
+                <EmptyMedia
+                  variant="icon"
+                  className="size-10 rounded-sm border border-border bg-muted/40 text-muted-foreground"
+                >
+                  <CalendarOff />
+                </EmptyMedia>
+                <EmptyTitle className="font-heading text-lg tracking-widest text-foreground uppercase">
+                  No fixtures tracked
+                </EmptyTitle>
+                <EmptyDescription className="font-mono text-[11px] leading-relaxed">
+                  Goalana syncs World Cup fixtures from the TxLINE feed. If this
+                  stays empty, the feed is unreachable — check the status
+                  indicator in the header.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {fixtures.map((fixture) => (

@@ -21,6 +21,15 @@ export function Header() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
 
+  // Single source of truth for which nav link is active — used by both the
+  // desktop bar and the mobile drawer so the two can't drift.
+  function isActive(href: string): boolean {
+    if (href === "/") return pathname === "/"
+    if (href === "/fixtures")
+      return pathname.startsWith("/fixtures") || pathname.startsWith("/market")
+    return pathname.startsWith(href)
+  }
+
   // Disable scroll when mobile menu is open
   useEffect(() => {
     if (isOpen) {
@@ -31,6 +40,16 @@ export function Header() {
     return () => {
       document.body.style.overflow = ""
     }
+  }, [isOpen])
+
+  // Close the mobile menu on Escape so keyboard users have an escape route.
+  useEffect(() => {
+    if (!isOpen) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setIsOpen(false)
+    }
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
   }, [isOpen])
 
   // Close mobile menu when navigating
@@ -60,21 +79,17 @@ export function Header() {
           {/* Desktop Navigation Links */}
           <nav className="hidden items-center gap-4 md:flex md:gap-5">
             {NAV_LINKS.map((link) => {
-              const active =
-                link.href === "/"
-                  ? pathname === "/"
-                  : link.href === "/fixtures"
-                    ? pathname.startsWith("/fixtures") || pathname.startsWith("/market")
-                    : pathname.startsWith(link.href)
+              const active = isActive(link.href)
 
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative font-mono text-[10px] tracking-widest whitespace-nowrap uppercase transition-colors md:text-[11px] py-1 ${
+                  aria-current={active ? "page" : undefined}
+                  className={`relative rounded-sm py-1 font-mono text-[10px] tracking-widest whitespace-nowrap uppercase transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:text-[11px] ${
                     active
-                      ? "text-primary border-b-2 border-primary"
-                      : "text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-border"
+                      ? "border-b-2 border-primary text-primary"
+                      : "border-b-2 border-transparent text-muted-foreground hover:border-border hover:text-foreground"
                   }`}
                 >
                   {link.label}
@@ -99,8 +114,9 @@ export function Header() {
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="flex h-9 w-9 items-center justify-center rounded-sm border border-border bg-card transition-colors hover:border-primary/50 md:hidden"
-            aria-label={isOpen ? "Close Menu" : "Open Menu"}
+            className="flex h-11 w-11 items-center justify-center rounded-sm border border-border bg-card transition-colors hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:hidden"
+            aria-label={isOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isOpen}
           >
             {isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
@@ -109,21 +125,22 @@ export function Header() {
 
       {/* Mobile Drawer/Menu Overlay */}
       {isOpen && (
-        <div className="fixed inset-x-0 top-16 bottom-0 z-40 flex animate-in flex-col border-b border-border bg-background/95 p-0 backdrop-blur-md duration-200 fade-in slide-in-from-top-4 md:hidden">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Main menu"
+          className="fixed inset-x-0 top-16 bottom-0 z-40 flex animate-in flex-col border-b border-border bg-background/95 p-0 backdrop-blur-md duration-200 fade-in slide-in-from-top-4 md:hidden"
+        >
           <div className="flex-1 overflow-y-auto">
             <nav className="flex flex-col">
               {NAV_LINKS.map((link) => {
-                const active =
-                  link.href === "/"
-                    ? pathname === "/"
-                    : link.href === "/fixtures"
-                      ? pathname.startsWith("/fixtures") || pathname.startsWith("/market")
-                      : pathname.startsWith(link.href)
+                const active = isActive(link.href)
 
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
+                    aria-current={active ? "page" : undefined}
                     className={`flex items-center justify-between border-b border-border/40 px-6 py-5 font-mono text-xs tracking-widest uppercase transition-colors ${
                       active
                         ? "bg-primary/5 text-primary"
@@ -152,7 +169,7 @@ export function Header() {
               <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
                 Theme
               </span>
-              <ModeToggle />
+              <ModeToggle className="size-11" />
             </div>
           </div>
         </div>

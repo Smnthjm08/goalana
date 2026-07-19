@@ -45,11 +45,7 @@ export function OddsDelta({ current, initial, dimmed }: OddsDeltaProps) {
     <span
       title={`${up ? "Up" : "Down"} ${Math.abs(delta).toFixed(2)} points since this market opened`}
       className={`font-mono text-[10px] tabular-nums ${
-        dimmed
-          ? "text-current opacity-70"
-          : up
-            ? "text-lime-600 dark:text-lime-400"
-            : "text-rose-600 dark:text-rose-400"
+        dimmed ? "text-current opacity-70" : up ? "text-pos" : "text-neg"
       }`}
     >
       {up ? "▲" : "▼"} {up ? "+" : "-"}

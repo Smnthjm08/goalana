@@ -6,6 +6,13 @@ import { AlertCircle, RefreshCw, Target } from "lucide-react"
 import axiosInstance from "@/lib/axios-instance"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Button } from "@workspace/ui/components/button"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@workspace/ui/components/empty"
 import { TeamBadge } from "@/components/team-badge"
 import { MatchTimeStatus } from "@/components/fixtures/match-time-status"
 import { MarketStatusBadge } from "@/components/market-status-badge"
@@ -136,17 +143,24 @@ export default function FixturesPage() {
 
         {/* Empty State */}
         {!loading && !error && fixtures.length === 0 && (
-          <div className="flex flex-col items-center gap-4 rounded-sm border border-dashed border-border bg-card px-6 py-16 text-center">
-            <Target className="size-8 text-muted-foreground/40" />
-            <span className="font-heading text-lg tracking-widest text-foreground uppercase">
-              No fixtures tracked
-            </span>
-            <p className="max-w-sm font-mono text-[11px] leading-relaxed text-muted-foreground">
-              Goalana syncs World Cup fixtures from the TxLINE feed. If this
-              stays empty, the feed may be unreachable — check the status
-              indicator in the header.
-            </p>
-          </div>
+          <Empty className="rounded-sm border border-dashed border-border bg-card py-16">
+            <EmptyHeader>
+              <EmptyMedia
+                variant="icon"
+                className="size-10 rounded-sm border border-border bg-muted/40 text-muted-foreground"
+              >
+                <Target />
+              </EmptyMedia>
+              <EmptyTitle className="font-heading text-lg tracking-widest text-foreground uppercase">
+                No fixtures tracked
+              </EmptyTitle>
+              <EmptyDescription className="font-mono text-[11px] leading-relaxed">
+                Goalana syncs World Cup fixtures from the TxLINE feed. If this
+                stays empty, the feed may be unreachable — check the status
+                indicator in the header.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
 
         {/* Fixture List */}
