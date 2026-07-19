@@ -7,6 +7,13 @@ Built for the **TxODDS × Superteam** _Prediction Markets & Settlement_ track.
 
 **🔗 Live app:** [goalana.smnthjm08.dev](https://goalana.smnthjm08.dev/) · **⛓ Program:** [`ELiJEq…GE42`](https://explorer.solana.com/address/ELiJEqT95P8LzEiTrA86TEXXoLbK61cxxHFevvPDGE42?cluster=devnet)
 
+> **Tournament has moved on.** The free-tier TxLINE feed has advanced past the group/knockout
+> rounds it was seeded with — live production now tracks only the two matches left: the
+> **Third-Place match**, France v England ([fixture `18257865`](https://goalana.smnthjm08.dev/fixtures/18257865), finished 4–6, settled on-chain), and the
+> **Final**, Spain v Argentina (fixture `18257739`, finished 1–0, settled on-chain). Earlier
+> semifinal-stage fixtures referenced below (e.g. `18241006`) have rolled off the live fixture
+> list, but every Devnet transaction cited stays independently verifiable on Explorer regardless.
+
 ---
 
 ## Why Goalana is different
@@ -66,8 +73,11 @@ Real transactions on Solana Devnet. Append `?cluster=devnet` is already included
 Settlement never trusts Goalana. `settle_market` delegates to TxLINE's oracle by CPI into
 `validate_stat`, which re-hashes the Merkle path against a root anchored on-chain. The
 transactions below call **that exact instruction with the exact arguments settlement uses**,
-against the **real** TxLINE oracle on Devnet — for England 1–2 Argentina (fixture `18241006`).
-Rendered in-app under the fixture's **Proof Integrity** tab.
+against the **real** TxLINE oracle on Devnet — for England 1–2 Argentina (fixture `18241006`),
+a semifinal-stage match. That fixture has since rolled off the live production fixture list as
+the free-tier competition feed advanced to the Final/Third-Place round (see the note at the top
+of this README) — the **Proof Integrity** tab it was rendered in is no longer reachable in-app,
+but every transaction below remains independently verifiable on Explorer.
 
 | Case                                                | Proof    | Result                                      | Signature                                                                                                                                                     |
 | --------------------------------------------------- | -------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -97,7 +107,7 @@ The track brief explicitly suggests parametric prop bets ("Team A Corners + Team
 10"). TxLINE prices no corners/cards odds for this competition, so instead of a TxLINE-priced
 market, these two are **unpriced** — the pari-mutuel pool itself is the only price, labelled
 "Unpriced — the pool sets the price" in the UI. Real Devnet markets on France v England
-(fixture `18257865`):
+(fixture `18257865`, the Third-Place match — now finished and settled):
 
 | Market              | Predicate           | Market PDA                                                                                                               | `create_market` tx                                                                                                                                           |
 | ------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -110,7 +120,7 @@ automated: `market.service.ts::createParametricPropMarketsForFixture()` runs unc
 (independent of any TxLINE odds row) for every fixture the market-discovery cron already
 processes, so every future match gets both prop markets with no manual step.
 
-**Honest status:** `create_market` / `place_bet` / `lock_market` / `cancel_market` / `claim_refund` are validated on **live Devnet** with real transactions (above). Merkle verification and tampered-proof rejection are validated on **live Devnet** against TxLINE's real oracle (the table above). Full `settle_market` + `claim_winnings` are exercised end-to-end on **localnet** (26/26) — note that the localnet suite runs against `txoracle_mock`, which returns a canned verdict and does **not** verify Merkle proofs, so it covers Goalana's own guards (stat-key binding, stale-snapshot, PDA derivation, state machine) but proves nothing about proof integrity; that is what the Devnet evidence above is for. Live-Devnet settlement is positioned to fire automatically when the France v England semifinal finishes (2026-07-18). We label what ran where rather than overclaim.
+**Honest status:** `create_market` / `place_bet` / `lock_market` / `cancel_market` / `claim_refund` are validated on **live Devnet** with real transactions (above). Merkle verification and tampered-proof rejection are validated on **live Devnet** against TxLINE's real oracle (the table above). Full `settle_market` + `claim_winnings` are exercised end-to-end on **localnet** (26/26) — note that the localnet suite runs against `txoracle_mock`, which returns a canned verdict and does **not** verify Merkle proofs, so it covers Goalana's own guards (stat-key binding, stale-snapshot, PDA derivation, state machine) but proves nothing about proof integrity; that is what the Devnet evidence above is for. Live-Devnet `settle_market` has since fired for real: both the France v England Third-Place match (fixture `18257865`, finished 4–6) and the Spain v Argentina Final (fixture `18257739`, finished 1–0) went final and every market on them settled automatically via the real CPI. We label what ran where rather than overclaim.
 
 ---
 
@@ -124,7 +134,7 @@ directly to what's shipped — so the rubric check doesn't require reading the w
 | Requirement                                                                                      | Goalana                                                                                                                                                                                                                     |
 | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | No P2P transfers of the TxLINE credit token                                                      | ✅ All staking is **native devnet SOL** into Goalana's own Vault PDA. The TxLINE token is touched exactly once, for data-authorization (`subscribe` + activate script) — never by users.                                    |
-| Permissionless results validation ("unlock funds natively on Solana on other coins than TxLINE") | ✅ SOL escrow in a neutral PDA; `settle_market` requires **no authority signer** — see [House trust surface](./RISKS.md#4-house-trust-surface); claims are user-pulled.                                                     |
+| Permissionless results validation ("unlock funds natively on Solana on other coins than TxLINE") | ✅ SOL escrow in a neutral PDA; `settle_market` requires **no authority signer** — see [House trust surface](docs/RISKS.md#4-house-trust-surface); claims are user-pulled.                                                  |
 | Custom On-Chain Settlement Engine via CPI into `validate_stat`                                   | ✅ `settle_market.rs` → `txline_cpi.rs`, plus Goalana's own check gates (stat-key binding, stale-snapshot, PDA derivation) and the [forged-proof revert evidence](#proof-integrity--a-forged-proof-cannot-settle-a-market). |
 
 ### Ideas to get started
@@ -220,20 +230,19 @@ The real, audited documentation lives in [`docs/`](./docs) (reflects a code audi
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — monorepo, data flow, account model
 - [`docs/TECHNICAL_DOCUMENTATION.md`](docs/TECHNICAL_DOCUMENTATION.md) — product requirements, TxLINE integration, the 9-step market lifecycle, and the backend API reference
 - [`docs/SETUP.md`](docs/SETUP.md) — VM deployment for `apps/api`, plus the Anchor program redeploy runbook
-- [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) — demo video script and shot list
-- [`RISKS.md`](./RISKS.md) — honest trust surface, tampered-proof evidence, compute-cost stats, known limitations
+- [`docs/RISKS.md`](docs/RISKS.md) — honest trust surface, tampered-proof evidence, compute-cost stats, known limitations
 
 ---
 
 ## TxLINE API feedback
 
-**Liked most**
+### Liked most
 
 - One normalized JSON schema across fixtures / odds / scores made mapping to markets straightforward.
 - The three-stage `stat-validation` proof with an on-chain anchored daily root is a genuinely strong settlement primitive — exactly what a trustless engine needs.
 - Guest-JWT + `X-Api-Token` two-token auth and the World Cup free tier are low-friction.
 
-**Friction**
+### Friction
 
 - The exact byte/serialization layout of the on-chain `validate_stat` args (FixtureSummary / Predicate / StatProof) wasn't obvious from the prose docs — a copy-paste Anchor CPI example would have removed the biggest unknown.
 - `GameState` is always `"scheduled"` in the feed, so live/finished has to be derived from `StatusId` + kickoff age + feed freshness.

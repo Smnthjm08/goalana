@@ -1,6 +1,6 @@
 # Goalana — Setup & Deployment
 
-Related docs: [ARCHITECTURE.md](ARCHITECTURE.md) · [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) · [RISKS.md](../RISKS.md)
+Related docs: [ARCHITECTURE.md](ARCHITECTURE.md) · [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) · [RISKS.md](RISKS.md)
 
 Two independent procedures live in this doc:
 
@@ -126,7 +126,7 @@ because Anchor's IDL/type codegen and the SDK constants are independent
 sources of truth:
 
 | #   | File                                                                                 | What it is                                                     |
-| --- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| --- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
 | 1   | `goalana_program/programs/goalana_program/src/lib.rs:12`                             | `declare_id!` — compiled into the on-chain binary              |
 | 2   | `goalana_program/Anchor.toml`                                                        | `[programs.localnet]` entry Anchor CLI uses for deploy/test    |
 | 3   | `packages/goalana-sdk/scripts/sync-idl.ts:5`                                         | `TARGET_PROGRAM_ID` — stamped into the IDL/types on sync       |

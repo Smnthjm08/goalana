@@ -34,7 +34,7 @@ deliberately cannot settle a fixture that finished before its market existed (`c
 enforces `settle_after > locks_at` at creation, and a finished match's proof timestamp is already
 in the past). Isolating the CPI via a top-level `validate_stat` call was the only way to
 demonstrate rejection against a fixture that had already finished — see
-[`docs/TECHNICAL_DOCUMENTATION.md`](docs/TECHNICAL_DOCUMENTATION.md#part-4--backend-api-reference)
+[`docs/TECHNICAL_DOCUMENTATION.md`](TECHNICAL_DOCUMENTATION.md#part-4--backend-api-reference)
 and `packages/goalana-sdk/src/txoracle.ts::buildValidateStatIx()`.
 
 **This also proves settlement is stat-agnostic, not a goals-only oracle** — goals, corners, and
@@ -84,7 +84,7 @@ rather than let the 26/26 badge imply more than it does.
 ## 4. House trust surface
 
 Goalana is **house-only for creation, lock, and cancel** — deliberately, to keep the settlement
-path itself simple and legible (see [non-goals](docs/TECHNICAL_DOCUMENTATION.md#non-goals-this-hackathon)).
+path itself simple and legible (see [non-goals](TECHNICAL_DOCUMENTATION.md#non-goals-this-hackathon)).
 `settle_market`, `claim_winnings`, and `claim_refund` are permissionless: no authority signer is
 required, so anyone (a keeper bot, a user, a judge) can trigger settlement once a genuine proof
 exists, and every payout is user-pulled. The house's remaining powers are real and worth stating
@@ -159,4 +159,4 @@ action item, not a resolved one, until that wallet acts.
 ---
 
 _Everything above reflects the code and on-chain state as of 2026-07-17. See
-[`README.md`](./README.md#honest-status) for the localnet-vs-Devnet evidence scoping._
+[`README.md`](../README.md#honest-status) for the localnet-vs-Devnet evidence scoping._

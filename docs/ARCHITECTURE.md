@@ -1,6 +1,6 @@
 # Goalana — Architecture
 
-Related docs: [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) (product, TxLINE integration, market lifecycle, API reference) · [SETUP.md](SETUP.md) (deployment) · [RISKS.md](../RISKS.md)
+Related docs: [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) (product, TxLINE integration, market lifecycle, API reference) · [SETUP.md](SETUP.md) (deployment) · [RISKS.md](RISKS.md)
 
 ## Monorepo layout
 
